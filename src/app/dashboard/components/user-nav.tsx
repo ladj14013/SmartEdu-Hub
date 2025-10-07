@@ -1,3 +1,6 @@
+'use client';
+
+import { useAuth, useUser } from '@/firebase';
 import {
   Avatar,
   AvatarFallback,
@@ -14,46 +17,61 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
-
-// In a real app, this would fetch user data
-const user = {
-    name: "أحمد عبد العزيز",
-    email: "directeur@example.com",
-    avatar: "https://i.pravatar.cc/150?u=user-1"
-}
+import { useRouter } from 'next/navigation';
+import { users } from '@/lib/data';
 
 export function UserNav() {
+  const { user } = useUser();
+  const auth = useAuth();
+  const router = useRouter();
+
+  // In a real app, this would fetch user metadata from Firestore
+  const mockUser = users.find(u => u.email === user?.email);
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    await auth.signOut();
+    router.push('/login');
+  };
+
+  if (!user) {
+    return null;
+  }
+
+  const displayName = mockUser?.name || user.displayName || "مستخدم";
+  const displayEmail = user.email || "";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.avatar} alt={`@${user.name}`} />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            <AvatarImage src={mockUser?.avatar} alt={`@${displayName}`} />
+            <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
             <p className="text-xs leading-none text-muted-foreground">
-              {user.email}
+              {displayEmail}
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled>
             الملف الشخصي
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled>
             الإعدادات
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/">الخروج</Link>
+        <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+          الخروج
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

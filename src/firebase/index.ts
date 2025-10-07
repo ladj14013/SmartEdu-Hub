@@ -6,6 +6,8 @@ import {firebaseConfig} from './config';
 import type {FirebaseServices} from './types';
 
 export * from './provider';
+export * from './auth/use-user';
+
 
 // Initialize Firebase
 export function initializeFirebase(): FirebaseServices {
