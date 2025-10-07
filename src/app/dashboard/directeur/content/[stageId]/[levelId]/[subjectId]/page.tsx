@@ -36,10 +36,10 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
         <div className="space-y-6">
             <PageHeader
                 title={<Skeleton className="h-8 w-64" />}
-                description={<Skeleton className="h-4 w-80 mt-2" />}
             >
                 <Skeleton className="h-10 w-24" />
             </PageHeader>
+            <Skeleton className="h-4 w-80" />
             <Card>
                 <CardContent className="p-0">
                     <div className="divide-y">

@@ -37,9 +37,10 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title={<Skeleton className="h-8 w-80" />} description={<Skeleton className="h-4 w-96 mt-2" />}>
+        <PageHeader title={<Skeleton className="h-8 w-80" />}>
           <Skeleton className="h-10 w-44" />
         </PageHeader>
+        <Skeleton className="h-4 w-96" />
         <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
         <Card><CardContent className="p-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
       </div>

@@ -25,12 +25,13 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
   if (isLoading) {
     return (
         <div className="space-y-6">
-            <PageHeader title={<Skeleton className="h-8 w-56" />} description={<Skeleton className="h-4 w-72 mt-2" />}>
+            <PageHeader title={<Skeleton className="h-8 w-56" />}>
                 <div className="flex gap-2">
                     <Skeleton className="h-10 w-24" />
                     <Skeleton className="h-10 w-36" />
                 </div>
             </PageHeader>
+            <Skeleton className="h-4 w-72" />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                     <Card>

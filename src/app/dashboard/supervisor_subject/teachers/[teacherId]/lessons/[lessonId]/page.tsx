@@ -62,9 +62,10 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title={<Skeleton className="h-8 w-64" />} description={<Skeleton className="h-4 w-80 mt-2" />}>
+        <PageHeader title={<Skeleton className="h-8 w-64" />}>
           <Skeleton className="h-10 w-40" />
         </PageHeader>
+        <Skeleton className="h-4 w-80" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>

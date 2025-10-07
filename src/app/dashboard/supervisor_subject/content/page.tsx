@@ -60,10 +60,10 @@ export default function ManagePublicContentPage() {
         <div className="space-y-6">
           <PageHeader
             title={<Skeleton className="h-8 w-72" />}
-            description={<Skeleton className="h-4 w-96 mt-2" />}
           >
             <Skeleton className="h-10 w-32" />
           </PageHeader>
+          <Skeleton className="h-4 w-96" />
           <Card>
             <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
             <CardContent><div className="divide-y rounded-md border"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div></CardContent>
