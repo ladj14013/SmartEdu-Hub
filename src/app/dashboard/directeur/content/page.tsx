@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Accordion,
   AccordionContent,
@@ -8,12 +9,24 @@ import {
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/common/page-header';
-import { MoreHorizontal, Plus, Pencil, Trash2, ChevronsUpDown } from 'lucide-react';
+import { MoreHorizontal, Plus, Pencil, Trash2, ChevronsUpDown, Loader2, Save } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -22,12 +35,18 @@ import {
   } from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import type { Stage, Level, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function ContentManagementPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const [newStageName, setNewStageName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
   const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
@@ -39,15 +58,86 @@ export default function ContentManagementPage() {
 
   const isLoading = isLoadingStages || isLoadingLevels || isLoadingSubjects;
 
+  const handleAddStage = async () => {
+    if (!newStageName.trim() || !firestore) return;
+
+    setIsSaving(true);
+    try {
+        const stagesCollection = collection(firestore, 'stages');
+        await addDoc(stagesCollection, { name: newStageName });
+        toast({
+            title: "تمت الإضافة بنجاح",
+            description: `تمت إضافة مرحلة "${newStageName}"`,
+        });
+        setNewStageName('');
+        setIsDialogOpen(false);
+    } catch (error) {
+        console.error("Error adding stage: ", error);
+        toast({
+            title: "فشل في الإضافة",
+            description: "حدث خطأ أثناء إضافة المرحلة الجديدة.",
+            variant: "destructive",
+        });
+    } finally {
+        setIsSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="إدارة هيكل المحتوى"
         description="إدارة المراحل والمستويات والمواد الدراسية في المنصة."
       >
-        <Button variant="accent">
-          <Plus className="ml-2 h-4 w-4" /> أضف مرحلة جديدة
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="accent">
+              <Plus className="ml-2 h-4 w-4" /> أضف مرحلة جديدة
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>إضافة مرحلة دراسية جديدة</DialogTitle>
+              <DialogDescription>
+                أدخل اسم المرحلة الجديدة. سيتم إضافتها إلى الهيكل التعليمي.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="stage-name" className="text-right">
+                  الاسم
+                </Label>
+                <Input
+                  id="stage-name"
+                  value={newStageName}
+                  onChange={(e) => setNewStageName(e.target.value)}
+                  className="col-span-3"
+                  placeholder="مثال: المرحلة الابتدائية"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild>
+                    <Button type="button" variant="outline">
+                        إلغاء
+                    </Button>
+                </DialogClose>
+              <Button type="button" onClick={handleAddStage} disabled={isSaving || !newStageName.trim()}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    جاري الحفظ...
+                  </>
+                ) : (
+                  <>
+                    <Save className="ml-2 h-4 w-4" />
+                    حفظ
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
 
       <div className="rounded-lg border">
