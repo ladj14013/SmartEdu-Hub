@@ -45,15 +45,15 @@ const signupSchema = z.object({
   level: z.string().optional(),
   subject: z.string().optional(),
   teacherCode: z.string().optional(),
-}).refine(data => {
-    if (data.role === 'student' && !data.stage) return false;
-    if (data.role === 'teacher' && !data.stage) return false;
+}).refine((data) => {
+    if (data.role === 'student' || data.role === 'teacher') {
+        return !!data.stage;
+    }
     return true;
 }, {
     message: "الرجاء اختيار المرحلة الدراسية.",
     path: ['stage'],
 });
-
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
@@ -327,7 +327,6 @@ export default function SignupPage() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
                 )}
 
                 <Button type="submit" className="w-full" variant="accent" disabled={isLoading}>
