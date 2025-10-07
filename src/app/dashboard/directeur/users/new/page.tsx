@@ -58,29 +58,29 @@ export default function NewUserPage() {
 
     let userCredential: UserCredential | null = null;
 
-    // --- Step 1: Create User in Firebase Auth ---
     try {
-      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      toast({
-        title: "الخطوة 1: نجاح المصادقة",
-        description: `تم إنشاء حساب المصادقة لـ ${data.email} بنجاح.`,
-      });
-    } catch (error: any) {
-      console.error("Authentication creation failed:", error);
-      const description = error.code === 'auth/email-already-in-use'
-          ? 'هذا البريد الإلكتروني مستخدم بالفعل.'
-          : 'فشل إنشاء المستخدم في نظام المصادقة.';
-      toast({
-        title: "فشل في الخطوة 1: المصادقة",
-        description,
-        variant: "destructive"
-      });
-      setIsLoading(false);
-      return; // Stop execution if auth fails
-    }
+      // --- Step 1: Create User in Firebase Auth ---
+      try {
+        userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+        toast({
+          title: "الخطوة 1: نجاح المصادقة",
+          description: `تم إنشاء حساب المصادقة لـ ${data.email} بنجاح.`,
+        });
+      } catch (error: any) {
+        console.error("Authentication creation failed:", error);
+        const description = error.code === 'auth/email-already-in-use'
+            ? 'هذا البريد الإلكتروني مستخدم بالفعل.'
+            : 'فشل إنشاء المستخدم في نظام المصادقة.';
+        toast({
+          title: "فشل في الخطوة 1: المصادقة",
+          description,
+          variant: "destructive"
+        });
+        setIsLoading(false); // Stop loading on auth failure
+        return; 
+      }
 
-    // --- Step 2: Create User Document in Firestore ---
-    try {
+      // --- Step 2: Create User Document in Firestore ---
       const user = userCredential.user;
       await setDoc(doc(firestore, "users", user.uid), {
         uid: user.uid,
