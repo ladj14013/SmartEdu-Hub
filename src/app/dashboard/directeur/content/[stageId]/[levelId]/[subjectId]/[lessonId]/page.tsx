@@ -16,9 +16,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function EditLessonPage({ params }: { params: { stageId: string; levelId: string; subjectId: string; lessonId: string } }) {
+  const { stageId, levelId, subjectId, lessonId } = params;
   const firestore = useFirestore();
 
-  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
   const { data: lesson, isLoading } = useDoc<Lesson>(lessonRef);
 
   if (isLoading) {
@@ -68,7 +69,7 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
       >
         <div className="flex gap-2">
             <Button variant="outline" asChild>
-                <Link href={`/dashboard/directeur/content/${params.stageId}/${params.levelId}/${params.subjectId}`}>
+                <Link href={`/dashboard/directeur/content/${stageId}/${levelId}/${subjectId}`}>
                     <ArrowRight className="ml-2 h-4 w-4" /> العودة
                 </Link>
             </Button>

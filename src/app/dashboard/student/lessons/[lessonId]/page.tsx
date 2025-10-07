@@ -11,8 +11,9 @@ import type { Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentLessonPage({ params }: { params: { lessonId: string } }) {
+  const { lessonId } = params;
   const firestore = useFirestore();
-  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
   const { data: lesson, isLoading } = useDoc<Lesson>(lessonRef);
 
   if (isLoading) {

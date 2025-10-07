@@ -9,10 +9,11 @@ import type { Lesson, User as UserType, SupervisorNote } from '@/lib/types';
 import { ArrowRight, Send, UserCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function ReviewLessonPage({ params }: { params: { teacherId: string, lessonId: string } }) {
+  const { teacherId, lessonId } = params;
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const { toast } = useToast();
@@ -21,17 +22,17 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
   const [isSending, setIsSending] = useState(false);
 
   // --- Data Fetching ---
-  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
-  const teacherRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', params.teacherId) : null, [firestore, params.teacherId]);
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
+  const teacherRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', teacherId) : null, [firestore, teacherId]);
   
-  const notesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'supervisor_notes'), where('lessonId', '==', params.lessonId)) : null, [firestore, params.lessonId]);
+  const notesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'supervisor_notes'), where('lessonId', '==', lessonId)) : null, [firestore, lessonId]);
 
   const { data: lesson, isLoading: isLessonLoading } = useDoc<Lesson>(lessonRef);
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
   const { data: notes, isLoading: areNotesLoading } = useCollection<SupervisorNote>(notesQuery);
 
   // We need to fetch the authors of the notes separately.
-  const authorIds = useMemoFirebase(() => notes ? [...new Set(notes.map(n => n.authorId))] : [], [notes]);
+  const authorIds = useMemo(() => notes ? [...new Set(notes.map(n => n.authorId))] : [], [notes]);
   const authorsQuery = useMemoFirebase(() => (firestore && authorIds && authorIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', authorIds)) : null, [firestore, authorIds]);
   const { data: authors, isLoading: areAuthorsLoading } = useCollection<UserType>(authorsQuery);
 
@@ -43,7 +44,7 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
     setIsSending(true);
     try {
         await addDoc(collection(firestore, 'supervisor_notes'), {
-            lessonId: params.lessonId,
+            lessonId: lessonId,
             authorId: authUser.uid,
             content: noteContent,
             timestamp: serverTimestamp()
@@ -89,7 +90,7 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
         description={`مراجعة درس "${lesson.title}" للأستاذ ${teacher.name}`}
       >
         <Button variant="outline" asChild>
-          <Link href={`/dashboard/supervisor_subject/teachers/${params.teacherId}`}>
+          <Link href={`/dashboard/supervisor_subject/teachers/${teacherId}`}>
             <ArrowRight className="ml-2 h-4 w-4" /> العودة لدروس الأستاذ
           </Link>
         </Button>

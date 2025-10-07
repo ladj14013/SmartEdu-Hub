@@ -10,16 +10,17 @@ import type { User as UserType, Lesson, Subject, Level } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeacherLessonsPage({ params }: { params: { teacherId: string } }) {
+  const { teacherId } = params;
   const firestore = useFirestore();
 
   // --- Data Fetching ---
-  const teacherRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', params.teacherId) : null, [firestore, params.teacherId]);
+  const teacherRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', teacherId) : null, [firestore, teacherId]);
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   const teacherLessonsQuery = useMemoFirebase(() => {
     if (!firestore || !teacher?.subjectId) return null;
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId), where('authorId', '==', params.teacherId));
-  }, [firestore, teacher?.subjectId, params.teacherId]);
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId), where('authorId', '==', teacherId));
+  }, [firestore, teacher?.subjectId, teacherId]);
   const { data: teacherLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(teacherLessonsQuery);
 
   const teacherLevelsQuery = useMemoFirebase(() => {

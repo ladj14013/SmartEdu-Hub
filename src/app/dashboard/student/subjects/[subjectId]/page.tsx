@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 export default function SubjectPage({ params }: { params: { subjectId: string } }) {
+  const { subjectId } = params;
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
   const { toast } = useToast();
@@ -21,7 +22,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const [teacherCode, setTeacherCode] = useState('');
 
   // --- Data Fetching ---
-  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', params.subjectId) : null, [firestore, params.subjectId]);
+  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
   const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   
   const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
@@ -38,8 +39,8 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
     }
     // This query is not perfect. Firestore doesn't support logical OR in `where` clauses on different fields.
     // We fetch public lessons and then teacher-specific ones, then merge. This is a common workaround.
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', params.subjectId));
-  }, [firestore, params.subjectId, student?.linkedTeacherId]);
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
+  }, [firestore, subjectId, student?.linkedTeacherId]);
 
   const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
   

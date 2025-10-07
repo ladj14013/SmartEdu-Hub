@@ -18,13 +18,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 export default function EditUserPage({ params }: { params: { userId: string } }) {
+  const { userId } = params;
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
   // --- Data Fetching ---
-  const userRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', params.userId) : null, [firestore, params.userId]);
+  const userRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', userId) : null, [firestore, userId]);
   const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
   const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
   const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);

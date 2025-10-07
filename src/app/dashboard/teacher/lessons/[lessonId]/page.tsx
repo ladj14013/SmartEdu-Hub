@@ -15,10 +15,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EditViewLessonPage({ params }: { params: { lessonId: string } }) {
+  const { lessonId } = params;
   const { user: authUser, isLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
 
-  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
   const { data: lesson, isLoading: isLessonLoading } = useDoc<Lesson>(lessonRef);
   
   const isLoading = isAuthLoading || isLessonLoading;

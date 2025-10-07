@@ -12,16 +12,17 @@ import type { Subject, Level, Stage, Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubjectContentPage({ params }: { params: { stageId: string; levelId: string; subjectId: string } }) {
+  const { stageId, levelId, subjectId } = params;
   const firestore = useFirestore();
 
-  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', params.subjectId) : null, [firestore, params.subjectId]);
-  const levelRef = useMemoFirebase(() => firestore ? doc(firestore, 'levels', params.levelId) : null, [firestore, params.levelId]);
-  const stageRef = useMemoFirebase(() => firestore ? doc(firestore, 'stages', params.stageId) : null, [firestore, params.stageId]);
+  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
+  const levelRef = useMemoFirebase(() => firestore ? doc(firestore, 'levels', levelId) : null, [firestore, levelId]);
+  const stageRef = useMemoFirebase(() => firestore ? doc(firestore, 'stages', stageId) : null, [firestore, stageId]);
   
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', params.subjectId));
-  }, [firestore, params.subjectId]);
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
+  }, [firestore, subjectId]);
 
   const { data: subject, isLoading: isLoadingSubject } = useDoc<Subject>(subjectRef);
   const { data: level, isLoading: isLoadingLevel } = useDoc<Level>(levelRef);
@@ -92,7 +93,7 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
                     </Badge>
                 </div>
                 <Button asChild variant="ghost" size="sm">
-                    <Link href={`/dashboard/directeur/content/${params.stageId}/${params.levelId}/${params.subjectId}/${lesson.id}`}>
+                    <Link href={`/dashboard/directeur/content/${stageId}/${levelId}/${subjectId}/${lesson.id}`}>
                         عرض/تعديل
                     </Link>
                 </Button>
