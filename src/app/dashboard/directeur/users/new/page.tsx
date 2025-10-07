@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword, initializeAuth, browserLocalPersistence, browserPopupRedirectResolver } from 'firebase/auth';
+import { createUserWithEmailAndPassword, initializeAuth, browserLocalPersistence, browserPopupRedirectResolver, deleteApp, getApp, initializeApp } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useFirestore, useFirebaseApp } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
@@ -18,6 +18,7 @@ import { Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import { firebaseConfig } from '@/firebase/config';
 
 
 const newUserSchema = z.object({
@@ -33,7 +34,6 @@ type NewUserFormValues = z.infer<typeof newUserSchema>;
 export default function NewUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const app = useFirebaseApp();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -43,22 +43,26 @@ export default function NewUserPage() {
       name: '',
       email: '',
       password: '',
+      role: 'student',
     },
   });
 
   const onSubmit = async (data: NewUserFormValues) => {
-    if (!app || !firestore) return;
+    if (!firestore) return;
     setIsLoading(true);
-    try {
-      // In a real-world scenario, this should be done via a secure backend (Firebase Functions).
-      // We create a temporary, isolated Auth instance to create a new user without
-      // affecting the currently signed-in admin user.
-      const tempAuth = initializeAuth(app, {
-          persistence: browserLocalPersistence,
-          popupRedirectResolver: browserPopupRedirectResolver
-      });
+    
+    // In a real-world scenario, this should be done via a secure backend (Firebase Functions).
+    // We create a temporary, isolated Auth instance to create a new user without
+    // affecting the currently signed-in admin user.
+    const tempAppName = `temp-auth-app-${Date.now()}`;
+    const tempApp = initializeApp(firebaseConfig, tempAppName);
+    const tempAuth = initializeAuth(tempApp, {
+        persistence: browserLocalPersistence,
+        popupRedirectResolver: browserPopupRedirectResolver
+    });
 
-      // 1. Create user in Auth
+    try {
+      // 1. Create user in Auth using the temporary instance
       const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, data.password);
       const user = userCredential.user;
 
@@ -89,6 +93,8 @@ export default function NewUserPage() {
       });
     } finally {
       setIsLoading(false);
+      // Clean up the temporary app instance
+      await deleteApp(tempApp);
     }
   };
 
