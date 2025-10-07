@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, type UserCredential } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { useAuth, useFirestore } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
@@ -32,7 +32,7 @@ export default function NewUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const firestore = useFirestore();
-  const auth = useAuth(); // Use the existing auth instance
+  const auth = useAuth();
   const { toast } = useToast();
 
   const form = useForm<NewUserFormValues>({
@@ -46,21 +46,42 @@ export default function NewUserPage() {
   });
 
   const onSubmit = async (data: NewUserFormValues) => {
-    if (!firestore || !auth) return;
+    if (!firestore || !auth) {
+        toast({
+            title: "خطأ في التهيئة",
+            description: "خدمات Firebase غير متاحة. الرجاء المحاولة مرة أخرى.",
+            variant: "destructive"
+        });
+        return;
+    };
     setIsLoading(true);
 
-    // WARNING: In a real-world scenario, creating users on the client-side
-    // like this is not secure, especially when an admin is logged in.
-    // This should ideally be handled by a secure backend (e.g., Firebase Functions)
-    // which can create a user and then immediately sign them out before returning.
-    // The current approach is a simplification for this project.
-    try {
-      // 1. Create user in Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+    let userCredential: UserCredential | null = null;
 
-      // 2. Create user document in Firestore
-      // This will now execute correctly after the user is created.
+    // --- Step 1: Create User in Firebase Auth ---
+    try {
+      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      toast({
+        title: "الخطوة 1: نجاح المصادقة",
+        description: `تم إنشاء حساب المصادقة لـ ${data.email} بنجاح.`,
+      });
+    } catch (error: any) {
+      console.error("Authentication creation failed:", error);
+      const description = error.code === 'auth/email-already-in-use'
+          ? 'هذا البريد الإلكتروني مستخدم بالفعل.'
+          : 'فشل إنشاء المستخدم في نظام المصادقة.';
+      toast({
+        title: "فشل في الخطوة 1: المصادقة",
+        description,
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return; // Stop execution if auth fails
+    }
+
+    // --- Step 2: Create User Document in Firestore ---
+    try {
+      const user = userCredential.user;
       await setDoc(doc(firestore, "users", user.uid), {
         uid: user.uid,
         name: data.name,
@@ -70,25 +91,21 @@ export default function NewUserPage() {
       });
 
       toast({
-        title: "تم إنشاء المستخدم بنجاح!",
-        description: `تم إنشاء حساب لـ ${data.name} وتخزين بياناته.`,
+        title: "الخطوة 2: نجاح قاعدة البيانات",
+        description: `تم إنشاء حساب لـ ${data.name} وتخزين بياناته بنجاح.`,
       });
+      
       router.push('/dashboard/directeur/users');
 
-      // Note: This flow leaves the newly created user signed in.
-      // In a real app, you'd want to sign them out and re-authenticate the admin.
-      // This is a known limitation of this simplified client-side approach.
-
     } catch (error: any) {
-      console.error("User creation failed:", error);
-      const description = error.code === 'auth/email-already-in-use'
-          ? 'هذا البريد الإلكتروني مستخدم بالفعل.'
-          : 'حدث خطأ غير متوقع. الرجاء المحاولة مرة أخرى.';
+      console.error("Firestore document creation failed:", error);
       toast({
-        title: "فشل إنشاء المستخدم",
-        description,
+        title: "فشل في الخطوة 2: قاعدة البيانات",
+        description: "نجحت المصادقة ولكن فشل حفظ البيانات في قاعدة البيانات. قد تكون هناك مشكلة في قواعد الأمان أو الاتصال بـ Firestore.",
         variant: "destructive"
       });
+       // Optional: Clean up by deleting the created auth user
+       // if (userCredential) { await deleteUser(userCredential.user); }
     } finally {
       setIsLoading(false);
     }
