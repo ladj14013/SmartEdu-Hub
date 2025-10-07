@@ -1,16 +1,63 @@
+'use client';
+
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { getSubjectById, getLessonsBySubject, getLevelById, getStageById } from '@/lib/data';
-import { ArrowRight, Lock, Unlock } from 'lucide-react';
+import { ArrowRight, Lock, Unlock, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { Subject, Level, Stage, Lesson } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubjectContentPage({ params }: { params: { stageId: string; levelId: string; subjectId: string } }) {
-  const subject = getSubjectById(params.subjectId);
-  const level = getLevelById(params.levelId);
-  const stage = getStageById(params.stageId);
-  const lessons = getLessonsBySubject(params.subjectId);
+  const firestore = useFirestore();
+
+  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', params.subjectId) : null, [firestore, params.subjectId]);
+  const levelRef = useMemoFirebase(() => firestore ? doc(firestore, 'levels', params.levelId) : null, [firestore, params.levelId]);
+  const stageRef = useMemoFirebase(() => firestore ? doc(firestore, 'stages', params.stageId) : null, [firestore, params.stageId]);
+  
+  const lessonsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', params.subjectId));
+  }, [firestore, params.subjectId]);
+
+  const { data: subject, isLoading: isLoadingSubject } = useDoc<Subject>(subjectRef);
+  const { data: level, isLoading: isLoadingLevel } = useDoc<Level>(levelRef);
+  const { data: stage, isLoading: isLoadingStage } = useDoc<Stage>(stageRef);
+  const { data: lessons, isLoading: isLoadingLessons } = useCollection<Lesson>(lessonsQuery);
+
+  const isLoading = isLoadingSubject || isLoadingLevel || isLoadingStage || isLoadingLessons;
+
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title={<Skeleton className="h-8 w-64" />}
+                description={<Skeleton className="h-4 w-80 mt-2" />}
+            >
+                <Skeleton className="h-10 w-24" />
+            </PageHeader>
+            <Card>
+                <CardContent className="p-0">
+                    <div className="divide-y">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="flex items-center justify-between p-4">
+                                <div className="flex items-center gap-4">
+                                    <Skeleton className="h-6 w-40" />
+                                    <Skeleton className="h-6 w-16" />
+                                    <Skeleton className="h-6 w-20" />
+                                </div>
+                                <Skeleton className="h-8 w-24" />
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+  }
 
   if (!subject || !level || !stage) {
     return <div>المادة أو المستوى أو المرحلة غير موجودة.</div>;
@@ -32,7 +79,7 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
       <Card>
         <CardContent className="p-0">
           <div className="divide-y">
-            {lessons.map((lesson) => (
+            {lessons?.map((lesson) => (
               <div key={lesson.id} className="flex items-center justify-between p-4 hover:bg-muted/50">
                 <div className="flex items-center gap-4">
                     <span className="font-medium">{lesson.title}</span>
@@ -51,7 +98,7 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
                 </Button>
               </div>
             ))}
-             {lessons.length === 0 && (
+             {lessons?.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
                     لا توجد دروس في هذه المادة حتى الآن.
                 </div>

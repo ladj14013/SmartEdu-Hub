@@ -1,3 +1,5 @@
+'use client';
+
 import {
   Accordion,
   AccordionContent,
@@ -11,7 +13,6 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/common/page-header';
-import { stages, levels, subjects } from '@/lib/data';
 import { MoreHorizontal, Plus, Pencil, Trash2, ChevronsUpDown } from 'lucide-react';
 import {
     DropdownMenu,
@@ -20,8 +21,24 @@ import {
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import type { Stage, Level, Subject } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ContentManagementPage() {
+  const firestore = useFirestore();
+
+  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
+  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
+  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
+
+  const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
+  const { data: levels, isLoading: isLoadingLevels } = useCollection<Level>(levelsQuery);
+  const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
+
+  const isLoading = isLoadingStages || isLoadingLevels || isLoadingSubjects;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -34,8 +51,15 @@ export default function ContentManagementPage() {
       </PageHeader>
 
       <div className="rounded-lg border">
+        {isLoading ? (
+            <div className="p-4 space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+        ) : (
         <Accordion type="multiple" className="w-full">
-          {stages.map((stage) => (
+          {stages?.map((stage) => (
             <AccordionItem value={stage.id} key={stage.id}>
               <AccordionTrigger className="px-4 hover:no-underline">
                 <div className="flex items-center gap-4">
@@ -47,7 +71,7 @@ export default function ContentManagementPage() {
                     <Button size="sm" variant="outline"><Plus className="ml-2 h-4 w-4" />أضف مستوى</Button>
                 </div>
                 {levels
-                  .filter((level) => level.stageId === stage.id)
+                  ?.filter((level) => level.stageId === stage.id)
                   .map((level) => (
                     <Collapsible key={level.id} className="rounded-md border bg-background px-4">
                       <div className="flex items-center justify-between py-3">
@@ -78,7 +102,7 @@ export default function ContentManagementPage() {
                             <Button size="sm" variant="outline"><Plus className="ml-2 h-4 w-4" />أضف مادة</Button>
                         </div>
                         {subjects
-                          .filter((subject) => subject.levelId === level.id)
+                          ?.filter((subject) => subject.levelId === level.id)
                           .map((subject) => (
                             <div key={subject.id} className="flex items-center justify-between rounded-md border p-3 bg-white">
                                 <Link href={`/dashboard/directeur/content/${stage.id}/${level.id}/${subject.id}`} className='hover:underline'>
@@ -98,13 +122,25 @@ export default function ContentManagementPage() {
                                 </DropdownMenu>
                             </div>
                           ))}
+                         {subjects?.filter(s => s.levelId === level.id).length === 0 && (
+                            <p className="text-center text-xs text-muted-foreground py-2">لا توجد مواد مضافة لهذا المستوى.</p>
+                         )}
                       </CollapsibleContent>
                     </Collapsible>
                   ))}
+                  {levels?.filter(l => l.stageId === stage.id).length === 0 && (
+                    <p className="text-center text-sm text-muted-foreground py-4">لا توجد مستويات مضافة لهذه المرحلة.</p>
+                  )}
               </AccordionContent>
             </AccordionItem>
           ))}
+           {stages?.length === 0 && (
+              <div className="p-8 text-center text-muted-foreground">
+                  لا توجد مراحل دراسية. ابدأ بإضافة مرحلة جديدة.
+              </div>
+           )}
         </Accordion>
+        )}
       </div>
     </div>
   );

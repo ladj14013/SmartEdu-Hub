@@ -1,3 +1,5 @@
+'use client';
+
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,16 +7,57 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { getLessonById, getSubjectById } from '@/lib/data';
 import { ArrowRight, Plus, Save, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Lesson } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function EditLessonPage({ params }: { params: { subjectId: string; lessonId: string } }) {
-  const lesson = getLessonById(params.lessonId);
-  const subject = getSubjectById(params.subjectId);
 
-  if (!lesson || !subject) {
-    return <div>الدرس أو المادة غير موجود.</div>;
+export default function EditLessonPage({ params }: { params: { stageId: string; levelId: string; subjectId: string; lessonId: string } }) {
+  const firestore = useFirestore();
+
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
+  const { data: lesson, isLoading } = useDoc<Lesson>(lessonRef);
+
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <PageHeader title={<Skeleton className="h-8 w-56" />} description={<Skeleton className="h-4 w-72 mt-2" />}>
+                <div className="flex gap-2">
+                    <Skeleton className="h-10 w-24" />
+                    <Skeleton className="h-10 w-36" />
+                </div>
+            </PageHeader>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                        <CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-10 w-full" /></div>
+                            <div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-20 w-full" /></div>
+                            <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader><CardTitle><Skeleton className="h-6 w-24" /></CardTitle></CardHeader>
+                        <CardContent><Skeleton className="h-24 w-full" /></CardContent>
+                    </Card>
+                </div>
+                <div className="lg:col-span-1">
+                    <Card>
+                        <CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader>
+                        <CardContent><Skeleton className="h-12 w-full" /></CardContent>
+                    </Card>
+                </div>
+            </div>
+        </div>
+    );
+  }
+
+  if (!lesson) {
+    return <div>الدرس غير موجود.</div>;
   }
 
   return (
@@ -65,7 +108,7 @@ export default function EditLessonPage({ params }: { params: { subjectId: string
                     </Button>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {lesson.exercises.map((exercise, index) => (
+                    {lesson.exercises?.map((exercise, index) => (
                         <Card key={exercise.id} className="bg-muted/50">
                             <CardHeader className="flex flex-row items-center justify-between p-4">
                                 <h4 className="font-semibold">تمرين {index + 1}</h4>
@@ -85,7 +128,7 @@ export default function EditLessonPage({ params }: { params: { subjectId: string
                             </CardContent>
                         </Card>
                     ))}
-                    {lesson.exercises.length === 0 && (
+                    {(!lesson.exercises || lesson.exercises.length === 0) && (
                         <p className="text-center text-muted-foreground py-4">لا توجد تمارين مضافة.</p>
                     )}
                 </CardContent>
