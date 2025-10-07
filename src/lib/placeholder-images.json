@@ -1,3 +1,28 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-background",
+      "description": "An inspiring image about education for the hero section background.",
+      "imageUrl": "https://picsum.photos/seed/101/1200/800",
+      "imageHint": "education classroom"
+    },
+    {
+      "id": "student-role",
+      "description": "Image illustrating a student using the platform.",
+      "imageUrl": "https://images.unsplash.com/photo-1544717305-2782549b5136?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c3R1ZGVudCUyMGxlYXJuaW5nfGVufDB8fHx8MTc1OTc4MjEwOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "student learning"
+    },
+    {
+      "id": "teacher-role",
+      "description": "Image illustrating a teacher using the platform.",
+      "imageUrl": "https://picsum.photos/seed/103/600/400",
+      "imageHint": "teacher explaining"
+    },
+    {
+      "id": "parent-role",
+      "description": "Image illustrating a parent monitoring their child's progress.",
+      "imageUrl": "https://picsum.photos/seed/104/600/400",
+      "imageHint": "parent child"
+    }
+  ]
 }
