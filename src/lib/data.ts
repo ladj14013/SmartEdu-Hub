@@ -24,7 +24,7 @@ export const subjects: Subject[] = [
 ];
 
 export const users: User[] = [
-  { id: 'user-1', name: 'أحمد عبد العزيز', email: 'directeur@example.com', role: 'directeur', avatar: 'https://i.pravatar.cc/150?u=user-1' },
+  { id: 'user-1', name: 'أحمد عبد العزيز', email: 'admin@sep.app', role: 'directeur', avatar: 'https://i.pravatar.cc/150?u=user-1' },
   { id: 'user-2', name: 'فاطمة الزهراء', email: 'supervisor.gen@example.com', role: 'supervisor_general', avatar: 'https://i.pravatar.cc/150?u=user-2' },
   { id: 'user-3', name: 'يوسف محمود', email: 'supervisor.math@example.com', role: 'supervisor_subject', subjectId: 'subj-2', stageId: 'stage-2', avatar: 'https://i.pravatar.cc/150?u=user-3' },
   { id: 'user-4', name: 'خالد إبراهيم', email: 'teacher.math@example.com', role: 'teacher', subjectId: 'subj-2', stageId: 'stage-2', teacherCode: 'KHALED123', avatar: 'https://i.pravatar.cc/150?u=user-4' },
