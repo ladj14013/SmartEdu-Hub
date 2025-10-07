@@ -1,36 +1,84 @@
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft } from 'lucide-react';
+import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
-
-// Mock data
-const teacher = {
-    name: "خالد إبراهيم",
-    subject: "الرياضيات",
-    stage: "المرحلة الإعدادية",
-    code: "KHALED123",
-};
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { User as UserType, Lesson, Stage, Subject as SubjectType } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeacherDashboard() {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
+
+  // --- Data Fetching ---
+  const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+
+  const stageRef = useMemoFirebase(() => (firestore && teacher?.stageId) ? doc(firestore, 'stages', teacher.stageId) : null, [firestore, teacher?.stageId]);
+  const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
+
+  const subjectRef = useMemoFirebase(() => (firestore && teacher?.subjectId) ? doc(firestore, 'subjects', teacher.subjectId) : null, [firestore, teacher?.subjectId]);
+  const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
+
+  const privateLessonsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, 'lessons'), where('authorId', '==', authUser.uid), where('type', '==', 'private'));
+  }, [firestore, authUser]);
+  const { data: privateLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
+
+  const linkedStudentsQuery = useMemoFirebase(() => {
+    if (!firestore || !authUser) return null;
+    return query(collection(firestore, 'users'), where('linkedTeacherId', '==', authUser.uid));
+  }, [firestore, authUser]);
+  const { data: linkedStudents, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
+
+  const isLoading = isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading || areStudentsLoading;
 
   const handleCopy = () => {
+    if (!teacher?.teacherCode) return;
     navigator.clipboard.writeText(teacher.code);
     setCopied(true);
     toast({ title: "تم نسخ الكود بنجاح!" });
     setTimeout(() => setCopied(false), 2000);
   };
+  
+  const teacherCode = teacher?.teacherCode || '...';
+  const teacherName = teacher?.name || 'أستاذ';
+  const subjectName = subject?.name || 'مادة';
+  const stageName = stage?.name || 'مرحلة';
+
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title={<Skeleton className="h-8 w-48" />}
+                description={<Skeleton className="h-4 w-72" />}
+            />
+             <div className="grid gap-6 md:grid-cols-2">
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
+             </div>
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+             </div>
+        </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="لوحة تحكم الأستاذ"
-        description={`مرحباً ${teacher.name}، أنت تدرس مادة ${teacher.subject} ل${teacher.stage}.`}
+        description={`مرحباً ${teacherName}، أنت تدرس مادة ${subjectName} ل${stageName}.`}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -40,8 +88,8 @@ export default function TeacherDashboard() {
                 <CardDescription>شارك هذا الكود مع تلاميذك لربطهم بحسابك.</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-4 p-4 bg-muted rounded-b-lg">
-                <p className="text-2xl font-mono font-bold text-primary">{teacher.code}</p>
-                <Button onClick={handleCopy} variant="ghost" size="icon">
+                <p className="text-2xl font-mono font-bold text-primary">{teacherCode}</p>
+                <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
                     {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
                     <span className="sr-only">نسخ الكود</span>
                 </Button>
@@ -67,8 +115,8 @@ export default function TeacherDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
-            <p className="text-xs text-muted-foreground">(عنصر نائب)</p>
+            <div className="text-2xl font-bold">{linkedStudents?.length ?? 0}</div>
+            <p className="text-xs text-muted-foreground">طالب مرتبط بك</p>
           </CardContent>
         </Card>
         <Card>
@@ -77,7 +125,7 @@ export default function TeacherDashboard() {
             <Presentation className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
           </CardContent>
         </Card>

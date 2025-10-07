@@ -27,7 +27,7 @@ export default function TeachersListPage() {
 
   // Get teachers in the same stage and subject
   const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !supervisor) return null;
+    if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
     return query(
       collection(firestore, 'users'),
       where('role', '==', 'teacher'),
@@ -37,14 +37,15 @@ export default function TeachersListPage() {
   }, [firestore, supervisor]);
   const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
 
-  // Get all lessons for the subject to count them
+  // Get all lessons to count them for each teacher
+  const teacherIds = useMemo(() => teachers?.map(t => t.id) || [], [teachers]);
   const lessonsQuery = useMemoFirebase(() => {
-    if (!firestore || !supervisor?.subjectId) return null;
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', supervisor.subjectId));
-  }, [firestore, supervisor?.subjectId]);
+    if (!firestore || teacherIds.length === 0) return null;
+    return query(collection(firestore, 'lessons'), where('authorId', 'in', teacherIds), where('type', '==', 'private'));
+  }, [firestore, teacherIds]);
   const { data: lessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
 
-  const isLoading = isAuthLoading || isSupervisorLoading || areTeachersLoading || areLessonsLoading;
+  const isLoading = isAuthLoading || isSupervisorLoading || areTeachersLoading || (teacherIds.length > 0 && areLessonsLoading);
 
   return (
     <div className="space-y-6">
@@ -74,7 +75,7 @@ export default function TeachersListPage() {
                 </TableRow>
               ))}
               {!isLoading && teachers?.map(teacher => {
-                const privateLessonsCount = lessons?.filter(l => l.authorId === teacher.id && l.type === 'private').length;
+                const privateLessonsCount = lessons?.filter(l => l.authorId === teacher.id).length ?? 0;
                 return (
                     <TableRow key={teacher.id}>
                         <TableCell>
