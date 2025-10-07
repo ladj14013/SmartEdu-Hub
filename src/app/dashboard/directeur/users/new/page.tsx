@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, initializeAuth, browserLocalPersistence, browserPopupRedirectResolver } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase';
+import { useFirestore, useFirebaseApp } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,10 +33,7 @@ type NewUserFormValues = z.infer<typeof newUserSchema>;
 export default function NewUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  // Note: This creates a new temporary app instance to create user.
-  // In a real app, you'd use a backend function (e.g., Firebase Functions)
-  // to create users without signing out the current admin.
-  const auth = useAuth();
+  const app = useFirebaseApp();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -50,12 +47,19 @@ export default function NewUserPage() {
   });
 
   const onSubmit = async (data: NewUserFormValues) => {
-    if (!auth || !firestore) return;
+    if (!app || !firestore) return;
     setIsLoading(true);
     try {
       // In a real-world scenario, this should be done via a secure backend (Firebase Functions).
+      // We create a temporary, isolated Auth instance to create a new user without
+      // affecting the currently signed-in admin user.
+      const tempAuth = initializeAuth(app, {
+          persistence: browserLocalPersistence,
+          popupRedirectResolver: browserPopupRedirectResolver
+      });
+
       // 1. Create user in Auth
-      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, data.password);
       const user = userCredential.user;
 
       // 2. Create user document in Firestore
@@ -64,6 +68,7 @@ export default function NewUserPage() {
         name: data.name,
         email: data.email,
         role: data.role,
+        avatar: `https://i.pravatar.cc/150?u=${user.uid}`
       });
 
 

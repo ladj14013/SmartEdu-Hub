@@ -23,6 +23,7 @@ export const useFirebase = () => {
 export const useFirebaseApp = () => {
   const context = useContext(FirebaseContext);
   if (!context) {
+    // This should never happen in practice, as the provider is at the root.
     throw new Error('useFirebaseApp must be used within a FirebaseProvider');
   }
   return context.firebaseApp;
