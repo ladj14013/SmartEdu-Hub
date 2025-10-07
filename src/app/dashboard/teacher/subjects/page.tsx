@@ -43,18 +43,20 @@ export default function TeacherSubjectsPage() {
         if (!firestore || !teacher?.subjectId) return null;
         return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId));
     }, [firestore, teacher?.subjectId]);
-    const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(allLessonsQuery);
+    const { data: allLessons, isLoading: areAllLessonsLoading } = useCollection<Lesson>(allLessonsQuery);
 
-    const isLoading = isAuthLoading || isTeacherLoading || isSubjectLoading || areLevelsLoading || areLessonsLoading;
+    const isLoading = isAuthLoading || isTeacherLoading || isSubjectLoading || areLevelsLoading || areAllLessonsLoading;
 
     if (isLoading) {
       return (
         <div className="space-y-6">
-          <PageHeader title={<Skeleton className="h-8 w-72" />} />
-          <Skeleton className="h-4 w-96" />
+          <PageHeader title={<Skeleton className="h-8 w-72" />} description="جاري تحميل الدروس..." />
+          <div className="flex justify-end">
+            <Skeleton className="h-10 w-56" />
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
           </div>
         </div>
       );
@@ -91,8 +93,10 @@ export default function TeacherSubjectsPage() {
                             <CardTitle>دروسك الخاصة</CardTitle>
                             <CardDescription>هذه الدروس تظهر لتلاميذك فقط.</CardDescription>
                         </div>
-                        <Button variant="accent" size="sm">
-                            <Plus className="ml-2 h-4 w-4" /> أضف درس خاص
+                        <Button variant="accent" size="sm" asChild>
+                           <Link href="/dashboard/teacher/lessons/new">
+                             <Plus className="ml-2 h-4 w-4" /> أضف درس خاص
+                           </Link>
                         </Button>
                     </CardHeader>
                     <CardContent>
