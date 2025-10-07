@@ -21,7 +21,7 @@
     {
       "id": "parent-role",
       "description": "Image illustrating a parent monitoring their child's progress.",
-      "imageUrl": "https://images.unsplash.com/photo-1576766125535-b04e15715957?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwYXJlbnQlMjBjaGlsZHxlbnwwfHx8fDE3NTk3ODIwNzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1484981138541-3d074aa97716?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxwYXJlbnQlMjBoZWxwaW5nJTIwY2hpbGQfZW58MHx8fHwxNzU5NzkxNzY5fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "parent child"
     }
   ]
