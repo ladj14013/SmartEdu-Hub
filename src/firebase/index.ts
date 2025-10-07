@@ -13,6 +13,7 @@ export * from './auth/use-user';
 export function initializeFirebase(): FirebaseServices {
   const firebaseApp = initializeApp(firebaseConfig);
   const auth = getAuth(firebaseApp);
-  const firestore = getFirestore(firebaseApp);
+  // Explicitly connect to the 'smart-education' database
+  const firestore = getFirestore(firebaseApp, 'smart-education');
   return {firebaseApp, auth, firestore};
 }
