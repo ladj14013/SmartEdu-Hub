@@ -23,7 +23,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Search, User, UserCog, UserGraduate } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, User, UserCog, UserCheck, GraduationCap } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -41,7 +41,7 @@ const roleMap: { [key: string]: { name: string; icon: React.ElementType } } = {
     supervisor_general: { name: 'مشرف عام', icon: UserCog },
     supervisor_subject: { name: 'مشرف مادة', icon: UserCog },
     teacher: { name: 'أستاذ', icon: UserCheck },
-    student: { name: 'تلميذ', icon: UserGraduate },
+    student: { name: 'تلميذ', icon: GraduationCap },
     parent: { name: 'ولي أمر', icon: User },
   };
 
