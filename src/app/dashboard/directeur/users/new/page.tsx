@@ -60,54 +60,52 @@ export default function NewUserPage() {
 
     try {
       // --- Step 1: Create User in Firebase Auth ---
-      try {
-        userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-        toast({
-          title: "الخطوة 1: نجاح المصادقة",
-          description: `تم إنشاء حساب المصادقة لـ ${data.email} بنجاح.`,
-        });
-      } catch (error: any) {
-        console.error("Authentication creation failed:", error);
-        const description = error.code === 'auth/email-already-in-use'
-            ? 'هذا البريد الإلكتروني مستخدم بالفعل.'
-            : 'فشل إنشاء المستخدم في نظام المصادقة.';
-        toast({
-          title: "فشل في الخطوة 1: المصادقة",
-          description,
-          variant: "destructive"
-        });
-        setIsLoading(false); // Stop loading on auth failure
-        return; 
-      }
-
-      // --- Step 2: Create User Document in Firestore ---
-      const user = userCredential.user;
-      await setDoc(doc(firestore, "users", user.uid), {
-        uid: user.uid,
-        name: data.name,
-        email: data.email,
-        role: data.role,
-        avatar: `https://i.pravatar.cc/150?u=${user.uid}`
-      });
-
+      userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       toast({
-        title: "الخطوة 2: نجاح قاعدة البيانات",
-        description: `تم إنشاء حساب لـ ${data.name} وتخزين بياناته بنجاح.`,
+        title: "الخطوة 1: نجاح المصادقة",
+        description: `تم إنشاء حساب المصادقة لـ ${data.email} بنجاح.`,
       });
-      
-      router.push('/dashboard/directeur/users');
-
     } catch (error: any) {
-      console.error("Firestore document creation failed:", error);
+      console.error("Authentication creation failed:", error);
+      const description = error.code === 'auth/email-already-in-use'
+          ? 'هذا البريد الإلكتروني مستخدم بالفعل.'
+          : 'فشل إنشاء المستخدم في نظام المصادقة.';
       toast({
-        title: "فشل في الخطوة 2: قاعدة البيانات",
-        description: "نجحت المصادقة ولكن فشل حفظ البيانات في قاعدة البيانات. قد تكون هناك مشكلة في قواعد الأمان أو الاتصال بـ Firestore.",
+        title: "فشل في الخطوة 1: المصادقة",
+        description,
         variant: "destructive"
       });
-       // Optional: Clean up by deleting the created auth user
-       // if (userCredential) { await deleteUser(userCredential.user); }
+      setIsLoading(false); // Stop loading on auth failure
+      return; 
+    }
+
+    try {
+        // --- Step 2: Create User Document in Firestore ---
+        const user = userCredential.user;
+        await setDoc(doc(firestore, "users", user.uid), {
+            uid: user.uid,
+            name: data.name,
+            email: data.email,
+            role: data.role,
+            avatar: `https://i.pravatar.cc/150?u=${user.uid}`
+        });
+
+        toast({
+            title: "الخطوة 2: نجاح قاعدة البيانات",
+            description: `تم إنشاء حساب لـ ${data.name} وتخزين بياناته بنجاح.`,
+        });
+        
+        router.push('/dashboard/directeur/users');
+
+    } catch (error: any) {
+        console.error("Firestore document creation failed:", error);
+        toast({
+            title: "فشل في الخطوة 2: قاعدة البيانات",
+            description: "نجحت المصادقة ولكن فشل حفظ البيانات في قاعدة البيانات. قد تكون هناك مشكلة في قواعد الأمان أو الاتصال بـ Firestore.",
+            variant: "destructive"
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
   };
 
