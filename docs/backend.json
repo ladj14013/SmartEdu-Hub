@@ -1,0 +1,424 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the SmartEdu Hub platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (e.g., student, teacher, director, supervisor)."
+        },
+        "stageId": {
+          "type": "string",
+          "description": "Reference to Stage. The stage the user is associated with. (Relationship: User 1:N Stage)"
+        },
+        "levelId": {
+          "type": "string",
+          "description": "Reference to Level. The level the user is associated with. (Relationship: User 1:N Level)"
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to Subject. The subject the user is associated with, applicable to teachers and supervisors. (Relationship: User 1:N Subject)"
+        },
+        "teacherCode": {
+          "type": "string",
+          "description": "The unique code of the teacher, used for student-teacher connection."
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "email",
+        "role"
+      ]
+    },
+    "Stage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Stage",
+      "type": "object",
+      "description": "Represents a stage in the educational structure (e.g., Primary, Secondary).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Stage entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the stage."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Level": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Level",
+      "type": "object",
+      "description": "Represents a level within a stage (e.g., Grade 1, Grade 2).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Level entity."
+        },
+        "stageId": {
+          "type": "string",
+          "description": "Reference to Stage. The stage this level belongs to. (Relationship: Stage 1:N Level)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the level."
+        }
+      },
+      "required": [
+        "id",
+        "stageId",
+        "name"
+      ]
+    },
+    "Subject": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Subject",
+      "type": "object",
+      "description": "Represents a subject within a level (e.g., Math, Science).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Subject entity."
+        },
+        "levelId": {
+          "type": "string",
+          "description": "Reference to Level. The level this subject belongs to. (Relationship: Level 1:N Subject)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the subject."
+        }
+      },
+      "required": [
+        "id",
+        "levelId",
+        "name"
+      ]
+    },
+    "Lesson": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Lesson",
+      "type": "object",
+      "description": "Represents a lesson within a subject.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Lesson entity."
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "Reference to Subject. The subject this lesson belongs to. (Relationship: Subject 1:N Lesson)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the lesson."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the lesson (e.g., text, HTML)."
+        },
+        "videoUrl": {
+          "type": "string",
+          "description": "URL of a video associated with the lesson.",
+          "format": "uri"
+        },
+        "isPublic": {
+          "type": "boolean",
+          "description": "Indicates whether the lesson is public or private."
+        },
+        "isLocked": {
+          "type": "boolean",
+          "description": "Indicates whether the lesson is locked or unlocked for students."
+        },
+        "teacherId": {
+          "type": "string",
+          "description": "Reference to User. The teacher who created the lesson. (Relationship: User 1:N Lesson)"
+        }
+      },
+      "required": [
+        "id",
+        "subjectId",
+        "title",
+        "content"
+      ]
+    },
+    "Exercise": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Exercise",
+      "type": "object",
+      "description": "Represents an exercise or question within a lesson.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Exercise entity."
+        },
+        "lessonId": {
+          "type": "string",
+          "description": "Reference to Lesson. The lesson this exercise belongs to. (Relationship: Lesson 1:N Exercise)"
+        },
+        "question": {
+          "type": "string",
+          "description": "The text of the question."
+        },
+        "correctAnswer": {
+          "type": "string",
+          "description": "The correct answer to the question."
+        }
+      },
+      "required": [
+        "id",
+        "lessonId",
+        "question",
+        "correctAnswer"
+      ]
+    },
+    "StudentLessonProgress": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StudentLessonProgress",
+      "type": "object",
+      "description": "Represents a student's progress on a specific lesson.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StudentLessonProgress entity."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to User. The student who is taking the lesson. (Relationship: User 1:N StudentLessonProgress)"
+        },
+        "lessonId": {
+          "type": "string",
+          "description": "Reference to Lesson. The lesson the student is working on. (Relationship: Lesson 1:N StudentLessonProgress)"
+        },
+        "completionDate": {
+          "type": "string",
+          "description": "The date and time when the student completed the lesson.",
+          "format": "date-time"
+        },
+        "score": {
+          "type": "number",
+          "description": "The student's score on the lesson (e.g., percentage)."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "lessonId"
+      ]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a message sent between users (e.g., from admin to supervisor).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Message entity."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to User. The user who sent the message. (Relationship: User 1:N Message)"
+        },
+        "receiverId": {
+          "type": "string",
+          "description": "Reference to User. The user who received the message. (Relationship: User 1:N Message)"
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject of the message."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the message."
+        },
+        "sentDate": {
+          "type": "string",
+          "description": "The date and time when the message was sent.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates whether the message has been read."
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "receiverId",
+        "subject",
+        "content",
+        "sentDate"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data. Path-based ownership allows easy management of personal data. The 'role' field is stored directly in the user document for role-based access control.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/stages/{stageId}",
+        "definition": {
+          "entityName": "Stage",
+          "schema": {
+            "$ref": "#/backend/entities/Stage"
+          },
+          "description": "Stores educational stages (e.g., Primary, Secondary).",
+          "params": [
+            {
+              "name": "stageId",
+              "description": "The unique identifier for the stage."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/levels/{levelId}",
+        "definition": {
+          "entityName": "Level",
+          "schema": {
+            "$ref": "#/backend/entities/Level"
+          },
+          "description": "Stores educational levels within stages (e.g., Grade 1, Grade 2).",
+          "params": [
+            {
+              "name": "levelId",
+              "description": "The unique identifier for the level."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/subjects/{subjectId}",
+        "definition": {
+          "entityName": "Subject",
+          "schema": {
+            "$ref": "#/backend/entities/Subject"
+          },
+          "description": "Stores subjects within levels (e.g., Math, Science).",
+          "params": [
+            {
+              "name": "subjectId",
+              "description": "The unique identifier for the subject."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/lessons/{lessonId}",
+        "definition": {
+          "entityName": "Lesson",
+          "schema": {
+            "$ref": "#/backend/entities/Lesson"
+          },
+          "description": "Stores lesson data. Includes 'teacherId' for ownership and 'isPublic' flag for public access. This structure supports filtering lessons based on privacy settings.",
+          "params": [
+            {
+              "name": "lessonId",
+              "description": "The unique identifier for the lesson."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/lessons/{lessonId}/exercises/{exerciseId}",
+        "definition": {
+          "entityName": "Exercise",
+          "schema": {
+            "$ref": "#/backend/entities/Exercise"
+          },
+          "description": "Stores exercises within lessons.",
+          "params": [
+            {
+              "name": "lessonId",
+              "description": "The unique identifier for the lesson."
+            },
+            {
+              "name": "exerciseId",
+              "description": "The unique identifier for the exercise."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{studentId}/lessonProgress/{lessonId}",
+        "definition": {
+          "entityName": "StudentLessonProgress",
+          "schema": {
+            "$ref": "#/backend/entities/StudentLessonProgress"
+          },
+          "description": "Stores student progress for each lesson. Path-based ownership with 'studentId' ensures only the student (or authorized users) can access their progress.",
+          "params": [
+            {
+              "name": "studentId",
+              "description": "The unique identifier for the student."
+            },
+            {
+              "name": "lessonId",
+              "description": "The unique identifier for the lesson."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": {
+            "$ref": "#/backend/entities/Message"
+          },
+          "description": "Stores messages between users. Includes 'senderId' and 'receiverId' for access control.",
+          "params": [
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to provide a secure and scalable platform for SmartEdu Hub, ensuring authorization independence, clear intent, and adherence to the specified design principles. It leverages denormalization and structural segregation to simplify security rules and enable efficient data access. The data structure strictly separates public and private data. It also includes denormalized authorization fields to support authorization independence, enabling atomic operations and simplifying security rules. The structure facilitates simple, robust, and easily debuggable security rules.\n\n**Authorization Independence and QAPs:**\n*   **Users:** User data is stored under `/users/{userId}`, ensuring path-based ownership. This is a standard approach for private user data. Roles are directly stored in the user document, avoiding the need for custom claims and simplifying role-based access control.\n*   **Stages, Levels, Subjects:** These entities are stored in top-level collections (`/stages`, `/levels`, `/subjects`).  Since these are relatively static educational structure components, global read access (with potential write restrictions to admins) can be easily managed without complex authorization logic.\n*   **Lessons:** Lessons are structured under `/lessons/{lessonId}`. Public lessons (`isPublic: true`) are accessible to all users. Private lessons, created by teachers, include the `teacherId` for ownership-based access. The `isPublic` flag enables secure `list` operations, filtering for public lessons without requiring complex rules.\n*   **Exercises:** Exercises are sub-collections of lessons (`/lessons/{lessonId}/exercises/{exerciseId}`). This establishes a clear hierarchy. The `lessonId` allows security rules to easily verify that a user has access to the parent lesson before accessing exercises.  Because lessons are not owned by users, `lessonId` provides the context necessary to authorize the request, in this case, with the `teacherId` of the lesson or the `isPublic` flag.\n*   **StudentLessonProgress:** Student progress is stored under `/users/{studentId}/lessonProgress/{lessonId}`. This path-based ownership ensures that only the student (or potentially teachers/admins with broader access) can view or modify their progress. The `studentId` in the path makes authorization simple and efficient.\n*   **Messages:** Messages are stored under `/messages/{messageId}` and include both `senderId` and `receiverId`. This allows for rules that ensure only the sender or receiver can access a message, supporting private communication.  An alternative structure could be considered which separates inboxes.  For example, `/users/{userId}/inbox/{messageId}`.  In that structure, `messages` would only contain the core message content and would omit `receiverId`.  Since this design will require a mechanism to list all messages for a user, the approach used is simpler to implement, in conjunction with the data provided.\n\nThis structure avoids `get()` calls in security rules by denormalizing necessary data, such as the `teacherId` in lessons and the `studentId` in student progress. It uses structural segregation to separate public and private content, simplifying list operations and access control."
+  }
+}

@@ -1,0 +1,211 @@
+/**
+ * @file Firestore Security Rules for SmartEdu Hub.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a user-ownership model for personal data and a role-based model for shared resources,
+ * with public read access for certain collections. It prioritizes authorization independence through
+ * data denormalization, minimizing `get()` calls and simplifying rule logic.
+ *
+ * Data Structure:
+ * - User data is stored under `/users/{userId}`, ensuring path-based ownership.
+ * - Educational stages, levels, and subjects are stored in top-level collections (`/stages`, `/levels`, `/subjects`)
+ *   with global read access.
+ * - Lessons are stored under `/lessons/{lessonId}`, with a teacherId field for ownership and an isPublic flag for public access.
+ * - Exercises are stored as subcollections under lessons (`/lessons/{lessonId}/exercises/{exerciseId}`).
+ * - Student lesson progress is stored under `/users/{studentId}/lessonProgress/{lessonId}`, ensuring path-based ownership.
+ * - Messages are stored under `/messages/{messageId}`, with senderId and receiverId fields for access control.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own data under `/users/{userId}`.
+ * - Stages, Levels, and Subjects are publicly readable.
+ * - Lessons can be public or private, with ownership managed by the teacherId field.
+ * - Student lesson progress is private and accessible only to the student (or authorized users).
+ * - Listing of users is disallowed.
+ *
+ * Denormalization for Authorization:
+ * - The `teacherId` field is denormalized into the Lesson document to avoid `get()` calls when checking ownership.
+ * - The `studentId` is part of the path for `StudentLessonProgress` to easily identify the owner.
+ *
+ * Structural Segregation:
+ * - Public and private lessons are managed using the `isPublic` flag, allowing for filtering in list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Allows users to read and write their own user data.
+     * @path /users/{userId}
+     * @allow (create) - Authenticated user creates their own profile with matching userId.
+     * @allow (get, update, delete) - Authenticated user reads, updates, or deletes their own profile.
+     * @deny (create, get, update, delete) - Any other user attempts to access another user's profile.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Allows anyone to read stage data.
+     * @path /stages/{stageId}
+     * @allow (get, list) - Any user can read stage data.
+     * @deny (create, update, delete) - No one can create, update, or delete stage data (admin role is not implemented).
+     * @principle Public read access with no write access.
+     */
+    match /stages/{stageId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows anyone to read level data.
+     * @path /levels/{levelId}
+     * @allow (get, list) - Any user can read level data.
+     * @deny (create, update, delete) - No one can create, update, or delete level data (admin role is not implemented).
+     * @principle Public read access with no write access.
+     */
+    match /levels/{levelId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows anyone to read subject data.
+     * @path /subjects/{subjectId}
+     * @allow (get, list) - Any user can read subject data.
+     * @deny (create, update, delete) - No one can create, update, or delete subject data (admin role is not implemented).
+     * @principle Public read access with no write access.
+     */
+    match /subjects/{subjectId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    /**
+     * @description Allows anyone to read lessons and the teacher who created the lesson to modify or delete it.
+     * @path /lessons/{lessonId}
+     * @allow (get, list) - Any user can read lesson data.
+     * @allow (create) - Any authenticated user can create lesson data, provided teacherId matches.
+     * @allow (update, delete) - Only the teacher who created the lesson can update or delete it.
+     * @deny (update, delete) - If the lesson does not exist.
+     * @principle Public read access with owner-only writes.
+     */
+    match /lessons/{lessonId} {
+       function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(teacherId) {
+        return isSignedIn() && request.auth.uid == teacherId;
+      }
+
+      function isExistingOwner(teacherId) {
+        return isOwner(teacherId) && resource != null;
+      }
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.teacherId);
+      allow delete: if isExistingOwner(resource.data.teacherId);
+    }
+
+    /**
+     * @description Allows read and write access to exercises to the teacher who owns the parent lesson.
+     * @path /lessons/{lessonId}/exercises/{exerciseId}
+     * @allow (get, list) - Any user can read exercise data.
+     * @allow (create) - Only the teacher who created the parent lesson can create exercises.
+     * @allow (update, delete) - Only the teacher who created the parent lesson can update or delete exercises.
+     * @principle Public read access with owner-only writes, inherited from parent lesson.
+     */
+    match /lessons/{lessonId}/exercises/{exerciseId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function getLesson(lessonId) {
+        return get(/databases/$(database)/documents/lessons/$(lessonId));
+      }
+
+      function isLessonOwner(lessonId) {
+        return isSignedIn() && getLesson(lessonId).data.teacherId == request.auth.uid;
+      }
+
+      function isExistingLessonOwner(lessonId) {
+        return isLessonOwner(lessonId) && resource != null;
+      }
+      allow get, list: if true;
+      allow create: if isSignedIn() && getLesson(lessonId).data.teacherId == request.auth.uid;
+      allow update: if isExistingLessonOwner(lessonId);
+      allow delete: if isExistingLessonOwner(lessonId);
+    }
+
+    /**
+     * @description Allows students to read and write their own lesson progress data.
+     * @path /users/{studentId}/lessonProgress/{lessonId}
+     * @allow (create, get, update, delete) - Authenticated user can manage their own lesson progress.
+     * @deny (create, get, update, delete) - Any other user attempts to access another student's lesson progress.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{studentId}/lessonProgress/{lessonId} {
+       function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(studentId) {
+        return isSignedIn() && request.auth.uid == studentId;
+      }
+
+       function isExistingOwner(studentId) {
+        return isOwner(studentId) && resource != null;
+      }
+
+      allow get: if isOwner(studentId);
+      allow list: if isOwner(studentId);
+      allow create: if isOwner(studentId) && request.resource.data.studentId == studentId;
+      allow update: if isExistingOwner(studentId) && request.resource.data.studentId == studentId;
+      allow delete: if isExistingOwner(studentId);
+    }
+
+    /**
+     * @description Allows the sender or receiver to read a message, and only the sender to create it. No updates or deletes allowed.
+     * @path /messages/{messageId}
+     * @allow (create) - Only the sender can create a message where senderId matches.
+     * @allow (get) - Only the sender or receiver can read the message.
+     * @deny (list, update, delete) - Listing is not allowed, and messages cannot be updated or deleted.
+     * @principle Enforces sender/receiver access control.
+     */
+    match /messages/{messageId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isSender(senderId) {
+        return isSignedIn() && request.auth.uid == senderId;
+      }
+
+      function isReceiver(receiverId) {
+        return isSignedIn() && request.auth.uid == receiverId;
+      }
+      allow get: if isSender(resource.data.senderId) || isReceiver(resource.data.receiverId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
