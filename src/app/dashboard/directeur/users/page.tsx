@@ -22,6 +22,14 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { users } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
