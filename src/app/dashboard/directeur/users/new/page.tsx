@@ -82,13 +82,19 @@ export default function NewUserPage() {
     try {
         // --- Step 2: Create User Document in Firestore ---
         const user = userCredential.user;
-        await setDoc(doc(firestore, "users", user.uid), {
+        let userData: any = {
             uid: user.uid,
             name: data.name,
             email: data.email,
             role: data.role,
             avatar: `https://i.pravatar.cc/150?u=${user.uid}`
-        });
+        };
+
+        if (data.role === 'teacher') {
+            userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+
+        await setDoc(doc(firestore, "users", user.uid), userData);
 
         toast({
             title: "الخطوة 2: نجاح قاعدة البيانات",

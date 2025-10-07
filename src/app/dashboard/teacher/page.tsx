@@ -1,25 +1,26 @@
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Lesson, Stage, Subject as SubjectType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeacherDashboard() {
   const [copied, setCopied] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
 
   // --- Data Fetching ---
   const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+  const { data: teacher, isLoading: isTeacherLoading, refetch: refetchTeacher } = useDoc<UserType>(teacherRef);
 
   const stageRef = useMemoFirebase(() => (firestore && teacher?.stageId) ? doc(firestore, 'stages', teacher.stageId) : null, [firestore, teacher?.stageId]);
   const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
@@ -43,13 +44,30 @@ export default function TeacherDashboard() {
 
   const handleCopy = () => {
     if (!teacher?.teacherCode) return;
-    navigator.clipboard.writeText(teacher.code);
+    navigator.clipboard.writeText(teacher.teacherCode);
     setCopied(true);
     toast({ title: "تم نسخ الكود بنجاح!" });
     setTimeout(() => setCopied(false), 2000);
   };
   
-  const teacherCode = teacher?.teacherCode || '...';
+  const generateTeacherCode = async () => {
+    if (!firestore || !authUser) return;
+    setIsGenerating(true);
+    try {
+        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const teacherDocRef = doc(firestore, 'users', authUser.uid);
+        await updateDoc(teacherDocRef, { teacherCode: code });
+        toast({ title: "تم توليد الكود بنجاح", description: `الكود الجديد هو: ${code}` });
+        refetchTeacher(); // Refetch teacher data to get the new code
+    } catch (error) {
+        console.error("Error generating teacher code:", error);
+        toast({ title: "فشل توليد الكود", variant: "destructive" });
+    } finally {
+        setIsGenerating(false);
+    }
+  }
+
+  const teacherCode = teacher?.teacherCode;
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
@@ -59,7 +77,7 @@ export default function TeacherDashboard() {
         <div className="space-y-6">
             <PageHeader
                 title={<Skeleton className="h-8 w-48" />}
-                description={<Skeleton className="h-4 w-72" />}
+                description={<Skeleton className="h-4 w-72 mt-2" />}
             />
              <div className="grid gap-6 md:grid-cols-2">
                 <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
@@ -78,7 +96,7 @@ export default function TeacherDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="لوحة تحكم الأستاذ"
-        description={`مرحباً ${teacherName}، أنت تدرس مادة ${subjectName} ل${stageName}.`}
+        description={`مرحباً ${teacherName}، أنت تدرس مادة ${subjectName} لـ ${stageName}.`}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -88,11 +106,20 @@ export default function TeacherDashboard() {
                 <CardDescription>شارك هذا الكود مع تلاميذك لربطهم بحسابك.</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-4 p-4 bg-muted rounded-b-lg">
-                <p className="text-2xl font-mono font-bold text-primary">{teacherCode}</p>
-                <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
-                    {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
-                    <span className="sr-only">نسخ الكود</span>
-                </Button>
+                {teacherCode ? (
+                    <>
+                        <p className="text-2xl font-mono font-bold text-primary">{teacherCode}</p>
+                        <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
+                            {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
+                            <span className="sr-only">نسخ الكود</span>
+                        </Button>
+                    </>
+                ) : (
+                    <Button onClick={generateTeacherCode} disabled={isGenerating} className='w-full'>
+                        {isGenerating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Wand2 className="h-4 w-4 ml-2" />}
+                        توليد كود
+                    </Button>
+                )}
             </CardContent>
         </Card>
         <Card className="hover:bg-muted/50 transition-colors">

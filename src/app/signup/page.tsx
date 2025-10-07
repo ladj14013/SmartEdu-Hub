@@ -98,8 +98,8 @@ export default function SignupPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // 2. Create user document in Firestore
-      await setDoc(doc(firestore, "users", user.uid), {
+      // 2. Prepare user document data
+      const userData: any = {
         uid: user.uid,
         name: data.fullName,
         email: data.email,
@@ -107,9 +107,18 @@ export default function SignupPage() {
         stageId: data.stage || null,
         levelId: data.level || null,
         subjectId: data.subject || null,
-        teacherCode: data.teacherCode || null,
         avatar: `https://i.pravatar.cc/150?u=${user.uid}`
-      });
+      };
+      
+      // Generate teacher code if role is teacher
+      if(data.role === 'teacher') {
+        userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      } else if (data.role === 'student') {
+        userData.linkedTeacherId = data.teacherCode || null;
+      }
+      
+      // 3. Create user document in Firestore
+      await setDoc(doc(firestore, "users", user.uid), userData);
 
       toast({
         title: "تم إنشاء الحساب بنجاح!",
