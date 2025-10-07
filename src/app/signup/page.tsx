@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/select';
 import { Logo } from '@/components/common/logo';
 import { stages, levels, subjects } from '@/lib/data';
-import type { Role } from '@/lib/types';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
