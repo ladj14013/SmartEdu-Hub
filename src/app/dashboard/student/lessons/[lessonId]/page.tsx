@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getLessonById } from '@/lib/data';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import Link from 'next/link';
-import { ExerciseEvaluator } from '../components/exercise-evaluator';
+import { ExerciseEvaluator } from '../../components/exercise-evaluator';
 
 export default function StudentLessonPage({ params }: { params: { lessonId: string } }) {
   const lesson = getLessonById(params.lessonId);
