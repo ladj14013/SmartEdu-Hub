@@ -51,8 +51,9 @@ const signupSchema = z.object({
   return true;
 }, {
   message: "الرجاء اختيار المرحلة الدراسية.",
-  path: ['stage'],
+  path: ["stage"],
 });
+
 
 type SignupFormValues = z.infer<typeof signupSchema>;
 
