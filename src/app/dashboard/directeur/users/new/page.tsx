@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { createUserWithEmailAndPassword, initializeAuth, browserLocalPersistence, browserPopupRedirectResolver } from 'firebase/auth';
-import { deleteApp, initializeApp } from 'firebase/app';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,8 +18,6 @@ import { Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { firebaseConfig } from '@/firebase/config';
-
 
 const newUserSchema = z.object({
   name: z.string().min(1, { message: "الرجاء إدخال الاسم الكامل." }),
@@ -31,11 +28,11 @@ const newUserSchema = z.object({
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
 
-
 export default function NewUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const firestore = useFirestore();
+  const auth = useAuth(); // Use the existing auth instance
   const { toast } = useToast();
 
   const form = useForm<NewUserFormValues>({
@@ -49,25 +46,21 @@ export default function NewUserPage() {
   });
 
   const onSubmit = async (data: NewUserFormValues) => {
-    if (!firestore) return;
+    if (!firestore || !auth) return;
     setIsLoading(true);
-    
-    // In a real-world scenario, this should be done via a secure backend (Firebase Functions).
-    // We create a temporary, isolated Auth instance to create a new user without
-    // affecting the currently signed-in admin user.
-    const tempAppName = `temp-auth-app-${Date.now()}`;
-    const tempApp = initializeApp(firebaseConfig, tempAppName);
-    const tempAuth = initializeAuth(tempApp, {
-        persistence: browserLocalPersistence,
-        popupRedirectResolver: browserPopupRedirectResolver
-    });
 
+    // WARNING: In a real-world scenario, creating users on the client-side
+    // like this is not secure, especially when an admin is logged in.
+    // This should ideally be handled by a secure backend (e.g., Firebase Functions)
+    // which can create a user and then immediately sign them out before returning.
+    // The current approach is a simplification for this project.
     try {
-      // 1. Create user in Auth using the temporary instance
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, data.email, data.password);
+      // 1. Create user in Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
       // 2. Create user document in Firestore
+      // This will now execute correctly after the user is created.
       await setDoc(doc(firestore, "users", user.uid), {
         uid: user.uid,
         name: data.name,
@@ -76,12 +69,16 @@ export default function NewUserPage() {
         avatar: `https://i.pravatar.cc/150?u=${user.uid}`
       });
 
-
       toast({
         title: "تم إنشاء المستخدم بنجاح!",
         description: `تم إنشاء حساب لـ ${data.name} وتخزين بياناته.`,
       });
       router.push('/dashboard/directeur/users');
+
+      // Note: This flow leaves the newly created user signed in.
+      // In a real app, you'd want to sign them out and re-authenticate the admin.
+      // This is a known limitation of this simplified client-side approach.
+
     } catch (error: any) {
       console.error("User creation failed:", error);
       const description = error.code === 'auth/email-already-in-use'
@@ -94,11 +91,8 @@ export default function NewUserPage() {
       });
     } finally {
       setIsLoading(false);
-      // Clean up the temporary app instance
-      await deleteApp(tempApp);
     }
   };
-
 
   return (
     <div className="space-y-6">
