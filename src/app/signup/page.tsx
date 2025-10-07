@@ -316,17 +316,18 @@ export default function SignupPage() {
 
                 {role === 'student' && (
                   <FormField
-                  control={form.control}
-                  name="teacherCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label htmlFor="teacher-code">رمز الأستاذ (اختياري)</Label>
-                      <FormControl>
-                        <Input id="teacher-code" placeholder="أدخل رمز الأستاذ للربط" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    control={form.control}
+                    name="teacherCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label htmlFor="teacher-code">رمز الأستاذ (اختياري)</Label>
+                        <FormControl>
+                          <Input id="teacher-code" placeholder="أدخل رمز الأستاذ للربط" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
 
                 <Button type="submit" className="w-full" variant="accent" disabled={isLoading}>
