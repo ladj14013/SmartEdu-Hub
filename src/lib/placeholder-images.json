@@ -3,25 +3,25 @@
     {
       "id": "hero-background",
       "description": "An inspiring image about education for the hero section background.",
-      "imageUrl": "https://picsum.photos/seed/101/1200/800",
+      "imageUrl": "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxlZHVjYXRpb24lMjBjbGFzc3Jvb218ZW58MHx8fHwxNzU5NzgxOTU0fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "education classroom"
     },
     {
       "id": "student-role",
       "description": "Image illustrating a student using the platform.",
-      "imageUrl": "https://images.unsplash.com/photo-1544717305-2782549b5136?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8c3R1ZGVudCUyMGxlYXJuaW5nfGVufDB8fHx8MTc1OTc4MjEwOHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxzdHVkZW50JTIwbGVhcm5pbmd8ZW58MHx8fHwxNzU5NzgxOTk0fDA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "student learning"
     },
     {
       "id": "teacher-role",
       "description": "Image illustrating a teacher using the platform.",
-      "imageUrl": "https://picsum.photos/seed/103/600/400",
+      "imageUrl": "https://images.unsplash.com/photo-1552581234-26160f608093?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHx0ZWFjaGVyJTIwZXhwbGFpbmluZ3xlbnwwfHx8fDE3NTk3ODIwNTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "teacher explaining"
     },
     {
       "id": "parent-role",
       "description": "Image illustrating a parent monitoring their child's progress.",
-      "imageUrl": "https://picsum.photos/seed/104/600/400",
+      "imageUrl": "https://images.unsplash.com/photo-1576766125535-b04e15715957?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwYXJlbnQlMjBjaGlsZHxlbnwwfHx8fDE3NTk3ODIwNzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "parent child"
     }
   ]

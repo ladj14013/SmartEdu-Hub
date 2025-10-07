@@ -140,7 +140,7 @@ export default function Home() {
                          <Image
                           src={studentImage.imageUrl}
                           alt={studentImage.description}
-                          layout="fill"
+                          fill
                           objectFit="cover"
                           data-ai-hint={studentImage.imageHint}
                         />
@@ -166,7 +166,7 @@ export default function Home() {
                         <Image
                           src={teacherImage.imageUrl}
                           alt={teacherImage.description}
-                          layout="fill"
+                          fill
                           objectFit="cover"
                           data-ai-hint={teacherImage.imageHint}
                         />
@@ -192,7 +192,7 @@ export default function Home() {
                         <Image
                           src={parentImage.imageUrl}
                           alt={parentImage.description}
-                          layout="fill"
+                          fill
                           objectFit="cover"
                           data-ai-hint={parentImage.imageHint}
                         />
