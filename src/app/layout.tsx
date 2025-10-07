@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { Cairo } from 'next/font/google';
+import { Amiri } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
-const cairo = Cairo({ subsets: ['arabic'], variable: '--font-cairo' });
+const amiri = Amiri({ subsets: ['arabic'], weight: ['400', '700'], variable: '--font-amiri' });
 
 export const metadata: Metadata = {
   title: 'SmartEdu Hub | منصة تعليمية ذكية',
@@ -20,9 +20,9 @@ export default function RootLayout({
        <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
       </head>
-      <body className={`${cairo.variable} font-body antialiased`}>
+      <body className={`${amiri.variable} font-body antialiased`}>
         {children}
         <Toaster />
       </body>

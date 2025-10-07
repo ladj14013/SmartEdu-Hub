@@ -43,12 +43,12 @@ export default function Home() {
             />
           }
           <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-background/20" />
-          <div className="container relative z-10 mx-auto px-4 text-center text-primary-foreground">
+          <div className="container relative z-10 mx-auto px-4 text-center">
             <div className="mx-auto max-w-3xl">
-              <h1 className="mb-4 font-headline text-4xl font-extrabold tracking-tight text-white md:text-5xl lg:text-6xl">
+              <h1 className="mb-4 font-headline text-4xl font-extrabold tracking-tight text-black md:text-5xl lg:text-6xl">
                 Smart Education: منصة تعليمية ذكية
               </h1>
-              <p className="mb-8 text-lg text-gray-200 md:text-xl">
+              <p className="mb-8 text-lg text-black/80 md:text-xl">
                 جسر تفاعلي يربط بين جميع أطراف المنظومة التعليمية لتوفير بيئة
                 تعليمية ذكية، شفافة، وفعالة.
               </p>
