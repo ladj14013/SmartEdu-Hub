@@ -1,3 +1,4 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -5,20 +6,45 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { getLessonById } from '@/lib/data';
-import { ArrowRight, Plus, Save, Trash2, Info } from 'lucide-react';
+import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Lesson } from '@/lib/types';
+import { ArrowRight, Plus, Save, Trash2, Info, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EditViewLessonPage({ params }: { params: { lessonId: string } }) {
-  const lesson = getLessonById(params.lessonId);
-  const teacherId = 'user-4'; // Mock teacher ID
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
+  const firestore = useFirestore();
+
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
+  const { data: lesson, isLoading: isLessonLoading } = useDoc<Lesson>(lessonRef);
+  
+  const isLoading = isAuthLoading || isLessonLoading;
+
+  if (isLoading) {
+      return (
+        <div className="space-y-6">
+            <PageHeader title={<Skeleton className="h-8 w-56" />} description={<Skeleton className="h-4 w-72 mt-2" />}>
+                <div className="flex gap-2"><Skeleton className="h-10 w-24" /><Skeleton className="h-10 w-36" /></div>
+            </PageHeader>
+             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 space-y-6">
+                    <Card><CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader><CardContent><Skeleton className="h-40 w-full" /></CardContent></Card>
+                    <Card><CardHeader><CardTitle><Skeleton className="h-6 w-24" /></CardTitle></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
+                </div>
+                <div className="lg:col-span-1"><Card><CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card></div>
+            </div>
+        </div>
+      );
+  }
 
   if (!lesson) {
     return <div>الدرس غير موجود.</div>;
   }
   
-  const isPrivate = lesson.type === 'private' && lesson.authorId === teacherId;
+  const isPrivate = lesson.type === 'private' && lesson.authorId === authUser?.uid;
 
   return (
     <div className="space-y-6">
@@ -76,7 +102,7 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
                     )}
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {lesson.exercises.map((exercise, index) => (
+                    {lesson.exercises?.map((exercise, index) => (
                         <Card key={exercise.id} className="bg-muted/50">
                             <CardHeader className="flex flex-row items-center justify-between p-4">
                                 <h4 className="font-semibold">تمرين {index + 1}</h4>
@@ -100,7 +126,7 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
                             </CardContent>
                         </Card>
                     ))}
-                    {lesson.exercises.length === 0 && <p className="text-center text-muted-foreground py-4">لا توجد تمارين.</p>}
+                    {lesson.exercises?.length === 0 && <p className="text-center text-muted-foreground py-4">لا توجد تمارين.</p>}
                 </CardContent>
             </Card>
         </div>

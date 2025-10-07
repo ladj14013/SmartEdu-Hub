@@ -1,3 +1,4 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -9,16 +10,41 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getTeachersBySubjectAndStage, getLessonsBySubject } from '@/lib/data';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { User as UserType, Lesson } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeachersListPage() {
-  // Mock data for the supervisor
-  const supervisorSubjectId = 'subj-2';
-  const supervisorStageId = 'stage-2';
-  
-  const teachers = getTeachersBySubjectAndStage(supervisorSubjectId, supervisorStageId);
+  const firestore = useFirestore();
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
+
+  // Get supervisor data
+  const supervisorRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: supervisor, isLoading: isSupervisorLoading } = useDoc<UserType>(supervisorRef);
+
+  // Get teachers in the same stage and subject
+  const teachersQuery = useMemoFirebase(() => {
+    if (!firestore || !supervisor) return null;
+    return query(
+      collection(firestore, 'users'),
+      where('role', '==', 'teacher'),
+      where('stageId', '==', supervisor.stageId),
+      where('subjectId', '==', supervisor.subjectId)
+    );
+  }, [firestore, supervisor]);
+  const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
+
+  // Get all lessons for the subject to count them
+  const lessonsQuery = useMemoFirebase(() => {
+    if (!firestore || !supervisor?.subjectId) return null;
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', supervisor.subjectId));
+  }, [firestore, supervisor?.subjectId]);
+  const { data: lessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
+
+  const isLoading = isAuthLoading || isSupervisorLoading || areTeachersLoading || areLessonsLoading;
 
   return (
     <div className="space-y-6">
@@ -39,9 +65,16 @@ export default function TeachersListPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {teachers.map(teacher => {
-                const privateLessonsCount = getLessonsBySubject(supervisorSubjectId)
-                  .filter(l => l.authorId === teacher.id && l.type === 'private').length;
+              {isLoading && Array.from({length: 3}).map((_, i) => (
+                <TableRow key={i}>
+                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-9 w-24" /></TableCell>
+                </TableRow>
+              ))}
+              {!isLoading && teachers?.map(teacher => {
+                const privateLessonsCount = lessons?.filter(l => l.authorId === teacher.id && l.type === 'private').length;
                 return (
                     <TableRow key={teacher.id}>
                         <TableCell>
@@ -65,7 +98,7 @@ export default function TeachersListPage() {
                     </TableRow>
                 )
               })}
-              {teachers.length === 0 && (
+              {!isLoading && teachers?.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
                         لا يوجد أساتذة مطابقون لمعايير الإشراف الخاصة بك.

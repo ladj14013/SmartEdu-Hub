@@ -1,13 +1,46 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getLessonById } from '@/lib/data';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { ArrowRight, BookOpen, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { ExerciseEvaluator } from '../../components/exercise-evaluator';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Lesson } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentLessonPage({ params }: { params: { lessonId: string } }) {
-  const lesson = getLessonById(params.lessonId);
+  const firestore = useFirestore();
+  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', params.lessonId) : null, [firestore, params.lessonId]);
+  const { data: lesson, isLoading } = useDoc<Lesson>(lessonRef);
+
+  if (isLoading) {
+    return (
+       <div className="space-y-6">
+        <PageHeader title={<Skeleton className="h-8 w-64" />}>
+            <Skeleton className="h-10 w-36" />
+        </PageHeader>
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader>
+              <CardContent>
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-48 w-full mt-6" />
+              </CardContent>
+            </Card>
+          </div>
+           <div className="lg:col-span-1">
+            <Card>
+              <CardHeader><CardTitle><Skeleton className="h-6 w-48" /></CardTitle></CardHeader>
+              <CardContent><Skeleton className="h-64 w-full" /></CardContent>
+            </Card>
+           </div>
+         </div>
+       </div>
+    )
+  }
 
   if (!lesson) {
     return <div>الدرس غير موجود.</div>;

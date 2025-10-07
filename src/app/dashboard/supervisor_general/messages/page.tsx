@@ -1,3 +1,5 @@
+'use client';
+
 import { PageHeader } from '@/components/common/page-header';
 import {
   Accordion,
@@ -5,10 +7,19 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { messages } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where } from 'firebase/firestore';
+import type { Message } from '@/lib/types';
+import { Loader2 } from 'lucide-react';
 
 export default function GeneralSupervisorMessagesPage() {
-  const forwardedMessages = messages.filter(m => m.forwardedTo === 'supervisor_general');
+  const firestore = useFirestore();
+
+  const messagesQuery = useMemoFirebase(
+    () => firestore ? query(collection(firestore, 'messages'), where('forwardedTo', '==', 'supervisor_general')) : null,
+    [firestore]
+  );
+  const { data: forwardedMessages, isLoading } = useCollection<Message>(messagesQuery);
 
   return (
     <div className="space-y-6">
@@ -19,7 +30,9 @@ export default function GeneralSupervisorMessagesPage() {
 
       <div className="rounded-lg border">
         <Accordion type="multiple" className="w-full">
-          {forwardedMessages.map((message) => (
+          {isLoading && <div className="p-8 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div>}
+
+          {!isLoading && forwardedMessages?.map((message) => (
             <AccordionItem value={message.id} key={message.id}>
               <AccordionTrigger className="px-4 hover:no-underline">
                 <div className="flex items-center gap-4 w-full">
@@ -38,7 +51,7 @@ export default function GeneralSupervisorMessagesPage() {
               </AccordionContent>
             </AccordionItem>
           ))}
-          {forwardedMessages.length === 0 && (
+          {!isLoading && forwardedMessages?.length === 0 && (
             <div className="p-8 text-center text-muted-foreground">
                 لا توجد رسائل موجهة إليك حالياً.
             </div>

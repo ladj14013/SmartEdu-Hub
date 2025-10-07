@@ -1,9 +1,9 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Pencil, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Plus, Pencil, Trash2, Loader2 } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -21,16 +21,62 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-import { getLessonsBySubject, levels } from '@/lib/data';
 import Link from 'next/link';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { Lesson, Level, User as UserType, Subject } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ManagePublicContentPage() {
-    // Mock: Supervisor's subjectId is 'subj-2'
-    const publicLessons = getLessonsBySubject('subj-2').filter(l => l.type === 'public');
+    const firestore = useFirestore();
+    const { user: authUser, isLoading: isAuthLoading } = useUser();
+
+    // Get supervisor data to find their subject and stage
+    const supervisorRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+    const { data: supervisor, isLoading: isSupervisorLoading } = useDoc<UserType>(supervisorRef);
+
+    // Get subject name
+    const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
+    const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
+    
+    // Get levels for the supervisor's stage
+    const levelsQuery = useMemoFirebase(() => {
+        if (!firestore || !supervisor?.stageId) return null;
+        return query(collection(firestore, 'levels'), where('stageId', '==', supervisor.stageId));
+    }, [firestore, supervisor?.stageId]);
+    const { data: levels, isLoading: areLevelsLoading } = useCollection<Level>(levelsQuery);
+    
+    // Get public lessons for the supervisor's subject
+    const lessonsQuery = useMemoFirebase(() => {
+        if (!firestore || !supervisor?.subjectId) return null;
+        return query(collection(firestore, 'lessons'), where('subjectId', '==', supervisor.subjectId), where('type', '==', 'public'));
+    }, [firestore, supervisor?.subjectId]);
+    const { data: publicLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
+    
+    const isLoading = isAuthLoading || isSupervisorLoading || isSubjectLoading || areLevelsLoading || areLessonsLoading;
+
+    if (isLoading) {
+      return (
+        <div className="space-y-6">
+          <PageHeader
+            title={<Skeleton className="h-8 w-72" />}
+            description={<Skeleton className="h-4 w-96 mt-2" />}
+          >
+            <Skeleton className="h-10 w-32" />
+          </PageHeader>
+          <Card>
+            <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
+            <CardContent><div className="divide-y rounded-md border"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div></CardContent>
+          </Card>
+        </div>
+      )
+    }
+
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="إدارة المحتوى العام لمادة الرياضيات"
+        title={`إدارة المحتوى العام لمادة ${subject?.name || ''}`}
         description="إدارة الدروس العامة التي تظهر لجميع أساتذة وتلاميذ هذه المادة."
       >
         <Button variant="accent">
@@ -47,7 +93,7 @@ export default function ManagePublicContentPage() {
                         <SelectValue placeholder="اختر المستوى الدراسي" />
                     </SelectTrigger>
                     <SelectContent>
-                        {levels.filter(l => l.stageId === 'stage-2').map(level => (
+                        {levels?.map(level => (
                             <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -56,7 +102,7 @@ export default function ManagePublicContentPage() {
         </CardHeader>
         <CardContent>
         <div className="divide-y rounded-md border">
-            {publicLessons.map((lesson) => (
+            {publicLessons?.map((lesson) => (
               <div key={lesson.id} className="flex items-center justify-between p-4">
                 <span className="font-medium">{lesson.title}</span>
                 <DropdownMenu>
@@ -68,18 +114,16 @@ export default function ManagePublicContentPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem>
-                            <Link href="#" className="flex items-center">
+                            <Link href="#" className="flex items-center w-full">
                                 <Pencil className="ml-2 h-4 w-4" />تعديل
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-500">
-                            <Trash2 className="ml-2 h-4 w-4" />حذف
-                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ))}
-             {publicLessons.length === 0 && (
+             {publicLessons?.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
                     لم تقم بإضافة أي دروس عامة بعد.
                 </div>

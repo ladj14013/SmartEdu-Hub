@@ -1,3 +1,4 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Pencil, Trash2, Eye } from 'lucide-react';
+import { MoreHorizontal, Plus, Pencil, Trash2, Eye, Loader2 } from 'lucide-react';
 import {
     Select,
     SelectContent,
@@ -15,22 +16,56 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { getLessonsBySubject, levels } from '@/lib/data';
 import Link from 'next/link';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { Lesson, Level, User as UserType, Subject } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeacherSubjectsPage() {
-    // Mock data for teacher 'user-4' and subject 'subj-2'
-    const teacherId = 'user-4';
-    const subjectId = 'subj-2';
+    const firestore = useFirestore();
+    const { user: authUser, isLoading: isAuthLoading } = useUser();
+
+    // --- Data Fetching ---
+    const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+    const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+
+    const subjectRef = useMemoFirebase(() => (firestore && teacher?.subjectId) ? doc(firestore, 'subjects', teacher.subjectId) : null, [firestore, teacher?.subjectId]);
+    const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
+
+    const levelsQuery = useMemoFirebase(() => {
+        if (!firestore || !teacher?.stageId) return null;
+        return query(collection(firestore, 'levels'), where('stageId', '==', teacher.stageId));
+    }, [firestore, teacher?.stageId]);
+    const { data: levels, isLoading: areLevelsLoading } = useCollection<Level>(levelsQuery);
     
-    const allLessons = getLessonsBySubject(subjectId);
-    const privateLessons = allLessons.filter(l => l.authorId === teacherId && l.type === 'private');
-    const publicLessons = allLessons.filter(l => l.type === 'public');
+    const allLessonsQuery = useMemoFirebase(() => {
+        if (!firestore || !teacher?.subjectId) return null;
+        return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId));
+    }, [firestore, teacher?.subjectId]);
+    const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(allLessonsQuery);
+
+    const isLoading = isAuthLoading || isTeacherLoading || isSubjectLoading || areLevelsLoading || areLessonsLoading;
+
+    if (isLoading) {
+      return (
+        <div className="space-y-6">
+          <PageHeader title={<Skeleton className="h-8 w-72" />} description={<Skeleton className="h-4 w-96 mt-2" />} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+            <Card><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+          </div>
+        </div>
+      );
+    }
+    
+    const privateLessons = allLessons?.filter(l => l.authorId === authUser?.uid && l.type === 'private');
+    const publicLessons = allLessons?.filter(l => l.type === 'public');
 
     return (
         <div className="space-y-6">
             <PageHeader
-                title="إدارة دروس مادة: الرياضيات"
+                title={`إدارة دروس مادة: ${subject?.name || ''}`}
                 description="إدارة دروسك الخاصة والاطلاع على الدروس العامة المتاحة."
             />
             
@@ -40,7 +75,7 @@ export default function TeacherSubjectsPage() {
                         <SelectValue placeholder="اختر المستوى الدراسي" />
                     </SelectTrigger>
                     <SelectContent>
-                        {levels.filter(l => l.stageId === 'stage-2').map(level => (
+                        {levels?.map(level => (
                             <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                         ))}
                     </SelectContent>
@@ -61,7 +96,7 @@ export default function TeacherSubjectsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="divide-y rounded-md border">
-                            {privateLessons.map((lesson) => (
+                            {privateLessons?.map((lesson) => (
                                 <div key={lesson.id} className="flex items-center justify-between p-3">
                                     <span className="font-medium">{lesson.title}</span>
                                     <DropdownMenu>
@@ -72,7 +107,7 @@ export default function TeacherSubjectsPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/teacher/lessons/${lesson.id}`} className="flex items-center">
+                                                <Link href={`/dashboard/teacher/lessons/${lesson.id}`} className="flex items-center w-full">
                                                     <Pencil className="ml-2 h-4 w-4" />تعديل
                                                 </Link>
                                             </DropdownMenuItem>
@@ -81,7 +116,7 @@ export default function TeacherSubjectsPage() {
                                     </DropdownMenu>
                                 </div>
                             ))}
-                            {privateLessons.length === 0 && <p className="text-center p-4 text-muted-foreground">لم تقم بإضافة دروس خاصة بعد.</p>}
+                            {privateLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">لم تقم بإضافة دروس خاصة بعد.</p>}
                         </div>
                     </CardContent>
                 </Card>
@@ -94,7 +129,7 @@ export default function TeacherSubjectsPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="divide-y rounded-md border">
-                            {publicLessons.map((lesson) => (
+                            {publicLessons?.map((lesson) => (
                                 <div key={lesson.id} className="flex items-center justify-between p-3">
                                     <span className="font-medium">{lesson.title}</span>
                                     <Button asChild variant="outline" size="sm">
@@ -104,7 +139,7 @@ export default function TeacherSubjectsPage() {
                                     </Button>
                                 </div>
                             ))}
-                            {publicLessons.length === 0 && <p className="text-center p-4 text-muted-foreground">لا توجد دروس عامة متاحة حالياً.</p>}
+                            {publicLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">لا توجد دروس عامة متاحة حالياً.</p>}
                         </div>
                     </CardContent>
                 </Card>

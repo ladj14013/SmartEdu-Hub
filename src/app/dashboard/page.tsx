@@ -1,38 +1,41 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { useUser } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
-import { users } from '@/lib/data';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { doc } from 'firebase/firestore';
+import type { User as UserType } from '@/lib/types';
 
-// In a real app, you would fetch user metadata from Firestore
-// based on the auth user's UID.
-const getRoleFromUser = (firebaseUser: import('firebase/auth').User | null) => {
-    if (!firebaseUser) return null;
-    const mockUser = users.find(u => u.email.toLowerCase() === firebaseUser.email?.toLowerCase());
-    return mockUser?.role || 'student'; // Default to student
-}
 
 export default function DashboardRedirectPage() {
     const router = useRouter();
-    const { user, isLoading } = useUser();
+    const { user, isLoading: isAuthLoading } = useUser();
+    const firestore = useFirestore();
+
+    const userRef = useMemoFirebase(
+      () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
+      [firestore, user]
+    );
+    const { data: userData, isLoading: isUserDataLoading } = useDoc<UserType>(userRef);
+
+    const isLoading = isAuthLoading || isUserDataLoading;
 
     useEffect(() => {
-        if (!isLoading && !user) {
-            // If loading is finished and there's no user, redirect to login
+        if (!isAuthLoading && !user) {
+            // If auth loading is finished and there's no user, redirect to login
             router.replace('/login');
-        } else if (user) {
-            // If there is a user, determine their role and redirect
-            const role = getRoleFromUser(user);
+        } else if (user && userData) {
+            // If there is a user and we have their data, redirect
+            const role = userData.role;
             if (role) {
                 router.replace(`/dashboard/${role}`);
             }
         }
-    }, [user, isLoading, router]);
+    }, [user, userData, isAuthLoading, router]);
 
-    // Show a loading state while checking auth
-    if (isLoading || user) {
+    // Show a loading state while checking auth and fetching user data
+    if (isLoading || (user && !userData)) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />

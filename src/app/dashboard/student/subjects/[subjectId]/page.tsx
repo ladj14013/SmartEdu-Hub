@@ -1,19 +1,90 @@
+'use client';
+import { useState } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { getSubjectById, getLessonsBySubject, getUserById } from '@/lib/data';
-import { ArrowRight, User, CheckCircle, Lock, PlayCircle } from 'lucide-react';
+import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
+import type { Subject, Lesson, User as UserType } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SubjectPage({ params }: { params: { subjectId: string } }) {
-  const subject = getSubjectById(params.subjectId);
-  // Mock student data, assuming they are linked to 'user-4'
-  const student = getUserById('user-5');
-  const teacher = student?.linkedTeacherId ? getUserById(student.linkedTeacherId) : null;
-  const lessons = getLessonsBySubject(params.subjectId)
-    .filter(l => l.type === 'public' || l.authorId === student?.linkedTeacherId);
+  const firestore = useFirestore();
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
+  const { toast } = useToast();
+  const [isLinking, setIsLinking] = useState(false);
+  const [teacherCode, setTeacherCode] = useState('');
+
+  // --- Data Fetching ---
+  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', params.subjectId) : null, [firestore, params.subjectId]);
+  const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  
+  const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
+  const { data: student, isLoading: isStudentLoading } = useDoc<UserType>(studentRef);
+
+  const teacherRef = useMemoFirebase(() => (firestore && student?.linkedTeacherId) ? doc(firestore, 'users', student.linkedTeacherId) : null, [firestore, student]);
+  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+
+  const lessonsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    const authorIds = ['public']; // A placeholder for public lessons for now.
+    if (student?.linkedTeacherId) {
+      authorIds.push(student.linkedTeacherId);
+    }
+    // This query is not perfect. Firestore doesn't support logical OR in `where` clauses on different fields.
+    // We fetch public lessons and then teacher-specific ones, then merge. This is a common workaround.
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', params.subjectId));
+  }, [firestore, params.subjectId, student?.linkedTeacherId]);
+
+  const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
+  
+  const lessons = allLessons?.filter(l => l.type === 'public' || l.authorId === student?.linkedTeacherId);
+
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || isTeacherLoading || areLessonsLoading;
+
+  const handleLinkTeacher = async () => {
+    if (!firestore || !student || !teacherCode.trim()) return;
+    setIsLinking(true);
+    try {
+        const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', teacherCode.trim()));
+        const { getDocs } = await import('firebase/firestore');
+        const teacherSnapshot = await getDocs(teachersQuery);
+
+        if (teacherSnapshot.empty) {
+            toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود. يرجى التأكد منه.', variant: 'destructive' });
+            return;
+        }
+
+        const teacherToLink = teacherSnapshot.docs[0];
+        const studentDocRef = doc(firestore, 'users', student.id);
+        await updateDoc(studentDocRef, { linkedTeacherId: teacherToLink.id });
+
+        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherToLink.data().name}.` });
+
+    } catch (error) {
+        console.error("Failed to link teacher:", error);
+        toast({ title: 'فشل الربط', description: 'حدث خطأ أثناء محاولة الربط مع الأستاذ.', variant: 'destructive' });
+    } finally {
+        setIsLinking(false);
+    }
+  }
+
+  if (isLoading) {
+    return (
+        <div className="space-y-6">
+            <PageHeader title={<Skeleton className="h-8 w-48" />} description={<Skeleton className="h-4 w-72 mt-2"/>}>
+                 <Skeleton className="h-10 w-32" />
+            </PageHeader>
+            <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
+            <Card><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+        </div>
+    )
+  }
 
   if (!subject) {
     return <div>المادة غير موجودة.</div>;
@@ -48,9 +119,10 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Input placeholder="أدخل كود الأستاذ" className="flex-1" />
-              <Button variant="accent">
-                <User className="ml-2 h-4 w-4" /> ربط الحساب
+              <Input placeholder="أدخل كود الأستاذ" className="flex-1" value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)} disabled={isLinking} />
+              <Button variant="accent" onClick={handleLinkTeacher} disabled={isLinking}>
+                {isLinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <User className="ml-2 h-4 w-4" />}
+                 ربط الحساب
               </Button>
             </div>
           )}
@@ -61,7 +133,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
         <CardHeader><CardTitle>قائمة الدروس</CardTitle></CardHeader>
         <CardContent className="p-0">
           <div className="divide-y">
-            {lessons.map((lesson, index) => {
+            {lessons?.map((lesson) => {
               const isCompleted = false; // Mock status
               const isAvailable = !lesson.isLocked;
               const lessonStatus = isCompleted ? 'completed' : (isAvailable ? 'available' : 'locked');
@@ -76,7 +148,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
               const Wrapper = isAvailable ? Link : 'div';
 
               return (
-              <Wrapper key={lesson.id} href={isAvailable ? `/dashboard/student/lessons/${lesson.id}` : ''} className={`flex items-center justify-between p-4 ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
+              <Wrapper key={lesson.id} href={isAvailable ? `/dashboard/student/lessons/${lesson.id}` : '#'} className={`flex items-center justify-between p-4 ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
                 <div className="flex items-center gap-4">
                     <span className="font-medium">{lesson.title}</span>
                 </div>
@@ -86,7 +158,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
                 </Badge>
               </Wrapper>
             )})}
-             {lessons.length === 0 && (
+             {lessons?.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
                     لا توجد دروس في هذه المادة حتى الآن.
                 </div>

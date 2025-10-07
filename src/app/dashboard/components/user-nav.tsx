@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import {
   Avatar,
   AvatarFallback,
@@ -18,15 +18,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { users } from '@/lib/data';
+import { doc } from 'firebase/firestore';
+import type { User as UserType } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function UserNav() {
-  const { user } = useUser();
+  const { user, isLoading: isAuthLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
 
-  // In a real app, this would fetch user metadata from Firestore
-  const mockUser = users.find(u => u.email === user?.email);
+  const userRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
+    [firestore, user]
+  );
+  const { data: userData, isLoading: isUserLoading } = useDoc<UserType>(userRef);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -34,11 +40,17 @@ export function UserNav() {
     router.push('/login');
   };
 
+  const isLoading = isAuthLoading || (user && isUserLoading);
+
+  if (isLoading) {
+    return <Skeleton className="h-9 w-9 rounded-full" />;
+  }
+
   if (!user) {
     return null;
   }
 
-  const displayName = mockUser?.name || user.displayName || "مستخدم";
+  const displayName = userData?.name || user.displayName || "مستخدم";
   const displayEmail = user.email || "";
 
   return (
@@ -46,7 +58,7 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={mockUser?.avatar} alt={`@${displayName}`} />
+            <AvatarImage src={userData?.avatar} alt={`@${displayName}`} />
             <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
           </Avatar>
         </Button>

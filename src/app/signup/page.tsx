@@ -7,8 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase';
+import { doc, setDoc, collection } from 'firebase/firestore';
+import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 import {
   Card,
@@ -30,10 +30,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Logo } from '@/components/common/logo';
-import { stages, levels, subjects } from '@/lib/data';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import type { Stage, Level, Subject } from '@/lib/types';
+
 
 const signupSchema = z.object({
   fullName: z.string().min(1, { message: "الرجاء إدخال الاسم الكامل." }),
@@ -65,6 +66,14 @@ export default function SignupPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
+  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
+  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
+
+  const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
+  const { data: levels, isLoading: isLoadingLevels } = useCollection<Level>(levelsQuery);
+  const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
+
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -78,8 +87,8 @@ export default function SignupPage() {
   const role = form.watch('role');
   const selectedStage = form.watch('stage');
   
-  const filteredLevels = levels.filter(level => level.stageId === selectedStage);
-  const filteredSubjects = subjects.filter(subject => levels.find(l => l.id === subject.levelId)?.stageId === selectedStage);
+  const filteredLevels = levels?.filter(level => level.stageId === selectedStage) || [];
+  const filteredSubjects = subjects?.filter(subject => levels?.find(l => l.id === subject.levelId)?.stageId === selectedStage) || [];
 
   const onSubmit = async (data: SignupFormValues) => {
     if (!auth || !firestore) return;
@@ -95,10 +104,10 @@ export default function SignupPage() {
         name: data.fullName,
         email: data.email,
         role: data.role,
-        stageId: data.stage,
-        levelId: data.level,
-        subjectId: data.subject,
-        teacherCode: data.teacherCode,
+        stageId: data.stage || null,
+        levelId: data.level || null,
+        subjectId: data.subject || null,
+        teacherCode: data.teacherCode || null,
         avatar: `https://i.pravatar.cc/150?u=${user.uid}`
       });
 
@@ -253,7 +262,7 @@ export default function SignupPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {stages.map(stage => (
+                              {stages?.map(stage => (
                                 <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -330,7 +339,7 @@ export default function SignupPage() {
                   />
                 )}
 
-                <Button type="submit" className="w-full" variant="accent" disabled={isLoading}>
+                <Button type="submit" className="w-full" variant="accent" disabled={isLoading || isLoadingStages || isLoadingLevels || isLoadingSubjects}>
                     {isLoading ? (
                         <>
                             <Loader2 className="ml-2 h-4 w-4 animate-spin" />

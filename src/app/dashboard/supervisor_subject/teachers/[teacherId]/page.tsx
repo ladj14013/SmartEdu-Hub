@@ -1,18 +1,53 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getUserById, getLessonsBySubject, levels, subjects } from '@/lib/data';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { User as UserType, Lesson, Subject, Level } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeacherLessonsPage({ params }: { params: { teacherId: string } }) {
-  const teacher = getUserById(params.teacherId);
-  if (!teacher || !teacher.subjectId) {
+  const firestore = useFirestore();
+
+  // --- Data Fetching ---
+  const teacherRef = useMemoFirebase(() => firestore ? doc(firestore, 'users', params.teacherId) : null, [firestore, params.teacherId]);
+  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+
+  const teacherLessonsQuery = useMemoFirebase(() => {
+    if (!firestore || !teacher?.subjectId) return null;
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId), where('authorId', '==', params.teacherId));
+  }, [firestore, teacher?.subjectId, params.teacherId]);
+  const { data: teacherLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(teacherLessonsQuery);
+
+  const teacherLevelsQuery = useMemoFirebase(() => {
+    if (!firestore || !teacher?.stageId) return null;
+    return query(collection(firestore, 'levels'), where('stageId', '==', teacher.stageId));
+  }, [firestore, teacher?.stageId]);
+  const { data: teacherLevels, isLoading: areLevelsLoading } = useCollection<Level>(teacherLevelsQuery);
+  
+  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
+  const { data: subjects, isLoading: areSubjectsLoading } = useCollection<Subject>(subjectsQuery);
+
+  const isLoading = isTeacherLoading || areLessonsLoading || areLevelsLoading || areSubjectsLoading;
+  
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader title={<Skeleton className="h-8 w-80" />} description={<Skeleton className="h-4 w-96 mt-2" />}>
+          <Skeleton className="h-10 w-44" />
+        </PageHeader>
+        <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+        <Card><CardContent className="p-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
+      </div>
+    );
+  }
+
+  if (!teacher) {
     return <div>الأستاذ غير موجود.</div>;
   }
-  
-  const teacherLessons = getLessonsBySubject(teacher.subjectId).filter(l => l.authorId === teacher.id);
-  const teacherLevels = levels.filter(l => l.stageId === teacher.stageId);
 
   return (
     <div className="space-y-6">
@@ -28,13 +63,13 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
       </PageHeader>
       
       <div className="space-y-6">
-        {teacherLevels.map(level => {
-            const lessonsInLevel = teacherLessons.filter(lesson => {
-              const subject = subjects.find(s => s.id === lesson.subjectId);
+        {teacherLevels?.map(level => {
+            const lessonsInLevel = teacherLessons?.filter(lesson => {
+              const subject = subjects?.find(s => s.id === lesson.subjectId);
               return subject && subject.levelId === level.id;
             });
 
-            if(lessonsInLevel.length === 0) return null;
+            if(!lessonsInLevel || lessonsInLevel.length === 0) return null;
 
             return (
                 <Card key={level.id}>
@@ -58,7 +93,7 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
                 </Card>
             )
         })}
-         {teacherLessons.length === 0 && (
+         {teacherLessons?.length === 0 && (
             <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
                     هذا الأستاذ لم يضف أي دروس خاصة بعد.
