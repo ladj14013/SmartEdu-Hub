@@ -35,22 +35,99 @@ import {
   } from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, doc } from 'firebase/firestore';
 import type { Stage, Level, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+
+// Component for adding a new level
+function AddLevelDialog({ stageId, onLevelAdded }: { stageId: string, onLevelAdded: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [newLevelName, setNewLevelName] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleAddLevel = async () => {
+        if (!newLevelName.trim() || !firestore) return;
+        setIsSaving(true);
+        try {
+            const levelsCollection = collection(firestore, 'levels');
+            await addDoc(levelsCollection, { 
+                name: newLevelName,
+                stageId: stageId
+            });
+            toast({
+                title: "تمت الإضافة بنجاح",
+                description: `تمت إضافة مستوى "${newLevelName}"`,
+            });
+            setNewLevelName('');
+            setIsOpen(false);
+            onLevelAdded(); // To potentially refetch or update UI
+        } catch (error) {
+            console.error("Error adding level: ", error);
+            toast({
+                title: "فشل في الإضافة",
+                description: "حدث خطأ أثناء إضافة المستوى الجديد.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="outline"><Plus className="ml-2 h-4 w-4" />أضف مستوى</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>إضافة مستوى جديد</DialogTitle>
+                    <DialogDescription>
+                        أدخل اسم المستوى الجديد. سيتم إضافته إلى المرحلة الحالية.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="level-name" className="text-right">
+                            الاسم
+                        </Label>
+                        <Input
+                            id="level-name"
+                            value={newLevelName}
+                            onChange={(e) => setNewLevelName(e.target.value)}
+                            className="col-span-3"
+                            placeholder="مثال: الصف الأول"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">إلغاء</Button>
+                    </DialogClose>
+                    <Button type="button" onClick={handleAddLevel} disabled={isSaving || !newLevelName.trim()}>
+                        {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 export default function ContentManagementPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const [newStageName, setNewStageName] = useState('');
-  const [isSaving, setIsSaving] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSavingStage, setIsSavingStage] = useState(false);
+  const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
+  const [updateTrigger, setUpdateTrigger] = useState(0);
 
-  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
-  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
-  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
+  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore, updateTrigger]);
+  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore, updateTrigger]);
+  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore, updateTrigger]);
 
   const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
   const { data: levels, isLoading: isLoadingLevels } = useCollection<Level>(levelsQuery);
@@ -58,10 +135,12 @@ export default function ContentManagementPage() {
 
   const isLoading = isLoadingStages || isLoadingLevels || isLoadingSubjects;
 
+  const refreshData = () => setUpdateTrigger(prev => prev + 1);
+
   const handleAddStage = async () => {
     if (!newStageName.trim() || !firestore) return;
 
-    setIsSaving(true);
+    setIsSavingStage(true);
     try {
         const stagesCollection = collection(firestore, 'stages');
         await addDoc(stagesCollection, { name: newStageName });
@@ -70,7 +149,8 @@ export default function ContentManagementPage() {
             description: `تمت إضافة مرحلة "${newStageName}"`,
         });
         setNewStageName('');
-        setIsDialogOpen(false);
+        setIsStageDialogOpen(false);
+        refreshData();
     } catch (error) {
         console.error("Error adding stage: ", error);
         toast({
@@ -79,7 +159,7 @@ export default function ContentManagementPage() {
             variant: "destructive",
         });
     } finally {
-        setIsSaving(false);
+        setIsSavingStage(false);
     }
   };
 
@@ -89,7 +169,7 @@ export default function ContentManagementPage() {
         title="إدارة هيكل المحتوى"
         description="إدارة المراحل والمستويات والمواد الدراسية في المنصة."
       >
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isStageDialogOpen} onOpenChange={setIsStageDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="accent">
               <Plus className="ml-2 h-4 w-4" /> أضف مرحلة جديدة
@@ -122,8 +202,8 @@ export default function ContentManagementPage() {
                         إلغاء
                     </Button>
                 </DialogClose>
-              <Button type="button" onClick={handleAddStage} disabled={isSaving || !newStageName.trim()}>
-                {isSaving ? (
+              <Button type="button" onClick={handleAddStage} disabled={isSavingStage || !newStageName.trim()}>
+                {isSavingStage ? (
                   <>
                     <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                     جاري الحفظ...
@@ -141,7 +221,7 @@ export default function ContentManagementPage() {
       </PageHeader>
 
       <div className="rounded-lg border">
-        {isLoading ? (
+        {isLoading && !stages ? ( // Show skeleton only on initial load
             <div className="p-4 space-y-4">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-12 w-full" />
@@ -158,7 +238,7 @@ export default function ContentManagementPage() {
               </AccordionTrigger>
               <AccordionContent className="bg-muted/50 p-4 space-y-4">
                 <div className='flex justify-end'>
-                    <Button size="sm" variant="outline"><Plus className="ml-2 h-4 w-4" />أضف مستوى</Button>
+                    <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} />
                 </div>
                 {levels
                   ?.filter((level) => level.stageId === stage.id)
