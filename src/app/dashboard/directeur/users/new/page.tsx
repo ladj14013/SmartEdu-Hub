@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useAuth, useFirestore } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,6 +37,7 @@ export default function NewUserPage() {
   // In a real app, you'd use a backend function (e.g., Firebase Functions)
   // to create users without signing out the current admin.
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<NewUserFormValues>({
@@ -48,26 +50,26 @@ export default function NewUserPage() {
   });
 
   const onSubmit = async (data: NewUserFormValues) => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsLoading(true);
     try {
-      // This is a simplified example. In a real-world scenario, creating users
-      // should be done via a secure backend (Firebase Functions) to avoid
-      // exposing admin credentials or complex client-side logic.
-      // We are not using a server-side function here for simplicity.
-      // Also, we are not storing the user role in Firestore yet.
-      
-      // A proper implementation would involve:
-      // 1. Calling a Firebase Function with the new user data.
-      // 2. The function uses the Firebase Admin SDK to create the user with `admin.auth().createUser()`.
-      // 3. The function then creates a user profile document in Firestore with the role and other details.
+      // In a real-world scenario, this should be done via a secure backend (Firebase Functions).
+      // 1. Create user in Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
 
-      // For now, we just create the user in Auth.
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // 2. Create user document in Firestore
+      await setDoc(doc(firestore, "users", user.uid), {
+        uid: user.uid,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+      });
+
 
       toast({
         title: "تم إنشاء المستخدم بنجاح!",
-        description: `تم إنشاء حساب لـ ${data.name}.`,
+        description: `تم إنشاء حساب لـ ${data.name} وتخزين بياناته.`,
       });
       router.push('/dashboard/directeur/users');
     } catch (error: any) {

@@ -7,7 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useAuth, useFirestore } from '@/firebase';
 
 import {
   Card,
@@ -61,6 +62,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
 
   const form = useForm<SignupFormValues>({
@@ -80,12 +82,26 @@ export default function SignupPage() {
   const filteredSubjects = subjects.filter(subject => levels.find(l => l.id === subject.levelId)?.stageId === selectedStage);
 
   const onSubmit = async (data: SignupFormValues) => {
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsLoading(true);
     try {
-      // Here you would also save the additional user data (role, name, etc.) to Firestore
-      // For now, we just create the auth user
-      await createUserWithEmailAndPassword(auth, data.email, data.password);
+      // 1. Create user in Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+
+      // 2. Create user document in Firestore
+      await setDoc(doc(firestore, "users", user.uid), {
+        uid: user.uid,
+        name: data.fullName,
+        email: data.email,
+        role: data.role,
+        stageId: data.stage,
+        levelId: data.level,
+        subjectId: data.subject,
+        teacherCode: data.teacherCode,
+        avatar: `https://i.pravatar.cc/150?u=${user.uid}`
+      });
+
       toast({
         title: "تم إنشاء الحساب بنجاح!",
         description: "سيتم توجيهك إلى لوحة التحكم.",
@@ -259,7 +275,7 @@ export default function SignupPage() {
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="اختر المستوى" />
-                              </SelectTrigger>
+                              </Trigger>
                             </FormControl>
                             <SelectContent>
                               {filteredLevels.map(level => (
@@ -284,7 +300,7 @@ export default function SignupPage() {
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="اختر المادة" />
-                              </SelectTrigger>
+                              </Trigger>
                             </FormControl>
                             <SelectContent>
                               {filteredSubjects.map(subject => (
