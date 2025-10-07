@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDoc, useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useDoc, useFirestore } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 

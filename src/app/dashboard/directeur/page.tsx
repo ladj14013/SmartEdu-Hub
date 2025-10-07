@@ -1,13 +1,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useCollection } from '@/firebase';
+import { useCollection, useFirestore } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, GraduationCap, UserCheck, Users, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { User } from '@/lib/types';
 
 const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string, value: number, icon: React.ElementType, isLoading: boolean }) => (
   <Card>
@@ -33,7 +33,7 @@ export default function DirecteurDashboard() {
     return collection(firestore, 'users');
   }, [firestore]);
 
-  const { data: usersData, isLoading: isLoadingUsers } = useCollection(usersQuery);
+  const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
 
   const stats = useMemo(() => {
     if (!usersData) {
