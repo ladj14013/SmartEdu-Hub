@@ -199,12 +199,11 @@ function AddLevelDialog({ stageId, onLevelAdded, existingLevelsCount }: { stageI
 }
 
 // Component for editing a stage
-function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdated: () => void }) {
+function EditStageDialog({ stage, onStageUpdated, onOpenChange }: { stage: Stage, onStageUpdated: () => void, onOpenChange: (open: boolean) => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [stageName, setStageName] = useState(stage.name);
     const [isSaving, setIsSaving] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
 
     const handleUpdateStage = async () => {
         if (!stageName.trim() || !firestore) return;
@@ -216,7 +215,7 @@ function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdat
                 title: "تم التحديث بنجاح",
                 description: `تم تحديث اسم المرحلة إلى "${stageName}"`,
             });
-            setIsOpen(false);
+            onOpenChange(false);
             onStageUpdated();
         } catch (error) {
             console.error("Error updating stage: ", error);
@@ -231,50 +230,42 @@ function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdat
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DropdownMenuTrigger asChild>
-                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Pencil className="ml-2 h-4 w-4" /> تعديل
-                </DropdownMenuItem>
-            </DropdownMenuTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>تعديل المرحلة الدراسية</DialogTitle>
-                    <DialogDescription>
-                        أدخل الاسم الجديد للمرحلة.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="stage-name-edit" className="text-right">
-                            الاسم
-                        </Label>
-                        <Input
-                            id="stage-name-edit"
-                            value={stageName}
-                            onChange={(e) => setStageName(e.target.value)}
-                            className="col-span-3"
-                        />
-                    </div>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>تعديل المرحلة الدراسية</DialogTitle>
+                <DialogDescription>
+                    أدخل الاسم الجديد للمرحلة.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="stage-name-edit" className="text-right">
+                        الاسم
+                    </Label>
+                    <Input
+                        id="stage-name-edit"
+                        value={stageName}
+                        onChange={(e) => setStageName(e.target.value)}
+                        className="col-span-3"
+                    />
                 </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
-                    <Button type="button" onClick={handleUpdateStage} disabled={isSaving || !stageName.trim()}>
-                        {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ التغييرات</>}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+                <Button type="button" onClick={handleUpdateStage} disabled={isSaving || !stageName.trim()}>
+                    {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ التغييرات</>}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
     );
 }
 
 // Component for editing a level
-function EditLevelDialog({ level, onLevelUpdated }: { level: Level, onLevelUpdated: () => void }) {
+function EditLevelDialog({ level, onLevelUpdated, onOpenChange }: { level: Level, onLevelUpdated: () => void, onOpenChange: (open: boolean) => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [levelName, setLevelName] = useState(level.name);
     const [isSaving, setIsSaving] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
 
     const handleUpdateLevel = async () => {
         if (!levelName.trim() || !firestore) return;
@@ -286,7 +277,7 @@ function EditLevelDialog({ level, onLevelUpdated }: { level: Level, onLevelUpdat
                 title: "تم التحديث بنجاح",
                 description: `تم تحديث اسم المستوى إلى "${levelName}"`,
             });
-            setIsOpen(false);
+            onOpenChange(false);
             onLevelUpdated();
         } catch (error) {
             console.error("Error updating level: ", error);
@@ -301,37 +292,30 @@ function EditLevelDialog({ level, onLevelUpdated }: { level: Level, onLevelUpdat
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                    <Pencil className="ml-2 h-4 w-4" /> تعديل
-                </DropdownMenuItem>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle>تعديل المستوى الدراسي</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="level-name-edit" className="text-right">
-                            الاسم
-                        </Label>
-                        <Input
-                            id="level-name-edit"
-                            value={levelName}
-                            onChange={(e) => setLevelName(e.target.value)}
-                            className="col-span-3"
-                        />
-                    </div>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle>تعديل المستوى الدراسي</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="level-name-edit" className="text-right">
+                        الاسم
+                    </Label>
+                    <Input
+                        id="level-name-edit"
+                        value={levelName}
+                        onChange={(e) => setLevelName(e.target.value)}
+                        className="col-span-3"
+                    />
                 </div>
-                <DialogFooter>
-                    <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
-                    <Button type="button" onClick={handleUpdateLevel} disabled={isSaving || !levelName.trim()}>
-                        {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ التغييرات</>}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            </div>
+            <DialogFooter>
+                <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+                <Button type="button" onClick={handleUpdateLevel} disabled={isSaving || !levelName.trim()}>
+                    {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ التغييرات</>}
+                </Button>
+            </DialogFooter>
+        </DialogContent>
     );
 }
 
@@ -342,6 +326,8 @@ export default function ContentManagementPage() {
   const [newStageName, setNewStageName] = useState('');
   const [isSavingStage, setIsSavingStage] = useState(false);
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
+  const [editingStage, setEditingStage] = useState<Stage | null>(null);
+  const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
   const stagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'stages'), orderBy('order')) : null, [firestore, updateTrigger]);
@@ -533,84 +519,65 @@ export default function ContentManagementPage() {
                 <Skeleton className="h-12 w-full" />
             </div>
         ) : (
-        <Accordion type="multiple" className="w-full">
-          {stages?.map((stage, index) => {
-            const levelsInStage = levels?.filter((level) => level.stageId === stage.id).sort((a,b) => a.order - b.order) || [];
-            return (
-            <AccordionItem value={stage.id} key={stage.id}>
-              <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-4 flex-1">
-                    <span className="font-medium text-lg">{stage.name}</span>
-                </div>
-                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'up')}} disabled={index === 0}>
-                        <ArrowUp className="h-4 w-4" />
-                    </Button>
-                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'down')}} disabled={index === (stages?.length || 0) - 1}>
-                        <ArrowDown className="h-4 w-4" />
-                    </Button>
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
-                                <span className="sr-only">فتح القائمة</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                           <EditStageDialog stage={stage} onStageUpdated={refreshData} />
-                           <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="bg-muted/50 p-4 space-y-4">
-                <div className='flex justify-end'>
-                    <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} existingLevelsCount={levelsInStage.length} />
-                </div>
-                {levelsInStage.map((level, levelIndex) => (
-                    <Collapsible key={level.id} className="rounded-md border bg-background px-4">
-                      <div className="flex items-center justify-between py-3">
-                        <div className="flex items-center gap-2">
-                            <CollapsibleTrigger asChild>
-                                <Button variant="ghost" size="sm" className="w-9 p-0">
-                                    <ChevronsUpDown className="h-4 w-4" />
-                                    <span className="sr-only">Toggle</span>
-                                </Button>
-                            </CollapsibleTrigger>
-                            <span className="font-semibold">{level.name}</span>
-                        </div>
+        <Dialog onOpenChange={(open) => !open && setEditingStage(null)}>
+            <Accordion type="multiple" className="w-full">
+            {stages?.map((stage, index) => {
+                const levelsInStage = levels?.filter((level) => level.stageId === stage.id).sort((a,b) => a.order - b.order) || [];
+                return (
+                <AccordionItem value={stage.id} key={stage.id}>
+                    <div className="flex items-center px-4 border-b">
+                        <AccordionTrigger className="flex-1 py-4 hover:no-underline">
+                            <span className="font-medium text-lg">{stage.name}</span>
+                        </AccordionTrigger>
                         <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'up')} disabled={levelIndex === 0}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'up')}} disabled={index === 0}>
                                 <ArrowUp className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'down')} disabled={levelIndex === levelsInStage.length - 1}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'down')}} disabled={index === (stages?.length || 0) - 1}>
                                 <ArrowDown className="h-4 w-4" />
                             </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" className="h-8 w-8 p-0">
-                                    <span className="sr-only">فتح القائمة</span>
-                                    <MoreHorizontal className="h-4 w-4" />
+                                    <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                        <span className="sr-only">فتح القائمة</span>
+                                        <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <EditLevelDialog level={level} onLevelUpdated={refreshData} />
-                                    <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                                    <DialogTrigger asChild>
+                                        <DropdownMenuItem onSelect={() => setEditingStage(stage)}>
+                                            <Pencil className="ml-2 h-4 w-4" /> تعديل
+                                        </DropdownMenuItem>
+                                    </DialogTrigger>
+                                <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
-                      </div>
-                      <CollapsibleContent className="space-y-2 pb-4">
-                        <div className='flex justify-end'>
-                            <AddSubjectDialog levelId={level.id} onSubjectAdded={refreshData} />
-                        </div>
-                        {subjects
-                          ?.filter((subject) => subject.levelId === level.id)
-                          .map((subject) => (
-                            <div key={subject.id} className="flex items-center justify-between rounded-md border p-3 bg-white">
-                                <Link href={`/dashboard/directeur/content/${stage.id}/${level.id}/${subject.id}`} className='hover:underline'>
-                                    {subject.name}
-                                </Link>
+                    </div>
+                    <AccordionContent className="bg-muted/50 p-4 space-y-4">
+                    <div className='flex justify-end'>
+                        <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} existingLevelsCount={levelsInStage.length} />
+                    </div>
+                    <Dialog onOpenChange={(open) => !open && setEditingLevel(null)}>
+                    {levelsInStage.map((level, levelIndex) => (
+                        <Collapsible key={level.id} className="rounded-md border bg-background px-4">
+                        <div className="flex items-center justify-between py-3">
+                            <div className="flex items-center gap-2">
+                                <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                                        <ChevronsUpDown className="h-4 w-4" />
+                                        <span className="sr-only">Toggle</span>
+                                    </Button>
+                                </CollapsibleTrigger>
+                                <span className="font-semibold">{level.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'up')} disabled={levelIndex === 0}>
+                                    <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'down')} disabled={levelIndex === levelsInStage.length - 1}>
+                                    <ArrowDown className="h-4 w-4" />
+                                </Button>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -619,30 +586,58 @@ export default function ContentManagementPage() {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem><Pencil className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
+                                        <DialogTrigger asChild>
+                                            <DropdownMenuItem onSelect={() => setEditingLevel(level)}>
+                                                <Pencil className="ml-2 h-4 w-4" /> تعديل
+                                            </DropdownMenuItem>
+                                        </DialogTrigger>
                                         <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                          ))}
-                         {subjects?.filter(s => s.levelId === level.id).length === 0 && (
-                            <p className="text-center text-xs text-muted-foreground py-2">لا توجد مواد مضافة لهذا المستوى.</p>
-                         )}
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ))}
-                  {levelsInStage.length === 0 && (
-                    <p className="text-center text-sm text-muted-foreground py-4">لا توجد مستويات مضافة لهذه المرحلة.</p>
-                  )}
-              </AccordionContent>
-            </AccordionItem>
-          )})}
-           {stages?.length === 0 && !isLoading && (
-              <div className="p-8 text-center text-muted-foreground">
-                  لا توجد مراحل دراسية. ابدأ بإضافة مرحلة جديدة.
-              </div>
-           )}
-        </Accordion>
+                        </div>
+                        <CollapsibleContent className="space-y-2 pb-4">
+                            <div className='flex justify-end'>
+                                <AddSubjectDialog levelId={level.id} onSubjectAdded={refreshData} />
+                            </div>
+                            {subjects
+                            ?.filter((subject) => subject.levelId === level.id)
+                            .map((subject) => (
+                                <div key={subject.id} className="flex items-center justify-between rounded-md border p-3 bg-white">
+                                    <Link href={`/dashboard/directeur/content/${stage.id}/${level.id}/${subject.id}`} className='hover:underline'>
+                                        {subject.name}
+                                    </Link>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" className="h-8 w-8 p-0">
+                                            <span className="sr-only">فتح القائمة</span>
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem><Pencil className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
+                            ))}
+                            {subjects?.filter(s => s.levelId === level.id).length === 0 && (
+                                <p className="text-center text-xs text-muted-foreground py-2">لا توجد مواد مضافة لهذا المستوى.</p>
+                            )}
+                        </CollapsibleContent>
+                        </Collapsible>
+                    ))}
+                    {editingLevel && <EditLevelDialog level={editingLevel} onLevelUpdated={refreshData} onOpenChange={(open) => !open && setEditingLevel(null)} />}
+                    </Dialog>
+                    {levelsInStage.length === 0 && (
+                        <p className="text-center text-sm text-muted-foreground py-4">لا توجد مستويات مضافة لهذه المرحلة.</p>
+                    )}
+                </AccordionContent>
+                </AccordionItem>
+            )})}
+            </Accordion>
+            {editingStage && <EditStageDialog stage={editingStage} onStageUpdated={refreshData} onOpenChange={(open) => !open && setEditingStage(null)} />}
+        </Dialog>
         )}
       </div>
     </div>
