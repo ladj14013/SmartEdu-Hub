@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import {
   Card,
@@ -11,8 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/common/logo';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
@@ -46,7 +52,22 @@ export default function LoginPage() {
                       هل نسيت كلمة المرور؟
                     </Link>
                   </div>
-                  <Input id="password" type="password" required />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-2 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </Button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" variant="accent">
                   تسجيل الدخول

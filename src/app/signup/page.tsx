@@ -24,10 +24,12 @@ import {
 import { Logo } from '@/components/common/logo';
 import { stages, levels, subjects } from '@/lib/data';
 import type { Role } from '@/lib/types';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function SignupPage() {
   const [role, setRole] = useState<Role>('student');
   const [selectedStage, setSelectedStage] = useState<string>('');
+  const [showPassword, setShowPassword] = useState(false);
   
   const filteredLevels = levels.filter(level => level.stageId === selectedStage);
   const filteredSubjects = subjects.filter(subject => levels.find(l => l.id === subject.levelId)?.stageId === selectedStage);
@@ -56,7 +58,18 @@ export default function SignupPage() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="password">كلمة المرور</Label>
-                  <Input id="password" type="password" required />
+                  <div className="relative">
+                    <Input id="password" type={showPassword ? 'text' : 'password'} required />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute left-2 top-1/2 h-7 w-7 -translate-y-1/2 text-muted-foreground"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </Button>
+                  </div>
                 </div>
                 <div className="grid gap-2">
                   <Label>أنا...</Label>
