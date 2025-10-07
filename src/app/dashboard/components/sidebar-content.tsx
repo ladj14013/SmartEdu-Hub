@@ -71,7 +71,7 @@ export function SidebarContent() {
   return (
     <>
       <SidebarHeader>
-        <Logo href="/dashboard" />
+        <Logo href="/" />
       </SidebarHeader>
       <SidebarContentArea>
         <SidebarMenu>
