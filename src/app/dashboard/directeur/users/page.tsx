@@ -3,9 +3,6 @@ import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Table,
@@ -23,7 +20,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Search, User, UserCog, UserCheck, GraduationCap } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, User, UserCog, GraduationCap, UserCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -52,8 +49,10 @@ export default function UsersPage() {
         title="إدارة المستخدمين"
         description="عرض وتعديل وحذف المستخدمين في المنصة."
       >
-        <Button variant="accent" disabled>
-          <Plus className="ml-2 h-4 w-4" /> أضف مستخدم جديد
+        <Button variant="accent" asChild>
+            <Link href="/dashboard/directeur/users/new">
+                <Plus className="ml-2 h-4 w-4" /> أضف مستخدم جديد
+            </Link>
         </Button>
       </PageHeader>
 

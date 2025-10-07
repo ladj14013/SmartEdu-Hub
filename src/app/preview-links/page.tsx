@@ -40,6 +40,7 @@ export default function PreviewLinksPage() {
             <ul>
               <PageLink href="/dashboard/directeur">الرئيسية</PageLink>
               <PageLink href="/dashboard/directeur/users">إدارة المستخدمين</PageLink>
+              <PageLink href="/dashboard/directeur/users/new">إضافة مستخدم جديد</PageLink>
               <PageLink href="/dashboard/directeur/users/user-1/edit">تعديل مستخدم</PageLink>
               <PageLink href="/dashboard/directeur/content">إدارة هيكل المحتوى</PageLink>
               <PageLink href="/dashboard/directeur/content/stage-2/level-2-1/subj-2">محتوى المادة</PageLink>
