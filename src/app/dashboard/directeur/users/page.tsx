@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useFirestore } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ const roleMap: { [key in Role]?: { name: string; icon: React.ElementType } } = {
 
 export default function UsersPage() {
   const firestore = useFirestore();
-  const usersQuery = useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const { data: users, isLoading } = useCollection<UserType>(usersQuery);
 
   const [searchTerm, setSearchTerm] = useState('');

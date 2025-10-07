@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useDoc, useFirestore } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { User as UserType } from '@/lib/types';
 
@@ -24,7 +24,7 @@ export default function EditUserPage({ params }: { params: { userId: string } })
   const { toast } = useToast();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const userRef = useMemo(() => {
+  const userRef = useMemoFirebase(() => {
     if (!firestore || !params.userId) return null;
     return doc(firestore, 'users', params.userId);
   }, [firestore, params.userId]);
