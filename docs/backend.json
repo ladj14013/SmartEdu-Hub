@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -276,149 +277,57 @@
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "password"
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user data. Path-based ownership allows easy management of personal data. The 'role' field is stored directly in the user document for role-based access control.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
       },
-      {
-        "path": "/stages/{stageId}",
-        "definition": {
-          "entityName": "Stage",
-          "schema": {
-            "$ref": "#/backend/entities/Stage"
-          },
-          "description": "Stores educational stages (e.g., Primary, Secondary).",
-          "params": [
-            {
-              "name": "stageId",
-              "description": "The unique identifier for the stage."
-            }
-          ]
-        }
+      "description": "Stores all the user profile information."
+    },
+    "/stages/{stageId}": {
+      "schema": {
+        "$ref": "#/entities/Stage"
       },
-      {
-        "path": "/levels/{levelId}",
-        "definition": {
-          "entityName": "Level",
-          "schema": {
-            "$ref": "#/backend/entities/Level"
-          },
-          "description": "Stores educational levels within stages (e.g., Grade 1, Grade 2).",
-          "params": [
-            {
-              "name": "levelId",
-              "description": "The unique identifier for the level."
-            }
-          ]
-        }
+      "description": "Stores educational stages."
+    },
+    "/levels/{levelId}": {
+      "schema": {
+        "$ref": "#/entities/Level"
       },
-      {
-        "path": "/subjects/{subjectId}",
-        "definition": {
-          "entityName": "Subject",
-          "schema": {
-            "$ref": "#/backend/entities/Subject"
-          },
-          "description": "Stores subjects within levels (e.g., Math, Science).",
-          "params": [
-            {
-              "name": "subjectId",
-              "description": "The unique identifier for the subject."
-            }
-          ]
-        }
+      "description": "Stores educational levels within stages."
+    },
+    "/subjects/{subjectId}": {
+      "schema": {
+        "$ref": "#/entities/Subject"
       },
-      {
-        "path": "/lessons/{lessonId}",
-        "definition": {
-          "entityName": "Lesson",
-          "schema": {
-            "$ref": "#/backend/entities/Lesson"
-          },
-          "description": "Stores lesson data. Includes 'teacherId' for ownership and 'isPublic' flag for public access. This structure supports filtering lessons based on privacy settings.",
-          "params": [
-            {
-              "name": "lessonId",
-              "description": "The unique identifier for the lesson."
-            }
-          ]
-        }
+      "description": "Stores subjects within levels."
+    },
+    "/lessons/{lessonId}": {
+      "schema": {
+        "$ref": "#/entities/Lesson"
       },
-      {
-        "path": "/lessons/{lessonId}/exercises/{exerciseId}",
-        "definition": {
-          "entityName": "Exercise",
-          "schema": {
-            "$ref": "#/backend/entities/Exercise"
-          },
-          "description": "Stores exercises within lessons.",
-          "params": [
-            {
-              "name": "lessonId",
-              "description": "The unique identifier for the lesson."
-            },
-            {
-              "name": "exerciseId",
-              "description": "The unique identifier for the exercise."
-            }
-          ]
-        }
+      "description": "Stores lesson data."
+    },
+    "/lessons/{lessonId}/exercises/{exerciseId}": {
+      "schema": {
+        "$ref": "#/entities/Exercise"
       },
-      {
-        "path": "/users/{studentId}/lessonProgress/{lessonId}",
-        "definition": {
-          "entityName": "StudentLessonProgress",
-          "schema": {
-            "$ref": "#/backend/entities/StudentLessonProgress"
-          },
-          "description": "Stores student progress for each lesson. Path-based ownership with 'studentId' ensures only the student (or authorized users) can access their progress.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "The unique identifier for the student."
-            },
-            {
-              "name": "lessonId",
-              "description": "The unique identifier for the lesson."
-            }
-          ]
-        }
+      "description": "Stores exercises within lessons."
+    },
+    "/users/{studentId}/lessonProgress/{lessonId}": {
+      "schema": {
+        "$ref": "#/entities/StudentLessonProgress"
       },
-      {
-        "path": "/messages/{messageId}",
-        "definition": {
-          "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Stores messages between users. Includes 'senderId' and 'receiverId' for access control.",
-          "params": [
-            {
-              "name": "messageId",
-              "description": "The unique identifier for the message."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to provide a secure and scalable platform for SmartEdu Hub, ensuring authorization independence, clear intent, and adherence to the specified design principles. It leverages denormalization and structural segregation to simplify security rules and enable efficient data access. The data structure strictly separates public and private data. It also includes denormalized authorization fields to support authorization independence, enabling atomic operations and simplifying security rules. The structure facilitates simple, robust, and easily debuggable security rules.\n\n**Authorization Independence and QAPs:**\n*   **Users:** User data is stored under `/users/{userId}`, ensuring path-based ownership. This is a standard approach for private user data. Roles are directly stored in the user document, avoiding the need for custom claims and simplifying role-based access control.\n*   **Stages, Levels, Subjects:** These entities are stored in top-level collections (`/stages`, `/levels`, `/subjects`).  Since these are relatively static educational structure components, global read access (with potential write restrictions to admins) can be easily managed without complex authorization logic.\n*   **Lessons:** Lessons are structured under `/lessons/{lessonId}`. Public lessons (`isPublic: true`) are accessible to all users. Private lessons, created by teachers, include the `teacherId` for ownership-based access. The `isPublic` flag enables secure `list` operations, filtering for public lessons without requiring complex rules.\n*   **Exercises:** Exercises are sub-collections of lessons (`/lessons/{lessonId}/exercises/{exerciseId}`). This establishes a clear hierarchy. The `lessonId` allows security rules to easily verify that a user has access to the parent lesson before accessing exercises.  Because lessons are not owned by users, `lessonId` provides the context necessary to authorize the request, in this case, with the `teacherId` of the lesson or the `isPublic` flag.\n*   **StudentLessonProgress:** Student progress is stored under `/users/{studentId}/lessonProgress/{lessonId}`. This path-based ownership ensures that only the student (or potentially teachers/admins with broader access) can view or modify their progress. The `studentId` in the path makes authorization simple and efficient.\n*   **Messages:** Messages are stored under `/messages/{messageId}` and include both `senderId` and `receiverId`. This allows for rules that ensure only the sender or receiver can access a message, supporting private communication.  An alternative structure could be considered which separates inboxes.  For example, `/users/{userId}/inbox/{messageId}`.  In that structure, `messages` would only contain the core message content and would omit `receiverId`.  Since this design will require a mechanism to list all messages for a user, the approach used is simpler to implement, in conjunction with the data provided.\n\nThis structure avoids `get()` calls in security rules by denormalizing necessary data, such as the `teacherId` in lessons and the `studentId` in student progress. It uses structural segregation to separate public and private content, simplifying list operations and access control."
+      "description": "Stores student progress for each lesson."
+    },
+    "/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "Stores messages between users."
+    }
   }
 }
