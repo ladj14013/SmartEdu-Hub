@@ -1,5 +1,8 @@
 import type { Stage, Level, Subject, User, Lesson, Message, SupervisorNote } from './types';
 
+// These arrays are now used for initial structure and fallbacks,
+// but the primary data source should be Firestore.
+
 export const stages: Stage[] = [
   { id: 'stage-1', name: 'المرحلة الابتدائية' },
   { id: 'stage-2', name: 'المرحلة الإعدادية' },
@@ -23,6 +26,7 @@ export const subjects: Subject[] = [
   { id: 'subj-5', name: 'الفيزياء', description: 'ميكانيكا وكهرباء.', levelId: 'level-3-1' },
 ];
 
+// This user data is now a fallback. The app should prioritize Firestore.
 export const users: User[] = [
   { id: 'user-1', name: 'أحمد عبد العزيز', email: 'admin@sep.app', role: 'directeur', avatar: 'https://i.pravatar.cc/150?u=user-1' },
   { id: 'user-2', name: 'فاطمة الزهراء', email: 'supervisor.gen@example.com', role: 'supervisor_general', avatar: 'https://i.pravatar.cc/150?u=user-2' },
@@ -113,7 +117,8 @@ export const supervisorNotes: SupervisorNote[] = [
     }
 ];
 
-// Helper functions to get data
+// Helper functions to get data from the mock arrays.
+// These should be phased out in favor of Firestore queries.
 export const getSubjectById = (id: string) => subjects.find(s => s.id === id);
 export const getLevelById = (id: string) => levels.find(l => l.id === id);
 export const getStageById = (id: string) => stages.find(s => s.id === id);

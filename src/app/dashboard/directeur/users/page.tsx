@@ -1,3 +1,8 @@
+'use client';
+
+import React, { useMemo, useState } from 'react';
+import { useCollection, useFirestore } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +18,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Search, User, UserCog, GraduationCap, UserCheck } from 'lucide-react';
+import { MoreHorizontal, Plus, Search, User, UserCog, GraduationCap, UserCheck, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -30,11 +35,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { users } from '@/lib/data';
+import type { User as UserType, Role } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const roleMap: { [key: string]: { name: string; icon: React.ElementType } } = {
+
+const roleMap: { [key in Role]?: { name: string; icon: React.ElementType } } = {
     directeur: { name: 'مدير', icon: UserCog },
     supervisor_general: { name: 'مشرف عام', icon: UserCog },
     supervisor_subject: { name: 'مشرف مادة', icon: UserCog },
@@ -44,6 +51,24 @@ const roleMap: { [key: string]: { name: string; icon: React.ElementType } } = {
   };
 
 export default function UsersPage() {
+  const firestore = useFirestore();
+  const usersQuery = useMemo(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: users, isLoading } = useCollection<UserType>(usersQuery);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    return users
+      .filter(user => {
+        const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                               user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+        return matchesSearch && matchesRole;
+      });
+  }, [users, searchTerm, roleFilter]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -62,9 +87,14 @@ export default function UsersPage() {
             <div className='flex flex-col md:flex-row gap-4 justify-between'>
                 <div className="relative flex-1">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="بحث بالاسم أو البريد الإلكتروني..." className="pr-10" />
+                    <Input 
+                      placeholder="بحث بالاسم أو البريد الإلكتروني..." 
+                      className="pr-10" 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                 </div>
-                <Select>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
                     <SelectTrigger className="w-full md:w-[180px]">
                         <SelectValue placeholder="فلترة حسب الدور" />
                     </SelectTrigger>
@@ -74,6 +104,7 @@ export default function UsersPage() {
                         <SelectItem value="teacher">أستاذ</SelectItem>
                         <SelectItem value="supervisor_subject">مشرف مادة</SelectItem>
                         <SelectItem value="supervisor_general">مشرف عام</SelectItem>
+                        <SelectItem value="directeur">مدير</SelectItem>
                         <SelectItem value="parent">ولي أمر</SelectItem>
                     </SelectContent>
                 </Select>
@@ -92,7 +123,17 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map(user => {
+              {isLoading && (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={`skeleton-${i}`}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                  </TableRow>
+                ))
+              )}
+              {!isLoading && filteredUsers.map(user => {
                 const RoleIcon = roleMap[user.role]?.icon || User;
                 return (
                     <TableRow key={user.id}>
@@ -115,7 +156,7 @@ export default function UsersPage() {
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                             <DropdownMenuItem asChild><Link href={`/dashboard/directeur/users/${user.id}/edit`}>تعديل</Link></DropdownMenuItem>
-                            <DropdownMenuItem>تغيير كلمة المرور</DropdownMenuItem>
+                            <DropdownMenuItem disabled>تغيير كلمة المرور</DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-500">حذف</DropdownMenuItem>
                             </DropdownMenuContent>
@@ -124,6 +165,13 @@ export default function UsersPage() {
                     </TableRow>
                 )
               })}
+               {!isLoading && filteredUsers.length === 0 && (
+                <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        لا توجد نتائج مطابقة لبحثك.
+                    </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
