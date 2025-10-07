@@ -275,7 +275,7 @@ export default function SignupPage() {
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="اختر المستوى" />
-                              </Trigger>
+                              </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {filteredLevels.map(level => (
@@ -300,7 +300,7 @@ export default function SignupPage() {
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="اختر المادة" />
-                              </Trigger>
+                              </SelectTrigger>
                             </FormControl>
                             <SelectContent>
                               {filteredSubjects.map(subject => (
