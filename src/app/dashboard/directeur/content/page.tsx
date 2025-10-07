@@ -280,7 +280,7 @@ export default function ContentManagementPage() {
     setIsSavingStage(true);
     try {
         const stagesCollection = collection(firestore, 'stages');
-        const newOrder = (stages.length > 0) ? Math.max(...stages.map(s => s.order).filter(o => typeof o === 'number')) + 1 : 0;
+        const newOrder = stages.length > 0 ? Math.max(...stages.map(s => s.order ?? -1)) + 1 : 0;
         await addDoc(stagesCollection, { name: newStageName, order: newOrder });
         toast({
             title: "تمت الإضافة بنجاح",
@@ -311,6 +311,12 @@ export default function ContentManagementPage() {
     
     const stageToMove = stages[index];
     const otherStage = stages[newIndex];
+    
+    if (typeof stageToMove.order !== 'number' || typeof otherStage.order !== 'number') {
+        console.error("Order is not a number for one of the stages", stageToMove, otherStage);
+        toast({ title: "خطأ في الترتيب", description: "بيانات الترتيب غير صالحة.", variant: "destructive" });
+        return;
+    }
     
     // Swap orders
     const stageToMoveRef = doc(firestore, 'stages', stageToMove.id);
@@ -343,6 +349,12 @@ export default function ContentManagementPage() {
     const levelToMove = levelsInStage[index];
     const otherLevel = levelsInStage[newIndex];
     
+    if (typeof levelToMove.order !== 'number' || typeof otherLevel.order !== 'number') {
+        console.error("Order is not a number for one of the levels");
+        toast({ title: "خطأ في الترتيب", description: "بيانات الترتيب غير صالحة.", variant: "destructive" });
+        return;
+    }
+
     // Swap orders
     const levelToMoveRef = doc(firestore, 'levels', levelToMove.id);
     batch.update(levelToMoveRef, { order: otherLevel.order });
