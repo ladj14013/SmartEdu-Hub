@@ -1,44 +1,65 @@
+/**
+ * @fileoverview Firestore Security Rules for SmartEdu Hub.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles
+ * and student lesson progress. Lessons are publicly readable but writable
+ * only by the teacher who created them. Stages, Levels, Subjects, and
+ * Messages are publicly accessible.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user profiles. Only the authenticated user can
+ *   read or write their own profile.
+ * - /stages/{stageId}: Stores educational stages. Publicly readable.
+ * - /levels/{levelId}: Stores educational levels within stages. Publicly readable.
+ * - /subjects/{subjectId}: Stores subjects within levels. Publicly readable.
+ * - /lessons/{lessonId}: Stores lesson data. Publicly readable, but only the
+ *   teacher who created it can modify it.
+ * - /lessons/{lessonId}/exercises/{exerciseId}: Stores exercises within lessons.
+ *   Only the teacher who created the parent lesson can modify them.
+ * - /users/{studentId}/lessonProgress/{lessonId}: Stores student progress for
+ *   each lesson. Only the student can modify their own progress.
+ * - /messages/{messageId}: Stores messages between users. Publicly readable.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed for privacy.
+ * - Stages, Levels, Subjects, and Messages are publicly readable to simplify
+ *   data access for all users.
+ * - Lessons can be marked as public to make them available to all users.
+ * - Default security posture for ambiguous relationships is strict owner-only
+ *   access.
+ *
+ * Denormalization for Authorization:
+ * - Lesson documents have a `teacherId` field to easily check ownership for
+ *   write operations.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Enforces user-ownership for user profiles. Only the authenticated user can
-     *              read or write their own profile data.
+     * @description Enforces user-ownership for user profiles.
      * @path /users/{userId}
-     * @allow (create) - User with UID 'user_abc' can create their own profile with id matching their UID.
-     *    request.auth.uid == 'user_abc' && request.resource.data.id == 'user_abc'
-     * @allow (get, update, delete) - User with UID 'user_abc' can read/update/delete their own profile.
-     *    request.auth.uid == 'user_abc'
-     * @deny (create) - User with UID 'user_xyz' cannot create a profile for 'user_abc'.
-     *    request.auth.uid == 'user_xyz' && request.resource.data.id == 'user_abc'
-     * @deny (get, update, delete) - User with UID 'user_xyz' cannot read/update/delete profile of 'user_abc'.
-     *    request.auth.uid == 'user_xyz'
+     * @allow (create) User with ID "user123" can create their profile if authenticated as "user123".
+     * @allow (get, update, delete) User with ID "user123" can read/update/delete their profile if authenticated as "user123".
+     * @deny (create) User with ID "user123" cannot create a profile if authenticated as "user456".
+     * @deny (get, update, delete) User with ID "user123" cannot read/update/delete their profile if authenticated as "user456".
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
-      }
-
       allow get: if isOwner(userId);
-      allow list: if false; // No listing of users.
-
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow list: if false;
+      allow create: if isOwner(userId);
       allow update: if isOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Allows public read access to stages.
+     * @description Allows public read access to educational stages.
      * @path /stages/{stageId}
-     * @allow (get, list) - Any user, signed in or not, can read stage data.
-     * @deny (create, update, delete) - No user can create, update, or delete stage data.
-     * @principle Allows public read access for static data.
+     * @allow (get, list) Any user can read the stages.
+     * @deny (create, update, delete) No user can create, update, or delete stages through the client.
+     * @principle Allows public read access to non-sensitive data.
      */
     match /stages/{stageId} {
       allow get, list: if true;
@@ -46,11 +67,11 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows public read access to levels.
+     * @description Allows public read access to educational levels.
      * @path /levels/{levelId}
-     * @allow (get, list) - Any user, signed in or not, can read level data.
-     * @deny (create, update, delete) - No user can create, update, or delete level data.
-     * @principle Allows public read access for static data.
+     * @allow (get, list) Any user can read the levels.
+     * @deny (create, update, delete) No user can create, update, or delete levels through the client.
+     * @principle Allows public read access to non-sensitive data.
      */
     match /levels/{levelId} {
       allow get, list: if true;
@@ -60,9 +81,9 @@ service cloud.firestore {
     /**
      * @description Allows public read access to subjects.
      * @path /subjects/{subjectId}
-     * @allow (get, list) - Any user, signed in or not, can read subject data.
-     * @deny (create, update, delete) - No user can create, update, or delete subject data.
-     * @principle Allows public read access for static data.
+     * @allow (get, list) Any user can read the subjects.
+     * @deny (create, update, delete) No user can create, update, or delete subjects through the client.
+     * @principle Allows public read access to non-sensitive data.
      */
     match /subjects/{subjectId} {
       allow get, list: if true;
@@ -70,115 +91,77 @@ service cloud.firestore {
     }
 
     /**
-     * @description Allows public read access to lessons, but restricts write access
-     *              to the teacher who created the lesson.
+     * @description Allows public read access to lessons, but restricts write access to the teacher who created the lesson.
      * @path /lessons/{lessonId}
-     * @allow (get, list) - Any user, signed in or not, can read lesson data.
-     * @allow (create) - A teacher can create a lesson with their teacherId.
-     *    request.auth.uid == 'teacher_abc' && request.resource.data.teacherId == 'teacher_abc'
-     * @allow (update, delete) - Only the teacher who created the lesson can update or delete it.
-     *    request.auth.uid == resource.data.teacherId
-     * @deny (create) - A student cannot create a lesson.
-     *    request.auth.uid != 'teacher_abc'
-     * @deny (update, delete) - A different teacher cannot update or delete the lesson.
-     *    request.auth.uid != resource.data.teacherId
-     * @principle Public read, owner-only writes.
+     * @allow (get, list) Any user can read the lessons.
+     * @allow (create) A teacher can create a lesson with their teacherId.
+     * @allow (update, delete) Only the teacher who created the lesson can update or delete it.
+     * @deny (create) A teacher cannot create a lesson without their teacherId.
+     * @deny (update, delete) A user who is not the teacher cannot update or delete the lesson.
+     * @principle Allows public read access while enforcing ownership for writes.
      */
     match /lessons/{lessonId} {
       allow get, list: if true;
-
-      function isTeacherOwner(teacherId) {
-        return request.auth != null && request.auth.uid == teacherId;
-      }
-
-      function isExistingTeacherOwner(lessonId, teacherId) {
-        return request.auth != null && request.auth.uid == teacherId && exists(/databases/$(database)/documents/lessons/$(lessonId));
-      }
-
-      allow create: if request.auth != null && isTeacherOwner(request.resource.data.teacherId);
-      allow update: if request.auth != null && isExistingTeacherOwner(lessonId, resource.data.teacherId);
-      allow delete: if request.auth != null && isExistingTeacherOwner(lessonId, resource.data.teacherId);
+      allow create: if isSignedIn() && request.resource.data.teacherId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.teacherId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.teacherId == request.auth.uid;
     }
 
     /**
-     * @description Restricts exercise creation, update, and deletion to the teacher who
-     *              created the parent lesson.
+     * @description Restricts exercise creation, update, and deletion to the teacher who owns the parent lesson.
      * @path /lessons/{lessonId}/exercises/{exerciseId}
-     * @allow (get, list) - Any user, signed in or not, can read exercise data.
-     * @allow (create, update, delete) - Only the teacher who created the parent lesson can create, update or delete exercises.
-     *    get(/databases/$(database)/documents/lessons/$(lessonId)).data.teacherId == request.auth.uid
-     * @deny (create, update, delete) - Other users cannot create, update, or delete exercises.
-     *    get(/databases/$(database)/documents/lessons/$(lessonId)).data.teacherId != request.auth.uid
-     * @principle Owner-only writes, inherited from parent document.
+     * @allow (create) A teacher can create an exercise within their lesson.
+     * @allow (update, delete) Only the teacher who created the parent lesson can update or delete exercises.
+     * @deny (create) A user who is not the teacher cannot create exercises in the lesson.
+     * @deny (update, delete) A user who is not the teacher cannot update or delete exercises in the lesson.
+     * @principle Restricts write access to resources based on the parent document's ownership.
      */
     match /lessons/{lessonId}/exercises/{exerciseId} {
-      function isTeacherOwnerOfLesson(lessonId) {
-          return get(/databases/$(database)/documents/lessons/$(lessonId)).data.teacherId == request.auth.uid;
-      }
-      allow get, list: if true;
-      allow create: if request.auth != null && isTeacherOwnerOfLesson(lessonId);
-      allow update: if request.auth != null && isTeacherOwnerOfLesson(lessonId);
-      allow delete: if request.auth != null && isTeacherOwnerOfLesson(lessonId);
+        allow get, list: if true; // Allowing public reads for exercises for now
+        allow create: if isSignedIn() && get(/databases/$(database)/documents/lessons/$(lessonId)).data.teacherId == request.auth.uid;
+        allow update: if isSignedIn() && get(/databases/$(database)/documents/lessons/$(lessonId)).data.teacherId == request.auth.uid;
+        allow delete: if isSignedIn() && get(/databases/$(database)/documents/lessons/$(lessonId)).data.teacherId == request.auth.uid;
     }
 
+
     /**
-     * @description Enforces user-ownership for student lesson progress. Only the authenticated
-     *              student can read or write their own progress data.
+     * @description Enforces user-ownership for student lesson progress.
      * @path /users/{studentId}/lessonProgress/{lessonId}
-     * @allow (create) - User with UID 'student_abc' can create their own progress entry with studentId matching their UID.
-     *    request.auth.uid == 'student_abc' && request.resource.data.studentId == 'student_abc'
-     * @allow (get, update, delete) - User with UID 'student_abc' can read/update/delete their own progress.
-     *    request.auth.uid == 'student_abc'
-     * @deny (create) - User with UID 'user_xyz' cannot create a progress entry for 'student_abc'.
-     *    request.auth.uid == 'user_xyz' && request.resource.data.studentId == 'student_abc'
-     * @deny (get, update, delete) - User with UID 'user_xyz' cannot read/update/delete progress of 'student_abc'.
-     *    request.auth.uid == 'user_xyz'
+     * @allow (create, get, update, delete) Student with ID "student123" can create, read, update or delete their progress if authenticated as "student123".
+     * @deny (create, get, update, delete) Student with ID "student123" cannot create, read, update or delete progress if authenticated as "student456".
      * @principle Enforces document ownership for writes.
      */
     match /users/{studentId}/lessonProgress/{lessonId} {
-      function isOwner(studentId) {
-        return request.auth != null && request.auth.uid == studentId;
-      }
-
-      function isExistingOwner(studentId, lessonId) {
-        return isOwner(studentId) && exists(/databases/$(database)/documents/users/$(studentId)/lessonProgress/$(lessonId));
-      }
-
       allow get: if isOwner(studentId);
       allow list: if false;
-
-      allow create: if isOwner(studentId) && request.resource.data.studentId == studentId;
+      allow create: if isOwner(studentId);
       allow update: if isOwner(studentId);
-      allow delete: if isExistingOwner(studentId, lessonId);
+      allow delete: if isExistingOwner(studentId);
     }
 
     /**
-     * @description Allows only the sender or receiver to read a message.  Any authenticated user
-     * can create a message.
+     * @description Allows public read access to messages.
      * @path /messages/{messageId}
-     * @allow (create) - Any authenticated user can create a message.
-     *    request.auth.uid != null
-     * @allow (get) - Only the sender or receiver can read the message.
-     *    request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId
-     * @deny (get) - Other users cannot read the message.
-     *    request.auth.uid != resource.data.senderId && request.auth.uid != resource.data.receiverId
-     * @principle Shared Access (sender and receiver).
+     * @allow (get, list) Any user can read the messages.
+     * @deny (create, update, delete) No user can create, update, or delete messages through the client.
+     * @principle Allows public read access to non-sensitive data.
      */
     match /messages/{messageId} {
-      function isSenderOrReceiver() {
-        return request.auth != null && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId);
-      }
-
-      function isExistingSenderOrReceiver(messageId) {
-        return request.auth != null && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId) && exists(/databases/$(database)/documents/messages/$(messageId));
-      }
-
-      allow get: if isSenderOrReceiver();
-      allow list: if false;
-
-      allow create: if request.auth != null;
-      allow update: if request.auth != null && isExistingSenderOrReceiver(messageId); // No updates allowed on messages.
-      allow delete: if false; // No deletes allowed on messages.
+      allow get, list: if true;
+      allow create, update, delete: if false;
     }
+  }
+
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
   }
 }
