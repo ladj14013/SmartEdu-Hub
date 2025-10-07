@@ -20,12 +20,6 @@ export function MainNav() {
           >
             الأدوار
           </Link>
-          <Link
-            href="#pricing"
-            className="text-gray-200 transition-colors hover:text-white"
-          >
-            الأسعار
-          </Link>
         </nav>
         <div className="flex items-center gap-2">
           <Button variant="ghost" asChild className="text-white hover:bg-white/10 hover:text-white">
