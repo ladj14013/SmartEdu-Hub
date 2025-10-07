@@ -16,7 +16,7 @@ export interface User {
 
 export interface Stage {
   id: string;
-  name: string;
+  name:string;
   order: number;
 }
 
@@ -24,6 +24,7 @@ export interface Level {
   id: string;
   name: string;
   stageId: string;
+  order: number;
 }
 
 export interface Subject {

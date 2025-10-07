@@ -41,7 +41,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 
 // Component for adding a new level
-function AddLevelDialog({ stageId, onLevelAdded }: { stageId: string, onLevelAdded: () => void }) {
+function AddLevelDialog({ stageId, onLevelAdded, existingLevelsCount }: { stageId: string, onLevelAdded: () => void, existingLevelsCount: number }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [newLevelName, setNewLevelName] = useState('');
@@ -55,7 +55,8 @@ function AddLevelDialog({ stageId, onLevelAdded }: { stageId: string, onLevelAdd
             const levelsCollection = collection(firestore, 'levels');
             await addDoc(levelsCollection, { 
                 name: newLevelName,
-                stageId: stageId
+                stageId: stageId,
+                order: existingLevelsCount // Set order to be the last
             });
             toast({
                 title: "تمت الإضافة بنجاح",
@@ -63,7 +64,7 @@ function AddLevelDialog({ stageId, onLevelAdded }: { stageId: string, onLevelAdd
             });
             setNewLevelName('');
             setIsOpen(false);
-            onLevelAdded(); // To potentially refetch or update UI
+            onLevelAdded();
         } catch (error) {
             console.error("Error adding level: ", error);
             toast({
@@ -150,7 +151,7 @@ function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdat
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     <Pencil className="ml-2 h-4 w-4" /> تعديل
                 </DropdownMenuItem>
             </DialogTrigger>
@@ -185,6 +186,73 @@ function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdat
     );
 }
 
+// Component for editing a level
+function EditLevelDialog({ level, onLevelUpdated }: { level: Level, onLevelUpdated: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [levelName, setLevelName] = useState(level.name);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleUpdateLevel = async () => {
+        if (!levelName.trim() || !firestore) return;
+        setIsSaving(true);
+        try {
+            const levelRef = doc(firestore, 'levels', level.id);
+            await updateDoc(levelRef, { name: levelName });
+            toast({
+                title: "تم التحديث بنجاح",
+                description: `تم تحديث اسم المستوى إلى "${levelName}"`,
+            });
+            setIsOpen(false);
+            onLevelUpdated();
+        } catch (error) {
+            console.error("Error updating level: ", error);
+            toast({
+                title: "فشل التحديث",
+                description: "حدث خطأ أثناء تحديث المستوى.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <Pencil className="ml-2 h-4 w-4" /> تعديل
+                </DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>تعديل المستوى الدراسي</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="level-name-edit" className="text-right">
+                            الاسم
+                        </Label>
+                        <Input
+                            id="level-name-edit"
+                            value={levelName}
+                            onChange={(e) => setLevelName(e.target.value)}
+                            className="col-span-3"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+                    <Button type="button" onClick={handleUpdateLevel} disabled={isSaving || !levelName.trim()}>
+                        {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ التغييرات</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function ContentManagementPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -195,7 +263,7 @@ export default function ContentManagementPage() {
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
   const stagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'stages'), orderBy('order')) : null, [firestore, updateTrigger]);
-  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore, updateTrigger]);
+  const levelsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'levels'), orderBy('order')) : null, [firestore, updateTrigger]);
   const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore, updateTrigger]);
 
   const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
@@ -212,7 +280,7 @@ export default function ContentManagementPage() {
     setIsSavingStage(true);
     try {
         const stagesCollection = collection(firestore, 'stages');
-        const newOrder = (stages.length > 0) ? Math.max(...stages.map(s => s.order)) + 1 : 0;
+        const newOrder = (stages.length > 0) ? Math.max(...stages.map(s => s.order).filter(o => typeof o === 'number')) + 1 : 0;
         await addDoc(stagesCollection, { name: newStageName, order: newOrder });
         toast({
             title: "تمت الإضافة بنجاح",
@@ -264,6 +332,36 @@ export default function ContentManagementPage() {
     }
   };
 
+  const handleMoveLevel = async (levelsInStage: Level[], index: number, direction: 'up' | 'down') => {
+    if (!firestore) return;
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= levelsInStage.length) return;
+
+    const batch = writeBatch(firestore);
+    
+    const levelToMove = levelsInStage[index];
+    const otherLevel = levelsInStage[newIndex];
+    
+    // Swap orders
+    const levelToMoveRef = doc(firestore, 'levels', levelToMove.id);
+    batch.update(levelToMoveRef, { order: otherLevel.order });
+    
+    const otherLevelRef = doc(firestore, 'levels', otherLevel.id);
+    batch.update(otherLevelRef, { order: levelToMove.order });
+
+    try {
+      await batch.commit();
+      refreshData();
+    } catch (error) {
+      console.error("Error reordering levels: ", error);
+      toast({
+        title: "فشل تغيير الترتيب",
+        description: "حدث خطأ أثناء محاولة تغيير ترتيب المستويات.",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -331,7 +429,9 @@ export default function ContentManagementPage() {
             </div>
         ) : (
         <Accordion type="multiple" className="w-full">
-          {stages?.map((stage, index) => (
+          {stages?.map((stage, index) => {
+            const levelsInStage = levels?.filter((level) => level.stageId === stage.id).sort((a,b) => a.order - b.order) || [];
+            return (
             <AccordionItem value={stage.id} key={stage.id}>
               <AccordionTrigger className="px-4 hover:no-underline">
                 <div className="flex items-center gap-4 flex-1">
@@ -341,7 +441,7 @@ export default function ContentManagementPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'up')}} disabled={index === 0}>
                         <ArrowUp className="h-4 w-4" />
                     </Button>
-                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'down')}} disabled={index === stages.length - 1}>
+                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'down')}} disabled={index === (stages?.length || 0) - 1}>
                         <ArrowDown className="h-4 w-4" />
                     </Button>
                      <DropdownMenu>
@@ -360,11 +460,9 @@ export default function ContentManagementPage() {
               </AccordionTrigger>
               <AccordionContent className="bg-muted/50 p-4 space-y-4">
                 <div className='flex justify-end'>
-                    <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} />
+                    <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} existingLevelsCount={levelsInStage.length} />
                 </div>
-                {levels
-                  ?.filter((level) => level.stageId === stage.id)
-                  .map((level) => (
+                {levelsInStage.map((level, levelIndex) => (
                     <Collapsible key={level.id} className="rounded-md border bg-background px-4">
                       <div className="flex items-center justify-between py-3">
                         <div className="flex items-center gap-2">
@@ -376,18 +474,26 @@ export default function ContentManagementPage() {
                             </CollapsibleTrigger>
                             <span className="font-semibold">{level.name}</span>
                         </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">فتح القائمة</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem><Pencil className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
-                                <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'up')} disabled={levelIndex === 0}>
+                                <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'down')} disabled={levelIndex === levelsInStage.length - 1}>
+                                <ArrowDown className="h-4 w-4" />
+                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <span className="sr-only">فتح القائمة</span>
+                                    <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <EditLevelDialog level={level} onLevelUpdated={refreshData} />
+                                    <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                       </div>
                       <CollapsibleContent className="space-y-2 pb-4">
                         <div className='flex justify-end'>
@@ -420,13 +526,13 @@ export default function ContentManagementPage() {
                       </CollapsibleContent>
                     </Collapsible>
                   ))}
-                  {levels?.filter(l => l.stageId === stage.id).length === 0 && (
+                  {levelsInStage.length === 0 && (
                     <p className="text-center text-sm text-muted-foreground py-4">لا توجد مستويات مضافة لهذه المرحلة.</p>
                   )}
               </AccordionContent>
             </AccordionItem>
-          ))}
-           {stages?.length === 0 && (
+          )})}
+           {stages?.length === 0 && !isLoading && (
               <div className="p-8 text-center text-muted-foreground">
                   لا توجد مراحل دراسية. ابدأ بإضافة مرحلة جديدة.
               </div>
