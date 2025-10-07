@@ -7,7 +7,7 @@ export function Footer() {
     <footer className="w-full border-t border-border/50 bg-background">
       <div className="container mx-auto flex flex-col items-center justify-between gap-4 px-4 py-6 sm:flex-row">
         <p className="text-sm text-muted-foreground">
-          © {currentYear} SmartEdu Hub. جميع الحقوق محفوظة.
+          © {currentYear} Smart Education. جميع الحقوق محفوظة.
         </p>
         <div className="flex items-center gap-4">
           <Link

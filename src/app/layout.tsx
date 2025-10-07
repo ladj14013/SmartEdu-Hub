@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster"
 const amiri = Amiri({ subsets: ['arabic'], weight: ['400', '700'], variable: '--font-amiri' });
 
 export const metadata: Metadata = {
-  title: 'SmartEdu Hub | منصة تعليمية ذكية',
+  title: 'Smart Education | منصة تعليمية ذكية',
   description: 'منصة تعليمية رقمية متكاملة تهدف إلى تحديث وتسهيل العملية التعليمية.',
 };
 
