@@ -39,6 +39,88 @@ import { collection, addDoc, doc, query, orderBy, writeBatch, updateDoc } from '
 import type { Stage, Level, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+
+// Component for adding a new subject
+function AddSubjectDialog({ levelId, onSubjectAdded }: { levelId: string, onSubjectAdded: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleAddSubject = async () => {
+        if (!name.trim() || !firestore) return;
+        setIsSaving(true);
+        try {
+            await addDoc(collection(firestore, 'subjects'), {
+                name,
+                description,
+                levelId,
+            });
+            toast({
+                title: "تمت الإضافة بنجاح",
+                description: `تمت إضافة مادة "${name}"`,
+            });
+            setName('');
+            setDescription('');
+            setIsOpen(false);
+            onSubjectAdded();
+        } catch (error) {
+            console.error("Error adding subject: ", error);
+            toast({
+                title: "فشل في الإضافة",
+                description: "حدث خطأ أثناء إضافة المادة الجديدة.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" variant="outline"><Plus className="ml-2 h-4 w-4" />أضف مادة</Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>إضافة مادة جديدة</DialogTitle>
+                    <DialogDescription>أدخل تفاصيل المادة الجديدة.</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject-name" className="text-right">الاسم</Label>
+                        <Input
+                            id="subject-name"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            className="col-span-3"
+                            placeholder="مثال: الرياضيات"
+                        />
+                    </div>
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="subject-desc" className="text-right">الوصف</Label>
+                        <Textarea
+                            id="subject-desc"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            className="col-span-3"
+                            placeholder="وصف مختصر للمادة"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+                    <Button type="button" onClick={handleAddSubject} disabled={isSaving || !name.trim()}>
+                        {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 // Component for adding a new level
 function AddLevelDialog({ stageId, onLevelAdded, existingLevelsCount }: { stageId: string, onLevelAdded: () => void, existingLevelsCount: number }) {
@@ -150,11 +232,11 @@ function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdat
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+            <DropdownMenuTrigger asChild>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                     <Pencil className="ml-2 h-4 w-4" /> تعديل
                 </DropdownMenuItem>
-            </DialogTrigger>
+            </DropdownMenuTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>تعديل المرحلة الدراسية</DialogTitle>
@@ -275,13 +357,17 @@ export default function ContentManagementPage() {
   const refreshData = () => setUpdateTrigger(prev => prev + 1);
 
   const handleAddStage = async () => {
-    if (!newStageName.trim() || !firestore || !stages) return;
-
+    if (!newStageName.trim() || !firestore) return;
+  
     setIsSavingStage(true);
     try {
         const stagesCollection = collection(firestore, 'stages');
-        const newOrder = stages.length > 0 ? Math.max(...stages.map(s => s.order ?? -1)) + 1 : 0;
+        // Ensure stages data is loaded before calculating new order
+        const currentStages = stages || [];
+        const newOrder = currentStages.length > 0 ? Math.max(...currentStages.map(s => s.order ?? -1)) + 1 : 0;
+        
         await addDoc(stagesCollection, { name: newStageName, order: newOrder });
+        
         toast({
             title: "تمت الإضافة بنجاح",
             description: `تمت إضافة مرحلة "${newStageName}"`,
@@ -313,8 +399,15 @@ export default function ContentManagementPage() {
     const otherStage = stages[newIndex];
     
     if (typeof stageToMove.order !== 'number' || typeof otherStage.order !== 'number') {
-        console.error("Order is not a number for one of the stages", stageToMove, otherStage);
-        toast({ title: "خطأ في الترتيب", description: "بيانات الترتيب غير صالحة.", variant: "destructive" });
+        // Fallback: Re-index all stages if order is not consistent
+        stages.forEach((s, i) => {
+            if (s.order !== i) {
+                batch.update(doc(firestore, 'stages', s.id), { order: i });
+            }
+        });
+        await batch.commit();
+        refreshData();
+        toast({ title: "تم إصلاح الترتيب", description: "تمت إعادة فهرسة المراحل. الرجاء المحاولة مرة أخرى.", variant: "default" });
         return;
     }
     
@@ -509,7 +602,7 @@ export default function ContentManagementPage() {
                       </div>
                       <CollapsibleContent className="space-y-2 pb-4">
                         <div className='flex justify-end'>
-                            <Button size="sm" variant="outline"><Plus className="ml-2 h-4 w-4" />أضف مادة</Button>
+                            <AddSubjectDialog levelId={level.id} onSubjectAdded={refreshData} />
                         </div>
                         {subjects
                           ?.filter((subject) => subject.levelId === level.id)
