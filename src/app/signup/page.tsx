@@ -45,13 +45,13 @@ const signupSchema = z.object({
   subject: z.string().optional(),
   teacherCode: z.string().optional(),
 }).refine((data) => {
-    if (data.role === 'student' || data.role === 'teacher') {
-        return !!data.stage;
-    }
-    return true;
+  if (data.role === 'student' || data.role === 'teacher') {
+    return !!data.stage;
+  }
+  return true;
 }, {
-    message: "الرجاء اختيار المرحلة الدراسية.",
-    path: ['stage'],
+  message: "الرجاء اختيار المرحلة الدراسية.",
+  path: ['stage'],
 });
 
 type SignupFormValues = z.infer<typeof signupSchema>;
