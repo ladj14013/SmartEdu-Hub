@@ -187,6 +187,16 @@ export default function Home() {
               <TabsContent value="parent">
                 <Card className="overflow-hidden">
                   <div className="grid grid-cols-1 items-center md:grid-cols-2">
+                    <div className="p-8">
+                      <h3 className="mb-4 font-headline text-2xl font-semibold">
+                        لولي الأمر
+                      </h3>
+                      <p className="text-muted-foreground">
+                        (قريباً) تابع التقدم الدراسي لأبنائك، اطلع على النتائج،
+                        واستلم إشعارات بإنجازاتهم لتكون جزءًا من رحلتهم
+                        التعليمية.
+                      </p>
+                    </div>
                      {parentImage && (
                       <div className="relative h-64 w-full md:h-full">
                         <Image
@@ -198,16 +208,6 @@ export default function Home() {
                         />
                       </div>
                     )}
-                    <div className="p-8">
-                      <h3 className="mb-4 font-headline text-2xl font-semibold">
-                        لولي الأمر
-                      </h3>
-                      <p className="text-muted-foreground">
-                        (قريباً) تابع التقدم الدراسي لأبنائك، اطلع على النتائج،
-                        واستلم إشعارات بإنجازاتهم لتكون جزءًا من رحلتهم
-                        التعليمية.
-                      </p>
-                    </div>
                   </div>
                 </Card>
               </TabsContent>
