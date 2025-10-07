@@ -1,8 +1,8 @@
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getUserById, getLessonsBySubject, levels } from '@/lib/data';
-import { ArrowRight } from 'lucide-react';
+import { getUserById, getLessonsBySubject, levels, subjects } from '@/lib/data';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function TeacherLessonsPage({ params }: { params: { teacherId: string } }) {
@@ -29,12 +29,12 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
       
       <div className="space-y-6">
         {teacherLevels.map(level => {
-            const lessonsInLevel = teacherLessons.filter(l => getLessonsBySubject(teacher.subjectId!).find(subL => subL.id === l.id && getLessonsBySubject(l.subjectId).find(lvl => lvl.id === l.id)) && levels.find(lvl => lvl.id === subjects.find(s => s.id === l.subjectId)!.levelId)?.id === level.id);
+            const lessonsInLevel = teacherLessons.filter(lesson => {
+              const subject = subjects.find(s => s.id === lesson.subjectId);
+              return subject && subject.levelId === level.id;
+            });
 
-            // A simplified mock logic as the data structure is not fully relational
-            const lessonsInLevelMock = teacherLessons.filter((_, index) => index % 2 === (level.id === 'level-2-1' ? 0 : 1) );
-
-            if(lessonsInLevelMock.length === 0) return null;
+            if(lessonsInLevel.length === 0) return null;
 
             return (
                 <Card key={level.id}>
@@ -43,7 +43,7 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
                     </CardHeader>
                     <CardContent>
                         <div className="divide-y">
-                            {lessonsInLevelMock.map(lesson => (
+                            {lessonsInLevel.map(lesson => (
                                 <Link
                                     key={lesson.id}
                                     href={`/dashboard/supervisor_subject/teachers/${teacher.id}/lessons/${lesson.id}`}
