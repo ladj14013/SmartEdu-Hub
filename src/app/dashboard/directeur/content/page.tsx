@@ -26,7 +26,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { PageHeader } from '@/components/common/page-header';
-import { MoreHorizontal, Plus, Pencil, Trash2, ChevronsUpDown, Loader2, Save } from 'lucide-react';
+import { MoreHorizontal, Plus, Pencil, Trash2, ChevronsUpDown, Loader2, Save, ArrowUp, ArrowDown } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -35,7 +35,7 @@ import {
   } from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, doc, query, orderBy, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Stage, Level, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -115,6 +115,75 @@ function AddLevelDialog({ stageId, onLevelAdded }: { stageId: string, onLevelAdd
     );
 }
 
+// Component for editing a stage
+function EditStageDialog({ stage, onStageUpdated }: { stage: Stage, onStageUpdated: () => void }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [stageName, setStageName] = useState(stage.name);
+    const [isSaving, setIsSaving] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleUpdateStage = async () => {
+        if (!stageName.trim() || !firestore) return;
+        setIsSaving(true);
+        try {
+            const stageRef = doc(firestore, 'stages', stage.id);
+            await updateDoc(stageRef, { name: stageName });
+            toast({
+                title: "تم التحديث بنجاح",
+                description: `تم تحديث اسم المرحلة إلى "${stageName}"`,
+            });
+            setIsOpen(false);
+            onStageUpdated();
+        } catch (error) {
+            console.error("Error updating stage: ", error);
+            toast({
+                title: "فشل التحديث",
+                description: "حدث خطأ أثناء تحديث المرحلة.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                    <Pencil className="ml-2 h-4 w-4" /> تعديل
+                </DropdownMenuItem>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                    <DialogTitle>تعديل المرحلة الدراسية</DialogTitle>
+                    <DialogDescription>
+                        أدخل الاسم الجديد للمرحلة.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="stage-name-edit" className="text-right">
+                            الاسم
+                        </Label>
+                        <Input
+                            id="stage-name-edit"
+                            value={stageName}
+                            onChange={(e) => setStageName(e.target.value)}
+                            className="col-span-3"
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+                    <Button type="button" onClick={handleUpdateStage} disabled={isSaving || !stageName.trim()}>
+                        {isSaving ? <><Loader2 className="ml-2 h-4 w-4 animate-spin" /> جاري الحفظ...</> : <><Save className="ml-2 h-4 w-4" /> حفظ التغييرات</>}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 export default function ContentManagementPage() {
   const firestore = useFirestore();
@@ -125,7 +194,7 @@ export default function ContentManagementPage() {
   const [isStageDialogOpen, setIsStageDialogOpen] = useState(false);
   const [updateTrigger, setUpdateTrigger] = useState(0);
 
-  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore, updateTrigger]);
+  const stagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'stages'), orderBy('order')) : null, [firestore, updateTrigger]);
   const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore, updateTrigger]);
   const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore, updateTrigger]);
 
@@ -138,12 +207,13 @@ export default function ContentManagementPage() {
   const refreshData = () => setUpdateTrigger(prev => prev + 1);
 
   const handleAddStage = async () => {
-    if (!newStageName.trim() || !firestore) return;
+    if (!newStageName.trim() || !firestore || !stages) return;
 
     setIsSavingStage(true);
     try {
         const stagesCollection = collection(firestore, 'stages');
-        await addDoc(stagesCollection, { name: newStageName });
+        const newOrder = (stages.length > 0) ? Math.max(...stages.map(s => s.order)) + 1 : 0;
+        await addDoc(stagesCollection, { name: newStageName, order: newOrder });
         toast({
             title: "تمت الإضافة بنجاح",
             description: `تمت إضافة مرحلة "${newStageName}"`,
@@ -162,6 +232,38 @@ export default function ContentManagementPage() {
         setIsSavingStage(false);
     }
   };
+
+  const handleMoveStage = async (index: number, direction: 'up' | 'down') => {
+    if (!stages || !firestore) return;
+    
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= stages.length) return;
+
+    const batch = writeBatch(firestore);
+    
+    const stageToMove = stages[index];
+    const otherStage = stages[newIndex];
+    
+    // Swap orders
+    const stageToMoveRef = doc(firestore, 'stages', stageToMove.id);
+    batch.update(stageToMoveRef, { order: otherStage.order });
+    
+    const otherStageRef = doc(firestore, 'stages', otherStage.id);
+    batch.update(otherStageRef, { order: stageToMove.order });
+
+    try {
+      await batch.commit();
+      refreshData();
+    } catch (error) {
+      console.error("Error reordering stages: ", error);
+      toast({
+        title: "فشل تغيير الترتيب",
+        description: "حدث خطأ أثناء محاولة تغيير ترتيب المراحل.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   return (
     <div className="space-y-6">
@@ -229,11 +331,31 @@ export default function ContentManagementPage() {
             </div>
         ) : (
         <Accordion type="multiple" className="w-full">
-          {stages?.map((stage) => (
+          {stages?.map((stage, index) => (
             <AccordionItem value={stage.id} key={stage.id}>
               <AccordionTrigger className="px-4 hover:no-underline">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 flex-1">
                     <span className="font-medium text-lg">{stage.name}</span>
+                </div>
+                 <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'up')}} disabled={index === 0}>
+                        <ArrowUp className="h-4 w-4" />
+                    </Button>
+                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => {e.stopPropagation(); handleMoveStage(index, 'down')}} disabled={index === stages.length - 1}>
+                        <ArrowDown className="h-4 w-4" />
+                    </Button>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0" onClick={(e) => e.stopPropagation()}>
+                                <span className="sr-only">فتح القائمة</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                           <EditStageDialog stage={stage} onStageUpdated={refreshData} />
+                           <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="bg-muted/50 p-4 space-y-4">
