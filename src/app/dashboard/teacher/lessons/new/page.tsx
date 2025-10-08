@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
@@ -10,16 +10,15 @@ import { addDoc, collection, doc, query, where } from 'firebase/firestore';
 
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowRight, Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
-import type { Level, Subject, User } from '@/lib/types';
+import type { Level, User } from '@/lib/types';
 
 
 const newLessonSchema = z.object({
@@ -69,7 +68,7 @@ export default function NewLessonPage() {
         await addDoc(collection(firestore, 'lessons'), {
             title: data.title,
             content: data.content,
-            videoUrl: data.videoUrl || '',
+            videoUrl: data.videoUrl || null,
             authorId: authUser.uid,
             subjectId: teacher.subjectId,
             levelId: data.levelId,
