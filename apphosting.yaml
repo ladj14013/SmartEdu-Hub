@@ -1,0 +1,28 @@
+# The name of the backend.
+# This is the name that you gave your backend in the Firebase console.
+backendId: smartedu-hub
+
+# The minimum number of instances to keep running.
+minInstances: 0
+
+# The region to run the backend in.
+region: us-central1
+
+# The CPU resources to allocate to the backend.
+cpu: 1
+
+# The memory resources to allocate to the backend.
+memory: 512Mi
+
+# The concurrency of the backend.
+concurrency: 80
+
+# The environment variables to set for the backend.
+# You can also use secrets to store sensitive information.
+# https://firebase.google.com/docs/app-hosting/manage-secrets
+env:
+  - variable: FIREBASE_CONFIG
+    # This will be populated with your project's Firebase config by default.
+    value: '{{ .FirebaseConfig }}'
+  - variable: GENKIT_ENV
+    value: prod
