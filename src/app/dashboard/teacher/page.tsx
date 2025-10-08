@@ -1,7 +1,7 @@
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2, Wand2 } from 'lucide-react';
+import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2, Wand2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useState, useMemo } from 'react';
@@ -58,7 +58,7 @@ export default function TeacherDashboard() {
         const teacherDocRef = doc(firestore, 'users', authUser.uid);
         await updateDoc(teacherDocRef, { teacherCode: code });
         toast({ title: "تم توليد الكود بنجاح", description: `الكود الجديد هو: ${code}` });
-        refetchTeacher(); // Refetch teacher data to get the new code
+        // No need to refetch, onSnapshot will update the UI
     } catch (error) {
         console.error("Error generating teacher code:", error);
         toast({ title: "فشل توليد الكود", variant: "destructive" });
@@ -81,7 +81,7 @@ export default function TeacherDashboard() {
             />
              <div className="grid gap-6 md:grid-cols-2">
                 <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
-                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
+                <Card className="hover:bg-muted/50 transition-colors"><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
              </div>
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-28 w-full" />
@@ -108,7 +108,11 @@ export default function TeacherDashboard() {
             <CardContent className="flex items-center justify-between gap-4 p-4 bg-muted rounded-b-lg">
                 {teacherCode ? (
                     <>
-                        <p className="text-2xl font-mono font-bold text-primary">{teacherCode}</p>
+                        <Button onClick={generateTeacherCode} variant="ghost" size="icon" disabled={isGenerating}>
+                            {isGenerating ? <Loader2 className="h-5 w-5 animate-spin"/> : <RefreshCw className="h-5 w-5" />}
+                            <span className="sr-only">توليد كود جديد</span>
+                        </Button>
+                        <p className="text-2xl font-mono font-bold text-primary flex-1 text-center">{teacherCode}</p>
                         <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
                             {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
                             <span className="sr-only">نسخ الكود</span>
@@ -123,7 +127,7 @@ export default function TeacherDashboard() {
             </CardContent>
         </Card>
         <Card className="hover:bg-muted/50 transition-colors">
-            <Link href="/dashboard/teacher/subjects" className="flex flex-col h-full">
+            <Link href="/dashboard/teacher/subjects" className="flex flex-col justify-center h-full">
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>إدارة المحتوى</CardTitle>
