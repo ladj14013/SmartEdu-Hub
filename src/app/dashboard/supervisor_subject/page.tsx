@@ -1,21 +1,93 @@
+'use client';
+import { useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BookCopy, Users, GraduationCap, ArrowLeft } from 'lucide-react';
+import { BookCopy, Users, GraduationCap, ArrowLeft, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { User as UserType, Lesson, Stage, Subject } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Mock data
-const supervisor = {
-    name: "يوسف محمود",
-    subject: "الرياضيات",
-    stage: "المرحلة الإعدادية",
-};
+const StatCard = ({ title, value, description, icon: Icon, isLoading }: { title: string, value: string | number, description: string, icon: React.ElementType, isLoading: boolean }) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+            <Skeleton className="h-8 w-1/2" />
+        ) : (
+            <>
+                <div className="text-2xl font-bold">{value}</div>
+                <p className="text-xs text-muted-foreground">{description}</p>
+            </>
+        )}
+      </CardContent>
+    </Card>
+);
 
 export default function SupervisorSubjectDashboard() {
+    const firestore = useFirestore();
+    const { user: authUser, isLoading: isAuthLoading } = useUser();
+
+    // --- Data Fetching ---
+    const supervisorRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+    const { data: supervisor, isLoading: isSupervisorLoading } = useDoc<UserType>(supervisorRef);
+
+    const stageRef = useMemoFirebase(() => (firestore && supervisor?.stageId) ? doc(firestore, 'stages', supervisor.stageId) : null, [firestore, supervisor?.stageId]);
+    const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
+
+    const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
+    const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
+
+    // Query for teachers in the same stage and subject
+    const teachersQuery = useMemoFirebase(() => {
+        if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
+        return query(
+            collection(firestore, 'users'),
+            where('role', '==', 'teacher'),
+            where('stageId', '==', supervisor.stageId),
+            where('subjectId', '==', supervisor.subjectId)
+        );
+    }, [firestore, supervisor]);
+    const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
+
+    // Query for students in the same stage
+    const studentsQuery = useMemoFirebase(() => {
+        if (!firestore || !supervisor?.stageId) return null;
+        return query(
+            collection(firestore, 'users'),
+            where('role', '==', 'student'),
+            where('stageId', '==', supervisor.stageId)
+        );
+    }, [firestore, supervisor]);
+    const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(studentsQuery);
+
+    // Query for public lessons created by this supervisor
+    const publicLessonsQuery = useMemoFirebase(() => {
+        if (!firestore || !authUser || !supervisor?.subjectId) return null;
+        return query(
+            collection(firestore, 'lessons'),
+            where('authorId', '==', authUser.uid),
+            where('subjectId', '==', supervisor.subjectId),
+            where('type', '==', 'public')
+        );
+    }, [firestore, authUser, supervisor]);
+    const { data: publicLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
+
+    const isLoading = isAuthLoading || isSupervisorLoading || isStageLoading || isSubjectLoading || areTeachersLoading || areStudentsLoading || areLessonsLoading;
+    
+    const supervisorName = supervisor?.name || '...';
+    const subjectName = subject?.name || '...';
+    const stageName = stage?.name || '...';
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="لوحة تحكم مشرف المادة"
-        description={`مرحباً ${supervisor.name}، أنت تشرف على مادة ${supervisor.subject} ل${supervisor.stage}.`}
+        description={isLoading ? 'جاري تحميل البيانات...' : `مرحباً ${supervisorName}، أنت تشرف على مادة ${subjectName} ل${stageName}.`}
       />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -44,36 +116,27 @@ export default function SupervisorSubjectDashboard() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي الأساتذة</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8</div>
-            <p className="text-xs text-muted-foreground">في المادة والمرحلة الخاصة بك</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">إجمالي التلاميذ</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">215</div>
-             <p className="text-xs text-muted-foreground">المسجلين في المادة</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الدروس العامة</CardTitle>
-            <BookCopy className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">درساً قمت بإنشائه</p>
-          </CardContent>
-        </Card>
+        <StatCard 
+            title="إجمالي الأساتذة" 
+            value={teachers?.length ?? 0}
+            description="في المادة والمرحلة الخاصة بك"
+            icon={Users}
+            isLoading={isLoading}
+        />
+        <StatCard 
+            title="إجمالي التلاميذ" 
+            value={students?.length ?? 0}
+            description={`المسجلين في ${stageName}`}
+            icon={GraduationCap}
+            isLoading={isLoading}
+        />
+        <StatCard 
+            title="الدروس العامة" 
+            value={publicLessons?.length ?? 0}
+            description="درساً قمت بإنشائه"
+            icon={BookCopy}
+            isLoading={isLoading}
+        />
       </div>
     </div>
   );
