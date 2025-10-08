@@ -140,8 +140,8 @@ export default function TeacherDashboard() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="hover:bg-muted/50 transition-colors">
-            <Link href="/dashboard/teacher/students" className="block w-full h-full">
+        <Link href="/dashboard/teacher/students">
+            <Card className="hover:bg-muted/50 transition-colors h-full">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">عدد الطلاب</CardTitle>
                     <Users className="h-4 w-4 text-muted-foreground" />
@@ -150,10 +150,10 @@ export default function TeacherDashboard() {
                     <div className="text-2xl font-bold">{linkedStudents?.length ?? 0}</div>
                     <p className="text-xs text-muted-foreground">طالب مرتبط بك</p>
                 </CardContent>
-            </Link>
-        </Card>
-        <Card className="hover:bg-muted/50 transition-colors">
-            <Link href="/dashboard/teacher/subjects" className="block w-full h-full">
+            </Card>
+        </Link>
+        <Link href="/dashboard/teacher/subjects">
+            <Card className="hover:bg-muted/50 transition-colors h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">الدروس الخاصة</CardTitle>
                 <Presentation className="h-4 w-4 text-muted-foreground" />
@@ -162,8 +162,8 @@ export default function TeacherDashboard() {
                 <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
                 <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
             </CardContent>
-            </Link>
-        </Card>
+            </Card>
+        </Link>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">متوسط الأداء</CardTitle>
