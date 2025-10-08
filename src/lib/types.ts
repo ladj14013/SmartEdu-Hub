@@ -58,8 +58,9 @@ export interface Message {
   subject: string;
   senderName: string;
   senderEmail: string;
+  authorId?: string | null; // The user ID if the sender is logged in
   content: string;
-  timestamp: string;
+  timestamp: any; // Firestore ServerTimestamp
   isRead: boolean;
   forwardedTo?: 'supervisor_general';
 }
