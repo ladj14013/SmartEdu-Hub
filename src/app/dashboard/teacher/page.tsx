@@ -95,8 +95,8 @@ export default function TeacherDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="لوحة تحكم الأستاذ"
-        description={`مرحباً ${teacherName}، أنت تدرس مادة ${subjectName} لـ ${stageName}.`}
+        title={`مرحباً بك أستاذ: ${teacherName}`}
+        description={`أنت تدرس مادة ${subjectName} لـ ${stageName}.`}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -123,7 +123,7 @@ export default function TeacherDashboard() {
             </CardContent>
         </Card>
         <Card className="hover:bg-muted/50 transition-colors">
-            <Link href="/dashboard/teacher/subjects">
+            <Link href="/dashboard/teacher/subjects" className="flex flex-col h-full">
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <CardTitle>إدارة المحتوى</CardTitle>
@@ -146,16 +146,18 @@ export default function TeacherDashboard() {
             <p className="text-xs text-muted-foreground">طالب مرتبط بك</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">الدروس الخاصة</CardTitle>
-            <Presentation className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
-            <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
-          </CardContent>
-        </Card>
+        <Link href="/dashboard/teacher/subjects">
+            <Card className="hover:bg-muted/50 transition-colors">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">الدروس الخاصة</CardTitle>
+                <Presentation className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
+                <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
+            </CardContent>
+            </Card>
+        </Link>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">متوسط الأداء</CardTitle>
