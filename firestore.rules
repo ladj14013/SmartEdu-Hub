@@ -2,9 +2,57 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Warning: Unsafe rule. Allows any read/write. For debugging only.
-    match /{document=**} {
-      allow read, write: if true;
+
+    // Helper function to get user role
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+    
+    // Helper function to check if a user is an admin type
+    function isAdmin() {
+      return getUserRole(request.auth.uid) in ['directeur', 'supervisor_general'];
+    }
+
+    match /users/{userId} {
+      allow read;
+      allow write: if request.auth.uid == userId || getUserRole(request.auth.uid) == 'directeur';
+    }
+
+    match /stages/{stageId} {
+      allow read;
+      allow write: if getUserRole(request.auth.uid) == 'directeur';
+    }
+
+    match /levels/{levelId} {
+      allow read;
+      allow write: if getUserRole(request.auth.uid) == 'directeur';
+    }
+
+    match /subjects/{subjectId} {
+      allow read;
+      allow write: if getUserRole(request.auth.uid) == 'directeur';
+    }
+
+    match /lessons/{lessonId} {
+      allow read;
+      allow write: if request.auth.uid == resource.data.authorId 
+                      || getUserRole(request.auth.uid) == 'directeur' 
+                      || getUserRole(request.auth.uid) == 'supervisor_subject';
+    }
+    
+    match /proposals/{proposalId} {
+      allow read: if request.auth.uid == resource.data.proposerId || getUserRole(request.auth.uid) == 'directeur';
+      allow create: if request.auth.uid != null;
+      allow update: if getUserRole(request.auth.uid) == 'directeur'; // Only director can approve/reject
+    }
+
+    match /messages/{messageId} {
+      allow read, write: if request.auth.uid != null;
+    }
+
+    // Student specific rules
+    match /users/{studentId}/lessonProgress/{lessonId} {
+      allow read, write: if request.auth.uid == studentId;
     }
   }
 }
