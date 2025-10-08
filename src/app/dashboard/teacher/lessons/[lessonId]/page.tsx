@@ -33,7 +33,7 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
   const [exercises, setExercises] = useState<Exercise[]>([]);
 
   const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
-  const { data: lesson, isLoading: isLessonLoading, refetch: refetchLesson } = useDoc<Lesson>(lessonRef);
+  const { data: lesson, isLoading: isLessonLoading } = useDoc<Lesson>(lessonRef);
   
   useEffect(() => {
     if (lesson) {
@@ -68,7 +68,6 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
               title: "تم الحفظ بنجاح",
               description: "تم تحديث بيانات الدرس.",
           });
-          refetchLesson();
       } catch (error) {
           console.error("Error updating lesson:", error);
           toast({
