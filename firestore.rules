@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -7,53 +8,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isUserWithRole(role) {
-      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    match /users/{userId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isOwner(userId) || isUserWithRole('directeur');
-    }
-
-    match /stages/{stageId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isUserWithRole('directeur');
-    }
-
-    match /levels/{levelId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isUserWithRole('directeur');
-    }
-
-    match /subjects/{subjectId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isUserWithRole('directeur');
-    }
-
-    match /lessons/{lessonId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isUserWithRole('directeur') 
-                    || (isUserWithRole('teacher') && request.resource.data.authorId == request.auth.uid)
-                    || (isUserWithRole('supervisor_subject') && request.resource.data.type == 'public');
-    }
-
-    match /messages/{messageId} {
+    // Rules for all collections
+    // This is a permissive setup for development.
+    // In production, you should restrict access further.
+    match /{document=**} {
       allow read, write: if isUserAuthenticated();
-    }
-
-    match /proposals/{proposalId} {
-      allow create: if isUserAuthenticated() && (isUserWithRole('supervisor_general') || isUserWithRole('supervisor_subject'));
-      allow read, list: if isUserAuthenticated();
-      allow update: if isUserWithRole('directeur');
-    }
-
-    match /supervisor_notes/{noteId} {
-      allow read, create: if isUserWithRole('supervisor_subject');
     }
   }
 }
