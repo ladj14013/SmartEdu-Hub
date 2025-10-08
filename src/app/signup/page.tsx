@@ -113,8 +113,10 @@ export default function SignupPage() {
       // Generate teacher code if role is teacher
       if(data.role === 'teacher') {
         userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      } else if (data.role === 'student') {
-        userData.linkedTeacherId = data.teacherCode || null;
+      } else if (data.role === 'student' && data.teacherCode) {
+        // In a real app, you'd find the teacher by code and link them.
+        // For now, we're just storing the code. This logic will be improved later.
+        userData.linkedTeacherId = data.teacherCode;
       }
       
       // 3. Create user document in Firestore

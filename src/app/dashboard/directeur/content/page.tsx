@@ -681,7 +681,7 @@ export default function ContentManagementPage() {
                              <CollapsibleContent className="space-y-2 py-2">
                                 {subjectsInStage.map((subject) => (
                                     <div key={subject.id} className="flex items-center justify-between rounded-md border p-3 bg-white">
-                                        <Link href={`/dashboard/directeur/content/${stage.id}/level-id-placeholder/${subject.id}`} className='hover:underline'>
+                                        <Link href={`/dashboard/directeur/content/${stage.id}/all-levels/${subject.id}`} className='hover:underline'>
                                             {subject.name}
                                         </Link>
                                         <DropdownMenu>

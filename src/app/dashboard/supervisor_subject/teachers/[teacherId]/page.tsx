@@ -18,29 +18,27 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   const teacherLessonsQuery = useMemoFirebase(() => {
-    if (!firestore || !teacher?.subjectId) return null;
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId), where('authorId', '==', teacherId));
-  }, [firestore, teacher?.subjectId, teacherId]);
+    if (!firestore || !teacher?.id) return null;
+    return query(collection(firestore, 'lessons'), where('authorId', '==', teacher.id));
+  }, [firestore, teacher]);
+
   const { data: teacherLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(teacherLessonsQuery);
 
   const teacherLevelsQuery = useMemoFirebase(() => {
     if (!firestore || !teacher?.stageId) return null;
     return query(collection(firestore, 'levels'), where('stageId', '==', teacher.stageId));
   }, [firestore, teacher?.stageId]);
-  const { data: teacherLevels, isLoading: areLevelsLoading } = useCollection<Level>(teacherLevelsQuery);
-  
-  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
-  const { data: subjects, isLoading: areSubjectsLoading } = useCollection<Subject>(subjectsQuery);
 
-  const isLoading = isTeacherLoading || areLessonsLoading || areLevelsLoading || areSubjectsLoading;
+  const { data: teacherLevels, isLoading: areLevelsLoading } = useCollection<Level>(teacherLevelsQuery);
+
+  const isLoading = isTeacherLoading || areLessonsLoading || areLevelsLoading;
   
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title={<Skeleton className="h-8 w-80" />}>
+        <PageHeader title={<Skeleton className="h-8 w-80" />} description={<Skeleton className="h-4 w-96 mt-2"/>}>
           <Skeleton className="h-10 w-44" />
         </PageHeader>
-        <Skeleton className="h-4 w-96" />
         <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
         <Card><CardContent className="p-6"><Skeleton className="h-16 w-full" /></CardContent></Card>
       </div>
@@ -66,10 +64,7 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
       
       <div className="space-y-6">
         {teacherLevels?.map(level => {
-            const lessonsInLevel = teacherLessons?.filter(lesson => {
-              const subject = subjects?.find(s => s.id === lesson.subjectId);
-              return subject && subject.levelId === level.id;
-            });
+            const lessonsInLevel = teacherLessons?.filter(lesson => lesson.levelId === level.id);
 
             if(!lessonsInLevel || lessonsInLevel.length === 0) return null;
 

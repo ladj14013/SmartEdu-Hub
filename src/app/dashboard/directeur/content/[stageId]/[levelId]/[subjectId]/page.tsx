@@ -12,7 +12,7 @@ import type { Subject, Level, Stage, Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubjectContentPage({ params }: { params: { stageId: string; levelId: string; subjectId: string } }) {
-  const { stageId, subjectId } = params; // levelId is no longer directly used for subjects
+  const { stageId, subjectId } = params;
   const firestore = useFirestore();
 
   const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -20,6 +20,7 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
   
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
+    // Query all lessons for the subject, filtering by level can happen client-side if needed
     return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
   }, [firestore, subjectId]);
 

@@ -34,14 +34,17 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student) return null;
     
-    // Base query for all lessons in the subject that are public or private to the student's level
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId), where('levelId', '==', student.levelId));
+    // Query all lessons in the subject that are public, or private to the student's level and linked teacher
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
 
   }, [firestore, subjectId, student]);
 
   const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
   
-  const lessons = allLessons?.filter(l => l.type === 'public' || l.authorId === student?.linkedTeacherId);
+  const lessons = allLessons?.filter(l => 
+      (l.type === 'public' && l.levelId === student?.levelId) || 
+      (l.type === 'private' && l.authorId === student?.linkedTeacherId && l.levelId === student?.levelId)
+  );
 
   const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || isTeacherLoading || areLessonsLoading;
 
@@ -74,10 +77,9 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   if (isLoading) {
     return (
         <div className="space-y-6">
-            <PageHeader title={<Skeleton className="h-8 w-48" />}>
+            <PageHeader title={<Skeleton className="h-8 w-48" />} description={<Skeleton className="h-4 w-72 mt-2" />}>
                  <Skeleton className="h-10 w-32" />
             </PageHeader>
-            <Skeleton className="h-4 w-72" />
             <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
             <Card><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
         </div>
@@ -118,7 +120,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
           ) : (
             <div className="flex items-center gap-2">
               <Input placeholder="أدخل كود الأستاذ" className="flex-1" value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)} disabled={isLinking} />
-              <Button variant="accent" onClick={handleLinkTeacher} disabled={isLinking}>
+              <Button variant="accent" onClick={handleLinkTeacher} disabled={isLinking || !teacherCode.trim()}>
                 {isLinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <User className="ml-2 h-4 w-4" />}
                  ربط الحساب
               </Button>

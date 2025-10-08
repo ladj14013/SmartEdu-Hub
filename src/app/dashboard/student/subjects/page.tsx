@@ -17,11 +17,11 @@ export default function StudentSubjectsPage() {
     const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
     const { data: student, isLoading: isStudentLoading } = useDoc<UserType>(studentRef);
 
-    // Get subjects for the student's level
+    // Get subjects for the student's stage
     const subjectsQuery = useMemoFirebase(() => {
-        if (!firestore || !student?.levelId) return null;
-        return query(collection(firestore, 'subjects'), where('levelId', '==', student.levelId));
-    }, [firestore, student?.levelId]);
+        if (!firestore || !student?.stageId) return null;
+        return query(collection(firestore, 'subjects'), where('stageId', '==', student.stageId));
+    }, [firestore, student?.stageId]);
     const { data: availableSubjects, isLoading: areSubjectsLoading } = useCollection<Subject>(subjectsQuery);
 
     const isLoading = isAuthLoading || isStudentLoading || areSubjectsLoading;
@@ -77,7 +77,7 @@ export default function StudentSubjectsPage() {
         })}
         {availableSubjects?.length === 0 && (
             <p className="col-span-full text-center text-muted-foreground">
-                لا توجد مواد دراسية متاحة لمستواك حالياً.
+                لا توجد مواد دراسية متاحة لمرحلتك الدراسية حالياً.
             </p>
         )}
       </div>
