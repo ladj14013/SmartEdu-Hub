@@ -5,9 +5,9 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, GraduationCap, UserCheck, Users, Loader2 } from 'lucide-react';
+import { BarChart, BookCopy, GraduationCap, UserCheck, Users, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { User } from '@/lib/types';
+import type { User, Lesson } from '@/lib/types';
 
 const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string, value: number, icon: React.ElementType, isLoading: boolean }) => (
   <Card>
@@ -28,12 +28,11 @@ const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string, valu
 export default function DirecteurDashboard() {
   const firestore = useFirestore();
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
+  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const lessonsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'lessons') : null, [firestore]);
 
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
+  const { data: lessonsData, isLoading: isLoadingLessons } = useCollection<Lesson>(lessonsQuery);
 
   const stats = useMemo(() => {
     if (!usersData) {
@@ -44,8 +43,8 @@ export default function DirecteurDashboard() {
     return { students, teachers };
   }, [usersData]);
 
-  // This should also be fetched from Firestore in a real app
-  const totalSubjects = 54;
+  const totalLessons = lessonsData?.length ?? 0;
+  const totalSubjects = 54; // This should also be fetched
 
   return (
     <div className="space-y-6">
@@ -54,10 +53,11 @@ export default function DirecteurDashboard() {
         description="مرحباً بعودتك، إليك نظرة عامة على المنصة."
       />
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="إجمالي الطلاب" value={stats.students} icon={Users} isLoading={isLoadingUsers} />
         <StatCard title="إجمالي المعلمين" value={stats.teachers} icon={UserCheck} isLoading={isLoadingUsers} />
         <StatCard title="إجمالي المواد" value={totalSubjects} icon={GraduationCap} isLoading={false} />
+        <StatCard title="إجمالي الدروس" value={totalLessons} icon={BookCopy} isLoading={isLoadingLessons} />
       </div>
 
       <Card>
