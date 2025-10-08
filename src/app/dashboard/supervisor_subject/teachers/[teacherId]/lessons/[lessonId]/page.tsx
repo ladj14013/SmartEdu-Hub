@@ -1,3 +1,4 @@
+
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
@@ -62,18 +63,17 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <PageHeader title={<Skeleton className="h-8 w-64" />}>
+        <PageHeader title={<Skeleton className="h-8 w-64" />} description={<Skeleton className="h-4 w-72 mt-2" />}>
           <Skeleton className="h-10 w-40" />
         </PageHeader>
-        <Skeleton className="h-4 w-80" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <Card><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+            <Card><CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader><CardContent className="p-6"><Skeleton className="h-48 w-full" /></CardContent></Card>
+            <Card><CardHeader><CardTitle><Skeleton className="h-6 w-24" /></CardTitle></CardHeader><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
           </div>
           <div className="lg:col-span-1 space-y-6">
-            <Card><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-            <Card><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
+            <Card><CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+            <Card><CardHeader><CardTitle><Skeleton className="h-6 w-24" /></CardTitle></CardHeader><CardContent className="p-6"><Skeleton className="h-24 w-full" /></CardContent></Card>
           </div>
         </div>
       </div>
