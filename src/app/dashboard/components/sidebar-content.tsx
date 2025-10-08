@@ -49,6 +49,7 @@ const navLinks = {
   ],
   supervisor_general: [
     { href: '/dashboard/supervisor_general', label: 'الرئيسية', icon: Home },
+    { href: '/dashboard/supervisor_general/supervisors', label: 'قائمة مشرفي المواد', icon: Users },
     { href: '/dashboard/supervisor_general/messages', label: 'الرسائل الموجهة', icon: Mail },
   ],
   teacher: [
