@@ -1,7 +1,5 @@
+
 {
-  "firestore": {
-    "rules": "firestore.rules"
-  },
   "hosting": {
     "source": ".next",
     "ignore": [
