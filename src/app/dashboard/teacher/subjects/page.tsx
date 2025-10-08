@@ -17,16 +17,30 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog"
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, deleteDoc } from 'firebase/firestore';
 import type { Lesson, Level, User as UserType, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export default function TeacherSubjectsPage() {
     const firestore = useFirestore();
     const { user: authUser, isLoading: isAuthLoading } = useUser();
     const [selectedLevelId, setSelectedLevelId] = useState<string | 'all'>('all');
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { toast } = useToast();
 
     // --- Data Fetching ---
     const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -45,10 +59,32 @@ export default function TeacherSubjectsPage() {
         if (!firestore || !teacher?.subjectId) return null;
         return query(collection(firestore, 'lessons'), where('subjectId', '==', teacher.subjectId));
     }, [firestore, teacher?.subjectId]);
-    const { data: allLessons, isLoading: areAllLessonsLoading } = useCollection<Lesson>(allLessonsQuery);
+    const { data: allLessons, isLoading: areAllLessonsLoading, refetch: refetchLessons } = useCollection<Lesson>(allLessonsQuery);
 
     const isLoading = isAuthLoading || isTeacherLoading || isSubjectLoading || areLevelsLoading || areAllLessonsLoading;
 
+    const handleDelete = async (lessonId: string) => {
+        if (!firestore) return;
+        setIsDeleting(true);
+        try {
+            await deleteDoc(doc(firestore, 'lessons', lessonId));
+            toast({
+                title: "تم الحذف بنجاح",
+                description: "تم حذف الدرس بنجاح.",
+            });
+            refetchLessons();
+        } catch (error) {
+            console.error("Error deleting lesson:", error);
+            toast({
+                title: "فشل الحذف",
+                description: "حدث خطأ أثناء حذف الدرس.",
+                variant: "destructive"
+            });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+    
     const filterLessonsByLevel = (lessons: Lesson[] | undefined) => {
         if (!lessons) return [];
         if (selectedLevelId === 'all') return lessons;
@@ -129,7 +165,27 @@ export default function TeacherSubjectsPage() {
                                                     <Pencil className="ml-2 h-4 w-4" />تعديل
                                                 </Link>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500">
+                                                        <Trash2 className="ml-2 h-4 w-4" />حذف
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            هذا الإجراء سيحذف الدرس "{lesson.title}" بشكل دائم.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(lesson.id)} disabled={isDeleting}>
+                                                            {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>

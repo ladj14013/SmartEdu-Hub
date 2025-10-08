@@ -18,6 +18,17 @@ import {
   DialogTrigger,
   DialogClose
 } from '@/components/ui/dialog';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+  } from "@/components/ui/alert-dialog"
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -35,7 +46,7 @@ import {
   } from "@/components/ui/dropdown-menu"
 import Link from 'next/link';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, doc, query, orderBy, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, query, orderBy, writeBatch, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Stage, Level, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -329,6 +340,7 @@ export default function ContentManagementPage() {
   const [editingStage, setEditingStage] = useState<Stage | null>(null);
   const [editingLevel, setEditingLevel] = useState<Level | null>(null);
   const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const stagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'stages'), orderBy('order')) : null, [firestore, updateTrigger]);
   const levelsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'levels'), orderBy('order')) : null, [firestore, updateTrigger]);
@@ -454,6 +466,28 @@ export default function ContentManagementPage() {
     }
   };
 
+  const handleDelete = async (collectionName: string, docId: string, docName: string) => {
+    if (!firestore) return;
+    setIsDeleting(true);
+    try {
+        await deleteDoc(doc(firestore, collectionName, docId));
+        toast({
+            title: "تم الحذف بنجاح",
+            description: `تم حذف "${docName}".`
+        });
+        refreshData();
+    } catch (error) {
+        console.error(`Error deleting ${collectionName}:`, error);
+        toast({
+            title: "فشل الحذف",
+            description: `حدث خطأ أثناء حذف "${docName}".`,
+            variant: "destructive"
+        });
+    } finally {
+        setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -549,7 +583,20 @@ export default function ContentManagementPage() {
                                             <Pencil className="ml-2 h-4 w-4" /> تعديل
                                         </DropdownMenuItem>
                                     </DialogTrigger>
-                                <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المرحلة "{stage.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete('stages', stage.id, stage.name)} disabled={isDeleting}>
+                                                    {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </div>
@@ -591,7 +638,20 @@ export default function ContentManagementPage() {
                                                 <Pencil className="ml-2 h-4 w-4" /> تعديل
                                             </DropdownMenuItem>
                                         </DialogTrigger>
-                                        <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                         <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المستوى "{level.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete('levels', level.id, level.name)} disabled={isDeleting}>
+                                                        {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
@@ -616,7 +676,20 @@ export default function ContentManagementPage() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem><Pencil className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المادة "{subject.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete('subjects', subject.id, subject.name)} disabled={isDeleting}>
+                                                             {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>
