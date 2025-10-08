@@ -37,7 +37,7 @@ export default function ProposalsPage() {
 
   // --- Data Fetching ---
   const currentUserRef = useMemoFirebase(() => authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const stagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'stages'), orderBy('order')) : null, [firestore]);
+  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
   const proposalsQuery = useMemoFirebase(() => authUser ? query(collection(firestore, 'proposals'), where('proposerId', '==', authUser.uid), orderBy('createdAt', 'desc')) : null, [firestore, authUser]);
   
   const { data: currentUser, isLoading: isUserLoading } = useDoc<UserType>(currentUserRef);
