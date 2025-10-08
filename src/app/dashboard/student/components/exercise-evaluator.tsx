@@ -5,7 +5,9 @@ import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { evaluateStudentAnswers, type EvaluateStudentAnswersOutput } from '@/ai/flows/evaluate-student-answers';
-import type { Lesson } from '@/lib/types';
+import type { Lesson, StudentLessonProgress } from '@/lib/types';
+import { useFirestore, useUser } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +33,8 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
   const [evaluationResult, setEvaluationResult] = useState<EvaluateStudentAnswersOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user: authUser } = useUser();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -44,6 +48,27 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
     name: 'answers',
   });
 
+  const saveProgress = async (score: number) => {
+    if (!firestore || !authUser) return;
+    try {
+      const progressRef = doc(firestore, `users/${authUser.uid}/lessonProgress`, lesson.id);
+      const progressData: StudentLessonProgress = {
+        studentId: authUser.uid,
+        lessonId: lesson.id,
+        completionDate: new Date().toISOString(),
+        score: score,
+      };
+      await setDoc(progressRef, progressData, { merge: true });
+    } catch (error) {
+      console.error("Failed to save lesson progress:", error);
+      toast({
+        title: "فشل حفظ التقدم",
+        description: "حدث خطأ أثناء حفظ نتيجتك. يمكنك إعادة المحاولة لاحقًا.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     setEvaluationResult(null);
@@ -54,6 +79,11 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
         studentAnswers: data.answers.map(a => a.value),
       });
       setEvaluationResult(result);
+      
+      const totalScore = result.detailedFeedback.reduce((sum, fb) => sum + fb.score, 0);
+      const averageScore = Math.round((totalScore / result.detailedFeedback.length) * 10);
+      await saveProgress(averageScore);
+
     } catch (error) {
         console.error("Evaluation failed:", error);
         toast({
@@ -92,7 +122,7 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
       <Card>
         <CardHeader>
           <CardTitle>نتائج التقييم</CardTitle>
-          <CardDescription>هذه هي ملاحظات الذكاء الاصطناعي على إجاباتك.</CardDescription>
+          <CardDescription>هذه هي ملاحظات الذكاء الاصطناعي على إجاباتك. تم حفظ نتيجتك.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-center space-y-2">

@@ -71,3 +71,10 @@ export interface SupervisorNote {
   content: string;
   timestamp: any;
 }
+
+export interface StudentLessonProgress {
+  studentId: string;
+  lessonId: string;
+  completionDate: string;
+  score: number;
+}

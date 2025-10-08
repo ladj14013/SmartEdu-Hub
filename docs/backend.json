@@ -229,7 +229,6 @@
         }
       },
       "required": [
-        "id",
         "studentId",
         "lessonId"
       ]
