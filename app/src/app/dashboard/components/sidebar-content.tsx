@@ -54,7 +54,6 @@ const navLinks = {
   teacher: [
     { href: '/dashboard/teacher', label: 'الرئيسية', icon: Home },
     { href: '/dashboard/teacher/subjects', label: 'إدارة الدروس', icon: Presentation },
-    { href: '/dashboard/teacher/students', label: 'الطلاب', icon: Users },
   ],
   student: [
     { href: '/dashboard/student', label: 'الرئيسية', icon: Home },
