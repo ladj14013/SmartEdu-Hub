@@ -39,7 +39,7 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      answers: lesson.exercises.map(() => ({ value: '' })),
+      answers: lesson.exercises?.map(() => ({ value: '' })) || [],
     },
   });
   
@@ -77,11 +77,12 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
         lessonContent: lesson.content,
         questions: lesson.exercises.map(ex => ex.question),
         studentAnswers: data.answers.map(a => a.value),
+        modelAnswers: lesson.exercises.map(ex => ex.modelAnswer),
       });
       setEvaluationResult(result);
       
       const totalScore = result.detailedFeedback.reduce((sum, fb) => sum + fb.score, 0);
-      const averageScore = Math.round((totalScore / result.detailedFeedback.length) * 10);
+      const averageScore = result.detailedFeedback.length > 0 ? Math.round((totalScore / result.detailedFeedback.length) * 10) : 0;
       await saveProgress(averageScore);
 
     } catch (error) {
@@ -101,7 +102,7 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
     form.reset();
   };
 
-  if (lesson.exercises.length === 0) {
+  if (!lesson.exercises || lesson.exercises.length === 0) {
     return (
         <Card>
             <CardHeader>
@@ -116,7 +117,7 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
 
   if (evaluationResult) {
     const totalScore = evaluationResult.detailedFeedback.reduce((sum, fb) => sum + fb.score, 0);
-    const averageScore = Math.round((totalScore / evaluationResult.detailedFeedback.length) * 10);
+    const averageScore = evaluationResult.detailedFeedback.length > 0 ? Math.round((totalScore / evaluationResult.detailedFeedback.length) * 10) : 0;
     
     return (
       <Card>
@@ -143,10 +144,20 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
                     <span>السؤال {index + 1}: <span className='font-bold'>{Math.round(fb.score * 10)}%</span></span>
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="space-y-3">
+                <AccordionContent className="space-y-3 p-4">
                     <p className="text-sm"><span className="font-semibold">سؤال:</span> {fb.question}</p>
-                    <p className="text-sm bg-blue-50 p-2 rounded-md"><span className="font-semibold">إجابتك:</span> {fb.studentAnswer}</p>
-                    <p className="text-sm bg-green-50 p-2 rounded-md"><span className="font-semibold">ملاحظات:</span> {fb.feedback}</p>
+                    <div className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-md space-y-1">
+                        <p className="font-semibold text-sm text-blue-800">إجابتك:</p>
+                        <p className="text-sm text-blue-700">{fb.studentAnswer}</p>
+                    </div>
+                    <div className="p-3 bg-green-50 border-l-4 border-green-400 rounded-md space-y-1">
+                        <p className="font-semibold text-sm text-green-800">الإجابة النموذجية:</p>
+                        <p className="text-sm text-green-700">{fb.modelAnswer}</p>
+                    </div>
+                    <div className="p-3 bg-orange-50 border-l-4 border-orange-400 rounded-md space-y-1">
+                        <p className="font-semibold text-sm text-orange-800">ملاحظات الذكاء الاصطناعي:</p>
+                        <p className="text-sm text-orange-700">{fb.feedback}</p>
+                    </div>
                 </AccordionContent>
               </AccordionItem>
             ))}
