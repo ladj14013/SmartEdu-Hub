@@ -41,24 +41,24 @@ const prompt = ai.definePrompt({
   name: 'evaluateStudentAnswersPrompt',
   input: {schema: EvaluateStudentAnswersInputSchema},
   output: {schema: EvaluateStudentAnswersOutputSchema},
-  prompt: `You are an AI assistant that evaluates student answers to exercises.
+  prompt: `أنت مساعد ذكاء اصطناعي متخصص في تقييم إجابات التلاميذ على التمارين. يجب أن تكون جميع ردودك باللغة العربية.
 
-  Provide detailed feedback for each question and answer pair, including a score representing how good the answer was.
-  Also provide overall feedback on the student performance.
+  قدم ملاحظات مفصلة لكل زوج من الأسئلة والإجابات، بما في ذلك درجة تمثل مدى جودة الإجابة (من 0 إلى 10).
+  قدم أيضًا ملاحظات عامة حول أداء التلميذ بشكل عام.
 
-  Lesson Content: {{{lessonContent}}}
-  Questions: {{#each questions}}{{{this}}}\n{{/each}}
-  Student Answers: {{#each studentAnswers}}{{{this}}}\n{{/each}}
+  محتوى الدرس: {{{lessonContent}}}
+  الأسئلة: {{#each questions}}{{{this}}}\n{{/each}}
+  إجابات التلميذ: {{#each studentAnswers}}{{{this}}}\n{{/each}}
 
-  Please provide the response in the following JSON format:
+  الرجاء تقديم الرد بتنسيق JSON التالي:
   {
-    "overallFeedback": "Overall feedback on the student performance.",
+    "overallFeedback": "ملاحظات عامة حول أداء التلميذ.",
     "detailedFeedback": [
       {
-        "question": "The question that was asked.",
-        "studentAnswer": "The student answer to the question.",
-        "feedback": "Detailed feedback on the student answer.",
-        "score": "A score representing how good the answer was."
+        "question": "السؤال الذي تم طرحه.",
+        "studentAnswer": "إجابة التلميذ على السؤال.",
+        "feedback": "ملاحظات مفصلة حول إجابة التلميذ.",
+        "score": "درجة تمثل مدى جودة الإجابة (من 0 إلى 10)."
       }
     ]
   }`,
