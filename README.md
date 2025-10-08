@@ -1,3 +1,7 @@
+##################################
+########## verssion 1.0 ##########
+##################################
+
 # Firebase Studio
 
 This is a NextJS starter in Firebase Studio.
