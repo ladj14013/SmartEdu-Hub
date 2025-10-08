@@ -68,5 +68,5 @@ export interface SupervisorNote {
   lessonId: string;
   authorId: string;
   content: string;
-  timestamp: string;
+  timestamp: any;
 }

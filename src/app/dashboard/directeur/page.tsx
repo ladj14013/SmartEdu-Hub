@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, BookCopy, GraduationCap, UserCheck, Users, Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { User, Lesson } from '@/lib/types';
+import type { User, Lesson, Subject } from '@/lib/types';
 
 const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string, value: number, icon: React.ElementType, isLoading: boolean }) => (
   <Card>
@@ -30,9 +30,11 @@ export default function DirecteurDashboard() {
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const lessonsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'lessons') : null, [firestore]);
+  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
 
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const { data: lessonsData, isLoading: isLoadingLessons } = useCollection<Lesson>(lessonsQuery);
+  const { data: subjectsData, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
 
   const stats = useMemo(() => {
     if (!usersData) {
@@ -44,7 +46,7 @@ export default function DirecteurDashboard() {
   }, [usersData]);
 
   const totalLessons = lessonsData?.length ?? 0;
-  const totalSubjects = 54; // This should also be fetched
+  const totalSubjects = subjectsData?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -56,7 +58,7 @@ export default function DirecteurDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard title="إجمالي الطلاب" value={stats.students} icon={Users} isLoading={isLoadingUsers} />
         <StatCard title="إجمالي المعلمين" value={stats.teachers} icon={UserCheck} isLoading={isLoadingUsers} />
-        <StatCard title="إجمالي المواد" value={totalSubjects} icon={GraduationCap} isLoading={false} />
+        <StatCard title="إجمالي المواد" value={totalSubjects} icon={GraduationCap} isLoading={isLoadingSubjects} />
         <StatCard title="إجمالي الدروس" value={totalLessons} icon={BookCopy} isLoading={isLoadingLessons} />
       </div>
 
