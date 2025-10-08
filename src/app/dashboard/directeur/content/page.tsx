@@ -51,6 +51,8 @@ import type { Stage, Level, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
 
 // Component for adding a new subject
 function AddSubjectDialog({ stageId, onSubjectAdded }: { stageId: string, onSubjectAdded: () => void }) {
@@ -330,6 +332,15 @@ function EditLevelDialog({ level, onLevelUpdated, onOpenChange }: { level: Level
     );
 }
 
+const stageColors = [
+    { bg: 'bg-sky-50', trigger: 'hover:bg-sky-100', content: 'bg-sky-50/50' },
+    { bg: 'bg-amber-50', trigger: 'hover:bg-amber-100', content: 'bg-amber-50/50' },
+    { bg: 'bg-emerald-50', trigger: 'hover:bg-emerald-100', content: 'bg-emerald-50/50' },
+    { bg: 'bg-violet-50', trigger: 'hover:bg-violet-100', content: 'bg-violet-50/50' },
+    { bg: 'bg-rose-50', trigger: 'hover:bg-rose-100', content: 'bg-rose-50/50' },
+];
+
+
 export default function ContentManagementPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -545,7 +556,7 @@ export default function ContentManagementPage() {
         </Dialog>
       </PageHeader>
 
-      <div className="rounded-lg border">
+      <div className="rounded-lg border overflow-hidden">
         {isLoading && !stages ? ( // Show skeleton only on initial load
             <div className="p-4 space-y-4">
                 <Skeleton className="h-12 w-full" />
@@ -556,12 +567,13 @@ export default function ContentManagementPage() {
         <Dialog onOpenChange={(open) => !open && setEditingStage(null)}>
             <Accordion type="multiple" className="w-full">
             {stages?.map((stage, index) => {
+                const color = stageColors[index % stageColors.length];
                 const levelsInStage = levels?.filter((level) => level.stageId === stage.id).sort((a,b) => a.order - b.order) || [];
                 const subjectsInStage = subjects?.filter((subject) => subject.stageId === stage.id) || [];
                 return (
-                <AccordionItem value={stage.id} key={stage.id}>
-                    <div className="flex items-center px-4 border-b">
-                        <AccordionTrigger className="flex-1 py-4 hover:no-underline">
+                <AccordionItem value={stage.id} key={stage.id} className={cn("border-b", color.bg)}>
+                    <div className="flex items-center px-4">
+                        <AccordionTrigger className={cn("flex-1 py-4 hover:no-underline", color.trigger)}>
                             <span className="font-medium text-lg">{stage.name}</span>
                         </AccordionTrigger>
                         <div className="flex items-center gap-1">
@@ -602,7 +614,7 @@ export default function ContentManagementPage() {
                             </DropdownMenu>
                         </div>
                     </div>
-                    <AccordionContent className="bg-muted/50 p-4 space-y-4">
+                    <AccordionContent className={cn("p-4 space-y-4", color.content)}>
                         
                         {/* Levels Section */}
                         <Collapsible defaultOpen>
