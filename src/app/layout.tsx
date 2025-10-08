@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
-import { Amiri } from 'next/font/google';
+import { Amiri, Noto_Sans_Math } from 'next/font/google';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 const amiri = Amiri({ subsets: ['arabic'], weight: ['400', '700'], variable: '--font-amiri' });
+const notoMath = Noto_Sans_Math({ subsets: ['math'], weight: ['400'], variable: '--font-math' });
 
 export const metadata: Metadata = {
   title: 'Smart Education | منصة تعليمية ذكية',
@@ -21,9 +22,9 @@ export default function RootLayout({
        <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Noto+Sans+Math&display=swap" rel="stylesheet" />
       </head>
-      <body className={`${amiri.variable} font-body antialiased`}>
+      <body className={`${amiri.variable} ${notoMath.variable} font-body antialiased`}>
         <FirebaseClientProvider>
           {children}
         </FirebaseClientProvider>

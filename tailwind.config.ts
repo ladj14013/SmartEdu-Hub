@@ -19,7 +19,8 @@ export default {
       fontFamily: {
         body: ['var(--font-amiri)', 'sans-serif'],
         headline: ['var(--font-amiri)', 'sans-serif'],
-        code: ['monospace'],
+        code: ['var(--font-math)', 'monospace'],
+        mono: ['var(--font-math)', 'monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
