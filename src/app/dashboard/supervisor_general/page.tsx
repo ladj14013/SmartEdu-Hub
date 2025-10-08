@@ -67,7 +67,7 @@ export default function SupervisorGeneralDashboard() {
 
        <Card>
         <CardHeader>
-          <CardTitle>تقرير الأداء العام (عنصر نائب)</CardTitle>
+          <CardTitle>تقرير الأداء العام</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center h-64 text-muted-foreground">
           <div className="text-center">
