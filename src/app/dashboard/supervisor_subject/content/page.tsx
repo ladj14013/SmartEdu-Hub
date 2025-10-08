@@ -122,8 +122,10 @@ export default function ManagePublicContentPage() {
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/dashboard/supervisor_subject/lessons/${lesson.id}`} className="flex items-center w-full">
                             <Pencil className="ml-2 h-4 w-4" />تعديل
+                          </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem disabled className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                     </DropdownMenuContent>

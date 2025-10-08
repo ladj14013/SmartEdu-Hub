@@ -58,6 +58,8 @@ export default function PreviewLinksPage() {
             <ul>
                 <PageLink href="/dashboard/supervisor_subject">الرئيسية</PageLink>
                 <PageLink href="/dashboard/supervisor_subject/content">إدارة المحتوى العام</PageLink>
+                <PageLink href="/dashboard/supervisor_subject/content/new">إضافة درس عام جديد</PageLink>
+                <PageLink href="/dashboard/supervisor_subject/lessons/lesson-1">تعديل درس عام</PageLink>
                 <PageLink href="/dashboard/supervisor_subject/teachers">قائمة الأساتذة</PageLink>
                 <PageLink href="/dashboard/supervisor_subject/teachers/user-4">دروس الأستاذ</PageLink>
                 <PageLink href="/dashboard/supervisor_subject/teachers/user-4/lessons/lesson-2">مراجعة درس</PageLink>
