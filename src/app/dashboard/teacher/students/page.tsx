@@ -1,4 +1,5 @@
 'use client';
+import { useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -28,9 +29,9 @@ export default function TeacherStudentsPage() {
 
   // Get students linked to this teacher
   const linkedStudentsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, 'users'), where('linkedTeacherId', '==', authUser.uid));
-  }, [firestore, authUser]);
+    if (!firestore || !authUser || !teacher?.subjectId) return null;
+    return query(collection(firestore, 'users'), where(`linkedTeachers.${teacher.subjectId}`, '==', authUser.uid));
+  }, [firestore, authUser, teacher?.subjectId]);
   const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
   
   // Get all levels to display student's level name
