@@ -56,6 +56,9 @@ export default function NewLessonPage() {
     },
   });
 
+  const selectedLevelId = form.watch('levelId');
+  const isLevelSelected = !!selectedLevelId;
+
   const onSubmit = async (data: NewLessonFormValues) => {
     if (!firestore || !authUser || !teacher?.subjectId) {
         toast({ title: "خطأ", description: "لا يمكن إنشاء الدرس. البيانات الأساسية غير متوفرة.", variant: "destructive" });
@@ -89,7 +92,7 @@ export default function NewLessonPage() {
     <div className="space-y-6">
       <PageHeader
         title="إضافة درس خاص جديد"
-        description="املأ النموذج لإنشاء درس جديد ومشاركته مع تلاميذك."
+        description="اختر المستوى الدراسي ثم املأ النموذج لإنشاء درس جديد."
       >
          <Button variant="outline" asChild>
             <Link href="/dashboard/teacher/subjects">
@@ -105,6 +108,9 @@ export default function NewLessonPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>المعلومات الأساسية للدرس</CardTitle>
+                             <CardDescription>
+                                {isLevelSelected ? 'يمكنك الآن ملء تفاصيل الدرس.' : 'الرجاء اختيار المستوى الدراسي أولاً لتفعيل الحقول.'}
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <FormField
@@ -114,7 +120,7 @@ export default function NewLessonPage() {
                                 <FormItem>
                                     <FormLabel>عنوان الدرس</FormLabel>
                                     <FormControl>
-                                    <Input placeholder="مثال: مقدمة في الجبر" {...field} />
+                                    <Input placeholder="مثال: مقدمة في الجبر" {...field} disabled={!isLevelSelected} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -127,7 +133,7 @@ export default function NewLessonPage() {
                                 <FormItem>
                                     <FormLabel>المحتوى النصي للدرس</FormLabel>
                                     <FormControl>
-                                    <Textarea placeholder="اشرح الدرس هنا..." {...field} rows={10} />
+                                    <Textarea placeholder="اشرح الدرس هنا..." {...field} rows={10} disabled={!isLevelSelected} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -140,7 +146,7 @@ export default function NewLessonPage() {
                                 <FormItem>
                                     <FormLabel>رابط فيديو (اختياري)</FormLabel>
                                     <FormControl>
-                                    <Input placeholder="https://www.youtube.com/watch?v=..." {...field} />
+                                    <Input placeholder="https://www.youtube.com/watch?v=..." {...field} disabled={!isLevelSelected} />
                                     </FormControl>
                                     <FormMessage />
                                 </FormItem>
@@ -154,6 +160,9 @@ export default function NewLessonPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle>إعدادات النشر</CardTitle>
+                             <CardDescription>
+                                يجب اختيار المستوى الدراسي أولاً.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                              <FormField
@@ -180,7 +189,7 @@ export default function NewLessonPage() {
                             />
                         </CardContent>
                     </Card>
-                    <Button type="submit" variant="accent" className="w-full" disabled={isLoading}>
+                    <Button type="submit" variant="accent" className="w-full" disabled={isLoading || !isLevelSelected}>
                     {isLoading ? (
                         <>
                         <Loader2 className="ml-2 h-4 w-4 animate-spin" />
