@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '../provider';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -23,6 +24,7 @@ export interface UseCollectionResult<T> {
   data: WithId<T>[] | null; // Document data with ID, or null.
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
+  refetch: () => void;
 }
 
 /* Internal implementation of Query:
@@ -58,18 +60,25 @@ export function useCollection<T = any>(
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [refetchIndex, setRefetchIndex] = useState(0);
+  const { isUserLoading } = useUser();
+
+
+  const refetch = () => {
+    setRefetchIndex(prev => prev + 1);
+  };
+
+  const isLoading = isUserLoading || (memoizedTargetRefOrQuery && !data && !error);
+
 
   useEffect(() => {
-    if (!memoizedTargetRefOrQuery) {
+    if (!memoizedTargetRefOrQuery || isUserLoading) {
       setData(null);
-      setIsLoading(false);
       setError(null);
       return;
     }
 
-    setIsLoading(true);
     setError(null);
 
     // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
@@ -82,7 +91,6 @@ export function useCollection<T = any>(
         }
         setData(results);
         setError(null);
-        setIsLoading(false);
       },
       (error: FirestoreError) => {
         // This logic extracts the path from either a ref or a query
@@ -98,7 +106,6 @@ export function useCollection<T = any>(
 
         setError(contextualError)
         setData(null)
-        setIsLoading(false)
 
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
@@ -106,9 +113,11 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery]); // Re-run if the target query/reference changes.
+  }, [memoizedTargetRefOrQuery, isUserLoading, refetchIndex]); // Re-run if the target query/reference or auth state changes.
+
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');
   }
-  return { data, isLoading, error };
+
+  return { data, isLoading, error, refetch };
 }

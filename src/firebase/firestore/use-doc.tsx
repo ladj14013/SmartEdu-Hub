@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useUser } from '../provider';
 
 /** Utility type to add an 'id' field to a given type T. */
 type WithId<T> = T & { id: string };
@@ -22,6 +23,7 @@ export interface UseDocResult<T> {
   data: WithId<T> | null; // Document data with ID, or null.
   isLoading: boolean;       // True if loading.
   error: FirestoreError | Error | null; // Error object, or null.
+  refetch: () => void;
 }
 
 /**
@@ -44,18 +46,24 @@ export function useDoc<T = any>(
   type StateDataType = WithId<T> | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
+  const [refetchIndex, setRefetchIndex] = useState(0);
+  const { isUserLoading } = useUser();
+
+  const refetch = () => {
+    setRefetchIndex(prev => prev + 1);
+  };
+  
+  const isLoading = isUserLoading || (memoizedDocRef && !data && !error);
+
 
   useEffect(() => {
-    if (!memoizedDocRef) {
+    if (!memoizedDocRef || isUserLoading) {
       setData(null);
-      setIsLoading(false);
       setError(null);
       return;
     }
 
-    setIsLoading(true);
     setError(null);
     // Optional: setData(null); // Clear previous data instantly
 
@@ -69,7 +77,6 @@ export function useDoc<T = any>(
           setData(null);
         }
         setError(null); // Clear any previous error on successful snapshot (even if doc doesn't exist)
-        setIsLoading(false);
       },
       (error: FirestoreError) => {
         const contextualError = new FirestorePermissionError({
@@ -79,7 +86,6 @@ export function useDoc<T = any>(
 
         setError(contextualError)
         setData(null)
-        setIsLoading(false)
 
         // trigger global error propagation
         errorEmitter.emit('permission-error', contextualError);
@@ -87,7 +93,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef]); // Re-run if the memoizedDocRef changes.
+  }, [memoizedDocRef, isUserLoading, refetchIndex]); // Re-run if the memoizedDocRef or auth state changes.
 
-  return { data, isLoading, error };
+  return { data, isLoading, error, refetch };
 }
