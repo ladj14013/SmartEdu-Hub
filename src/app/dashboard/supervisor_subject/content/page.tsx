@@ -60,10 +60,10 @@ export default function ManagePublicContentPage() {
         <div className="space-y-6">
           <PageHeader
             title={<Skeleton className="h-8 w-72" />}
+            description="جاري تحميل الدروس العامة..."
           >
             <Skeleton className="h-10 w-32" />
           </PageHeader>
-          <Skeleton className="h-4 w-96" />
           <Card>
             <CardHeader><Skeleton className="h-6 w-48" /></CardHeader>
             <CardContent><div className="divide-y rounded-md border"><Skeleton className="h-14 w-full" /><Skeleton className="h-14 w-full" /></div></CardContent>
@@ -90,9 +90,10 @@ export default function ManagePublicContentPage() {
                 <CardTitle>قائمة الدروس العامة</CardTitle>
                 <Select>
                     <SelectTrigger className="w-full md:w-[220px]">
-                        <SelectValue placeholder="اختر المستوى الدراسي" />
+                        <SelectValue placeholder="فلترة حسب المستوى الدراسي" />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="all">كل المستويات</SelectItem>
                         {levels?.map(level => (
                             <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                         ))}
@@ -113,12 +114,10 @@ export default function ManagePublicContentPage() {
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                            <Link href="#" className="flex items-center w-full">
-                                <Pencil className="ml-2 h-4 w-4" />تعديل
-                            </Link>
+                        <DropdownMenuItem disabled>
+                            <Pencil className="ml-2 h-4 w-4" />تعديل
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                        <DropdownMenuItem disabled className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
               </div>
