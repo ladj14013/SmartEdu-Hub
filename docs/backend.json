@@ -277,6 +277,32 @@
         "content",
         "sentDate"
       ]
+    },
+    "StructureProposal": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StructureProposal",
+      "type": "object",
+      "description": "Represents a proposal to change the educational structure (e.g., add a subject).",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the proposal." },
+        "proposerId": { "type": "string", "description": "ID of the user who made the proposal." },
+        "proposerName": { "type": "string", "description": "Name of the user who made the proposal." },
+        "type": { "type": "string", "description": "Type of proposal (e.g., 'add_subject')." },
+        "status": { "type": "string", "description": "Status of the proposal (pending, approved, rejected)." },
+        "details": {
+          "type": "object",
+          "properties": {
+            "stageId": { "type": "string" },
+            "stageName": { "type": "string" },
+            "name": { "type": "string" },
+            "description": { "type": "string" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "rejectionReason": { "type": "string" }
+      },
+      "required": ["id", "proposerId", "proposerName", "type", "status", "details", "createdAt"]
     }
   },
   "auth": {
@@ -332,6 +358,12 @@
         "$ref": "#/entities/Message"
       },
       "description": "Stores messages between users."
+    },
+    "/proposals/{proposalId}": {
+      "schema": {
+        "$ref": "#/entities/StructureProposal"
+      },
+      "description": "Stores proposals for changes to the educational structure."
     }
   }
 }

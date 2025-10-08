@@ -78,3 +78,20 @@ export interface StudentLessonProgress {
   completionDate: string;
   score: number;
 }
+
+export interface StructureProposal {
+  id: string;
+  proposerId: string;
+  proposerName: string;
+  type: 'add_subject'; // For now, can be extended to 'add_stage', 'add_level'
+  status: 'pending' | 'approved' | 'rejected';
+  details: {
+    stageId: string;
+    stageName: string;
+    name: string;
+    description: string;
+  };
+  createdAt: any; // Firestore ServerTimestamp
+  reviewedAt?: any;
+  rejectionReason?: string;
+}
