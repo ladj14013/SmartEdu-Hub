@@ -20,7 +20,7 @@ export default function DashboardLayout({
 
   return (
     <SidebarProvider defaultOpen={isSidebarOpen}>
-      <Sidebar side="right" collapsible="offcanvas">
+      <Sidebar side="right">
         <SidebarContent />
       </Sidebar>
       <SidebarInset>
