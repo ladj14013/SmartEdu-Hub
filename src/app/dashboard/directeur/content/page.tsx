@@ -53,7 +53,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 
 // Component for adding a new subject
-function AddSubjectDialog({ levelId, onSubjectAdded }: { levelId: string, onSubjectAdded: () => void }) {
+function AddSubjectDialog({ stageId, onSubjectAdded }: { stageId: string, onSubjectAdded: () => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [name, setName] = useState('');
@@ -68,7 +68,7 @@ function AddSubjectDialog({ levelId, onSubjectAdded }: { levelId: string, onSubj
             await addDoc(collection(firestore, 'subjects'), {
                 name,
                 description,
-                levelId,
+                stageId,
             });
             toast({
                 title: "تمت الإضافة بنجاح",
@@ -98,7 +98,7 @@ function AddSubjectDialog({ levelId, onSubjectAdded }: { levelId: string, onSubj
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>إضافة مادة جديدة</DialogTitle>
-                    <DialogDescription>أدخل تفاصيل المادة الجديدة.</DialogDescription>
+                    <DialogDescription>أدخل تفاصيل المادة الجديدة لهذه المرحلة.</DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
@@ -557,6 +557,7 @@ export default function ContentManagementPage() {
             <Accordion type="multiple" className="w-full">
             {stages?.map((stage, index) => {
                 const levelsInStage = levels?.filter((level) => level.stageId === stage.id).sort((a,b) => a.order - b.order) || [];
+                const subjectsInStage = subjects?.filter((subject) => subject.stageId === stage.id) || [];
                 return (
                 <AccordionItem value={stage.id} key={stage.id}>
                     <div className="flex items-center px-4 border-b">
@@ -602,109 +603,120 @@ export default function ContentManagementPage() {
                         </div>
                     </div>
                     <AccordionContent className="bg-muted/50 p-4 space-y-4">
-                    <div className='flex justify-end'>
-                        <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} existingLevelsCount={levelsInStage.length} />
-                    </div>
-                    <Dialog onOpenChange={(open) => !open && setEditingLevel(null)}>
-                    {levelsInStage.map((level, levelIndex) => (
-                        <Collapsible key={level.id} className="rounded-md border bg-background px-4">
-                        <div className="flex items-center justify-between py-3">
-                            <div className="flex items-center gap-2">
-                                <CollapsibleTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="w-9 p-0">
+                        
+                        {/* Levels Section */}
+                        <Collapsible defaultOpen>
+                            <CollapsibleTrigger className="w-full">
+                                <div className="flex justify-between items-center py-2 px-3 rounded-md bg-background border">
+                                    <h3 className="font-semibold">المستويات الدراسية</h3>
+                                    <div className="flex items-center gap-2">
+                                        <AddLevelDialog stageId={stage.id} onLevelAdded={refreshData} existingLevelsCount={levelsInStage.length} />
                                         <ChevronsUpDown className="h-4 w-4" />
-                                        <span className="sr-only">Toggle</span>
-                                    </Button>
-                                </CollapsibleTrigger>
-                                <span className="font-semibold">{level.name}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'up')} disabled={levelIndex === 0}>
-                                    <ArrowUp className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'down')} disabled={levelIndex === levelsInStage.length - 1}>
-                                    <ArrowDown className="h-4 w-4" />
-                                </Button>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" className="h-8 w-8 p-0">
-                                        <span className="sr-only">فتح القائمة</span>
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DialogTrigger asChild>
-                                            <DropdownMenuItem onSelect={() => setEditingLevel(level)}>
-                                                <Pencil className="ml-2 h-4 w-4" /> تعديل
-                                            </DropdownMenuItem>
-                                        </DialogTrigger>
-                                         <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المستوى "{level.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete('levels', level.id, level.name)} disabled={isDeleting}>
-                                                        {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
-                        <CollapsibleContent className="space-y-2 pb-4">
-                            <div className='flex justify-end'>
-                                <AddSubjectDialog levelId={level.id} onSubjectAdded={refreshData} />
-                            </div>
-                            {subjects
-                            ?.filter((subject) => subject.levelId === level.id)
-                            .map((subject) => (
-                                <div key={subject.id} className="flex items-center justify-between rounded-md border p-3 bg-white">
-                                    <Link href={`/dashboard/directeur/content/${stage.id}/${level.id}/${subject.id}`} className='hover:underline'>
-                                        {subject.name}
-                                    </Link>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                            <span className="sr-only">فتح القائمة</span>
-                                            <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem><Pencil className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المادة "{subject.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete('subjects', subject.id, subject.name)} disabled={isDeleting}>
-                                                             {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    </div>
                                 </div>
-                            ))}
-                            {subjects?.filter(s => s.levelId === level.id).length === 0 && (
-                                <p className="text-center text-xs text-muted-foreground py-2">لا توجد مواد مضافة لهذا المستوى.</p>
-                            )}
-                        </CollapsibleContent>
+                            </CollapsibleTrigger>
+                             <CollapsibleContent className="space-y-2 py-2">
+                                <Dialog onOpenChange={(open) => !open && setEditingLevel(null)}>
+                                {levelsInStage.map((level, levelIndex) => (
+                                    <div key={level.id} className="flex items-center justify-between rounded-md border bg-white p-3">
+                                        <span className="font-semibold">{level.name}</span>
+                                        <div className="flex items-center gap-1">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'up')} disabled={levelIndex === 0}>
+                                                <ArrowUp className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'down')} disabled={levelIndex === levelsInStage.length - 1}>
+                                                <ArrowDown className="h-4 w-4" />
+                                            </Button>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">فتح القائمة</span>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={() => setEditingLevel(level)}>
+                                                            <Pencil className="ml-2 h-4 w-4" /> تعديل
+                                                        </DropdownMenuItem>
+                                                    </DialogTrigger>
+                                                    <AlertDialog>
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                        <AlertDialogContent>
+                                                            <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المستوى "{level.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
+                                                            <AlertDialogFooter>
+                                                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                                <AlertDialogAction onClick={() => handleDelete('levels', level.id, level.name)} disabled={isDeleting}>
+                                                                    {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                                </AlertDialogAction>
+                                                            </AlertDialogFooter>
+                                                        </AlertDialogContent>
+                                                    </AlertDialog>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    </div>
+                                ))}
+                                {editingLevel && <EditLevelDialog level={editingLevel} onLevelUpdated={refreshData} onOpenChange={(open) => !open && setEditingLevel(null)} />}
+                                </Dialog>
+                                {levelsInStage.length === 0 && (
+                                    <p className="text-center text-sm text-muted-foreground py-4">لا توجد مستويات مضافة لهذه المرحلة.</p>
+                                )}
+                             </CollapsibleContent>
                         </Collapsible>
-                    ))}
-                    {editingLevel && <EditLevelDialog level={editingLevel} onLevelUpdated={refreshData} onOpenChange={(open) => !open && setEditingLevel(null)} />}
-                    </Dialog>
-                    {levelsInStage.length === 0 && (
-                        <p className="text-center text-sm text-muted-foreground py-4">لا توجد مستويات مضافة لهذه المرحلة.</p>
-                    )}
+
+                        {/* Subjects Section */}
+                        <Collapsible defaultOpen>
+                            <CollapsibleTrigger className="w-full">
+                                <div className="flex justify-between items-center py-2 px-3 rounded-md bg-background border">
+                                    <h3 className="font-semibold">المواد الدراسية</h3>
+                                     <div className="flex items-center gap-2">
+                                        <AddSubjectDialog stageId={stage.id} onSubjectAdded={refreshData} />
+                                        <ChevronsUpDown className="h-4 w-4" />
+                                    </div>
+                                </div>
+                            </CollapsibleTrigger>
+                             <CollapsibleContent className="space-y-2 py-2">
+                                {subjectsInStage.map((subject) => (
+                                    <div key={subject.id} className="flex items-center justify-between rounded-md border p-3 bg-white">
+                                        <Link href={`/dashboard/directeur/content/${stage.id}/level-id-placeholder/${subject.id}`} className='hover:underline'>
+                                            {subject.name}
+                                        </Link>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                <span className="sr-only">فتح القائمة</span>
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem disabled><Pencil className="ml-2 h-4 w-4" />تعديل</DropdownMenuItem>
+                                                <AlertDialog>
+                                                    <AlertDialogTrigger asChild>
+                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500"><Trash2 className="ml-2 h-4 w-4" />حذف</DropdownMenuItem>
+                                                    </AlertDialogTrigger>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف المادة "{subject.name}". هذا الإجراء لا يمكن التراجع عنه.</AlertDialogDescription></AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete('subjects', subject.id, subject.name)} disabled={isDeleting}>
+                                                                {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                ))}
+                                {subjectsInStage.length === 0 && (
+                                    <p className="text-center text-xs text-muted-foreground py-2">لا توجد مواد مضافة لهذه المرحلة.</p>
+                                )}
+                            </CollapsibleContent>
+                        </Collapsible>
+                    
                 </AccordionContent>
                 </AccordionItem>
             )})}

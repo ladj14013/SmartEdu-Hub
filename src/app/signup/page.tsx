@@ -41,18 +41,18 @@ const signupSchema = z.object({
   email: z.string().email({ message: "الرجاء إدخال بريد إلكتروني صالح." }),
   password: z.string().min(6, { message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." }),
   role: z.enum(['student', 'teacher', 'parent']),
-  stage: z.string().optional(),
-  level: z.string().optional(),
-  subject: z.string().optional(),
+  stageId: z.string().optional(),
+  levelId: z.string().optional(),
+  subjectId: z.string().optional(),
   teacherCode: z.string().optional(),
 }).refine((data) => {
   if (data.role === 'student' || data.role === 'teacher') {
-    return !!data.stage;
+    return !!data.stageId;
   }
   return true;
 }, {
   message: "الرجاء اختيار المرحلة الدراسية.",
-  path: ["stage"],
+  path: ["stageId"],
 });
 
 
@@ -85,10 +85,10 @@ export default function SignupPage() {
   });
 
   const role = form.watch('role');
-  const selectedStage = form.watch('stage');
+  const selectedStage = form.watch('stageId');
   
   const filteredLevels = levels?.filter(level => level.stageId === selectedStage) || [];
-  const filteredSubjects = subjects?.filter(subject => levels?.find(l => l.id === subject.levelId)?.stageId === selectedStage) || [];
+  const filteredSubjects = subjects?.filter(subject => subject.stageId === selectedStage) || [];
 
   const onSubmit = async (data: SignupFormValues) => {
     if (!auth || !firestore) return;
@@ -104,9 +104,9 @@ export default function SignupPage() {
         name: data.fullName,
         email: data.email,
         role: data.role,
-        stageId: data.stage || null,
-        levelId: data.level || null,
-        subjectId: data.subject || null,
+        stageId: data.stageId || null,
+        levelId: data.levelId || null,
+        subjectId: data.subjectId || null,
         avatar: `https://i.pravatar.cc/150?u=${user.uid}`
       };
       
@@ -257,10 +257,10 @@ export default function SignupPage() {
                   )}
                 />
                 
-                {(role === 'student' || role === 'teacher') && (
+                {(role === 'student' || role === 'teacher' || role === 'supervisor_subject') && (
                    <FormField
                       control={form.control}
-                      name="stage"
+                      name="stageId"
                       render={({ field }) => (
                         <FormItem>
                           <Label>المرحلة الدراسية</Label>
@@ -285,7 +285,7 @@ export default function SignupPage() {
                 {role === 'student' && selectedStage && (
                    <FormField
                       control={form.control}
-                      name="level"
+                      name="levelId"
                       render={({ field }) => (
                         <FormItem>
                           <Label>المستوى الدراسي</Label>
@@ -307,13 +307,13 @@ export default function SignupPage() {
                     />
                 )}
 
-                {role === 'teacher' && selectedStage && (
+                {(role === 'teacher' || role === 'supervisor_subject') && selectedStage && (
                    <FormField
                       control={form.control}
-                      name="subject"
+                      name="subjectId"
                       render={({ field }) => (
                         <FormItem>
-                          <Label>المادة المتخصصة</Label>
+                          <Label>المادة</Label>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>

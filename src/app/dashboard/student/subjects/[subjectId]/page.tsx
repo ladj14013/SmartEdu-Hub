@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc, getDocs } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -32,15 +32,12 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   const lessonsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    const authorIds = ['public']; // A placeholder for public lessons for now.
-    if (student?.linkedTeacherId) {
-      authorIds.push(student.linkedTeacherId);
-    }
-    // This query is not perfect. Firestore doesn't support logical OR in `where` clauses on different fields.
-    // We fetch public lessons and then teacher-specific ones, then merge. This is a common workaround.
-    return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
-  }, [firestore, subjectId, student?.linkedTeacherId]);
+    if (!firestore || !student) return null;
+    
+    // Base query for all lessons in the subject that are public or private to the student's level
+    return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId), where('levelId', '==', student.levelId));
+
+  }, [firestore, subjectId, student]);
 
   const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
   
@@ -53,7 +50,6 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
     setIsLinking(true);
     try {
         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', teacherCode.trim()));
-        const { getDocs } = await import('firebase/firestore');
         const teacherSnapshot = await getDocs(teachersQuery);
 
         if (teacherSnapshot.empty) {
@@ -162,7 +158,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
             )})}
              {lessons?.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
-                    لا توجد دروس في هذه المادة حتى الآن.
+                    لا توجد دروس في هذه المادة لمستواك الدراسي حتى الآن.
                 </div>
             )}
           </div>

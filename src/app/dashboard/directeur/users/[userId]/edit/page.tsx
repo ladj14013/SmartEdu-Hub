@@ -87,7 +87,7 @@ export default function EditUserPage({ params }: { params: { userId: string } })
   };
   
   const filteredLevels = levels?.filter(l => l.stageId === stageId) || [];
-  const filteredSubjects = subjects?.filter(s => levels?.find(l => l.id === s.levelId)?.stageId === stageId) || [];
+  const filteredSubjects = subjects?.filter(s => s.stageId === stageId) || [];
 
   if (isLoading) {
     return (

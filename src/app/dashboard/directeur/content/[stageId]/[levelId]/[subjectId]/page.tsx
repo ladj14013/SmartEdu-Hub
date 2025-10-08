@@ -12,11 +12,10 @@ import type { Subject, Level, Stage, Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SubjectContentPage({ params }: { params: { stageId: string; levelId: string; subjectId: string } }) {
-  const { stageId, levelId, subjectId } = params;
+  const { stageId, subjectId } = params; // levelId is no longer directly used for subjects
   const firestore = useFirestore();
 
   const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
-  const levelRef = useMemoFirebase(() => firestore ? doc(firestore, 'levels', levelId) : null, [firestore, levelId]);
   const stageRef = useMemoFirebase(() => firestore ? doc(firestore, 'stages', stageId) : null, [firestore, stageId]);
   
   const lessonsQuery = useMemoFirebase(() => {
@@ -25,11 +24,10 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
   }, [firestore, subjectId]);
 
   const { data: subject, isLoading: isLoadingSubject } = useDoc<Subject>(subjectRef);
-  const { data: level, isLoading: isLoadingLevel } = useDoc<Level>(levelRef);
   const { data: stage, isLoading: isLoadingStage } = useDoc<Stage>(stageRef);
   const { data: lessons, isLoading: isLoadingLessons } = useCollection<Lesson>(lessonsQuery);
 
-  const isLoading = isLoadingSubject || isLoadingLevel || isLoadingStage || isLoadingLessons;
+  const isLoading = isLoadingSubject || isLoadingStage || isLoadingLessons;
 
   if (isLoading) {
     return (
@@ -60,15 +58,15 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
     );
   }
 
-  if (!subject || !level || !stage) {
-    return <div>المادة أو المستوى أو المرحلة غير موجودة.</div>;
+  if (!subject || !stage) {
+    return <div>المادة أو المرحلة غير موجودة.</div>;
   }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title={`محتوى مادة: ${subject.name}`}
-        description={`عرض الدروس لمادة ${subject.name} - ${level.name} - ${stage.name}`}
+        description={`عرض الدروس لمادة ${subject.name} - ${stage.name}`}
       >
         <Button variant="outline" asChild>
           <Link href="/dashboard/directeur/content">
@@ -93,7 +91,7 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
                     </Badge>
                 </div>
                 <Button asChild variant="ghost" size="sm">
-                    <Link href={`/dashboard/directeur/content/${stageId}/${levelId}/${subjectId}/${lesson.id}`}>
+                    <Link href={`/dashboard/directeur/content/${stageId}/${lesson.levelId}/${subjectId}/${lesson.id}`}>
                         عرض/تعديل
                     </Link>
                 </Button>
