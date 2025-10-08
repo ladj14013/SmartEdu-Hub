@@ -31,7 +31,7 @@ export interface Subject {
   id: string;
   name: string;
   description: string;
-  stageId: string; // Changed from levelId
+  stageId: string;
 }
 
 export interface Exercise {
@@ -46,7 +46,7 @@ export interface Lesson {
   content: string;
   videoUrl?: string;
   subjectId: string;
-  levelId: string; // Added levelId to Lesson
+  levelId: string;
   authorId: string;
   type: 'public' | 'private';
   isLocked: boolean;

@@ -97,15 +97,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Subject",
       "type": "object",
-      "description": "Represents a subject within a level (e.g., Math, Science).",
+      "description": "Represents a subject within a stage (e.g., Math, Science).",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the Subject entity."
         },
-        "levelId": {
+        "stageId": {
           "type": "string",
-          "description": "Reference to Level. The level this subject belongs to. (Relationship: Level 1:N Subject)"
+          "description": "Reference to Stage. The stage this subject belongs to. (Relationship: Stage 1:N Subject)"
         },
         "name": {
           "type": "string",
@@ -114,7 +114,7 @@
       },
       "required": [
         "id",
-        "levelId",
+        "stageId",
         "name"
       ]
     },
@@ -131,6 +131,10 @@
         "subjectId": {
           "type": "string",
           "description": "Reference to Subject. The subject this lesson belongs to. (Relationship: Subject 1:N Lesson)"
+        },
+        "levelId": {
+          "type": "string",
+          "description": "Reference to Level. The level this lesson is intended for. (Relationship: Level 1:N Lesson)"
         },
         "title": {
           "type": "string",
@@ -161,6 +165,7 @@
       "required": [
         "id",
         "subjectId",
+        "levelId",
         "title",
         "content"
       ]
@@ -303,7 +308,7 @@
       "schema": {
         "$ref": "#/entities/Subject"
       },
-      "description": "Stores subjects within levels."
+      "description": "Stores subjects within stages."
     },
     "/lessons/{lessonId}": {
       "schema": {

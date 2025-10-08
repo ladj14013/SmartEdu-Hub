@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 import {
@@ -114,9 +114,12 @@ export default function SignupPage() {
       if(data.role === 'teacher') {
         userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       } else if (data.role === 'student' && data.teacherCode) {
-        // In a real app, you'd find the teacher by code and link them.
-        // For now, we're just storing the code. This logic will be improved later.
-        userData.linkedTeacherId = data.teacherCode;
+         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()));
+         const teacherSnapshot = await getDocs(teachersQuery);
+         if (!teacherSnapshot.empty) {
+            const teacherToLink = teacherSnapshot.docs[0];
+            userData.linkedTeacherId = teacherToLink.id;
+         }
       }
       
       // 3. Create user document in Firestore
