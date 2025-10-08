@@ -46,6 +46,7 @@ export interface Lesson {
   content: string;
   videoUrl?: string;
   subjectId: string;
+  levelId: string;
   authorId: string;
   type: 'public' | 'private';
   isLocked: boolean;

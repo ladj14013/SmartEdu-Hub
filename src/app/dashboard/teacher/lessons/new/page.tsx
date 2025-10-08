@@ -63,21 +63,13 @@ export default function NewLessonPage() {
     }
     setIsLoading(true);
     try {
-        const subjectsInLevelQuery = query(collection(firestore, 'subjects'), where('levelId', '==', data.levelId), where('name', '==', 'الرياضيات'));
-        const { getDocs } = await import('firebase/firestore');
-        const subjectSnapshot = await getDocs(subjectsInLevelQuery);
-
-        let subjectId = teacher.subjectId;
-        if (!subjectSnapshot.empty) {
-            subjectId = subjectSnapshot.docs[0].id;
-        }
-
         await addDoc(collection(firestore, 'lessons'), {
             title: data.title,
             content: data.content,
             videoUrl: data.videoUrl || '',
             authorId: authUser.uid,
-            subjectId: subjectId,
+            subjectId: teacher.subjectId,
+            levelId: data.levelId,
             type: 'private',
             isLocked: false,
             exercises: [],

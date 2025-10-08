@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,6 +26,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function TeacherSubjectsPage() {
     const firestore = useFirestore();
     const { user: authUser, isLoading: isAuthLoading } = useUser();
+    const [selectedLevelId, setSelectedLevelId] = useState<string | 'all'>('all');
 
     // --- Data Fetching ---
     const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -47,6 +49,17 @@ export default function TeacherSubjectsPage() {
 
     const isLoading = isAuthLoading || isTeacherLoading || isSubjectLoading || areLevelsLoading || areAllLessonsLoading;
 
+    const filterLessonsByLevel = (lessons: Lesson[] | undefined) => {
+        if (!lessons) return [];
+        if (selectedLevelId === 'all') return lessons;
+        return lessons.filter(l => l.levelId === selectedLevelId);
+    }
+    
+    const privateLessons = filterLessonsByLevel(allLessons?.filter(l => l.authorId === authUser?.uid && l.type === 'private'));
+    const publicLessons = filterLessonsByLevel(allLessons?.filter(l => l.type === 'public'));
+    
+    const selectedLevelName = selectedLevelId !== 'all' ? levels?.find(l => l.id === selectedLevelId)?.name : null;
+
     if (isLoading) {
       return (
         <div className="space-y-6">
@@ -61,9 +74,6 @@ export default function TeacherSubjectsPage() {
         </div>
       );
     }
-    
-    const privateLessons = allLessons?.filter(l => l.authorId === authUser?.uid && l.type === 'private');
-    const publicLessons = allLessons?.filter(l => l.type === 'public');
 
     return (
         <div className="space-y-6">
@@ -73,11 +83,12 @@ export default function TeacherSubjectsPage() {
             />
             
             <div className="flex justify-end">
-                <Select>
+                <Select value={selectedLevelId} onValueChange={setSelectedLevelId}>
                     <SelectTrigger className="w-full md:w-[220px]">
                         <SelectValue placeholder="اختر المستوى الدراسي" />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="all">كل المستويات</SelectItem>
                         {levels?.map(level => (
                             <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                         ))}
@@ -88,10 +99,12 @@ export default function TeacherSubjectsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Private Lessons */}
                 <Card>
-                    <CardHeader className="flex-row items-center justify-between">
+                    <CardHeader className="flex-row items-start justify-between">
                         <div>
                             <CardTitle>دروسك الخاصة</CardTitle>
-                            <CardDescription>هذه الدروس تظهر لتلاميذك فقط.</CardDescription>
+                            <CardDescription>
+                                {selectedLevelName ? `الدروس الخاصة بالمستوى: ${selectedLevelName}` : 'هذه الدروس تظهر لتلاميذك فقط.'}
+                            </CardDescription>
                         </div>
                         <Button variant="accent" size="sm" asChild>
                            <Link href="/dashboard/teacher/lessons/new">
@@ -121,7 +134,9 @@ export default function TeacherSubjectsPage() {
                                     </DropdownMenu>
                                 </div>
                             ))}
-                            {privateLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">لم تقم بإضافة دروس خاصة بعد.</p>}
+                            {privateLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">
+                                {selectedLevelId === 'all' ? 'لم تقم بإضافة دروس خاصة بعد.' : 'لا توجد دروس خاصة في هذا المستوى.'}
+                            </p>}
                         </div>
                     </CardContent>
                 </Card>
@@ -130,7 +145,9 @@ export default function TeacherSubjectsPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>الدروس العامة</CardTitle>
-                        <CardDescription>محتوى متاح من المشرفين يمكنك استخدامه.</CardDescription>
+                        <CardDescription>
+                             {selectedLevelName ? `الدروس العامة بالمستوى: ${selectedLevelName}` : 'محتوى متاح من المشرفين يمكنك استخدامه.'}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="divide-y rounded-md border">
@@ -144,7 +161,9 @@ export default function TeacherSubjectsPage() {
                                     </Button>
                                 </div>
                             ))}
-                            {publicLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">لا توجد دروس عامة متاحة حالياً.</p>}
+                            {publicLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">
+                                {selectedLevelId === 'all' ? 'لا توجد دروس عامة متاحة حالياً.' : 'لا توجد دروس عامة في هذا المستوى.'}
+                            </p>}
                         </div>
                     </CardContent>
                 </Card>
