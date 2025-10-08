@@ -4,15 +4,92 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Helper functions
     function isUserAuthenticated() {
       return request.auth != null;
     }
 
-    // Rules for all collections
-    // This is a permissive setup for development.
-    // In production, you should restrict access further.
+    function isUser(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isRole(role) {
+      return isUserAuthenticated() && getUserRole(request.auth.uid) == role;
+    }
+
+    // Default deny
     match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isUserAuthenticated();
+      allow create: if isUserAuthenticated();
+      allow update: if isUser(userId) || isRole('directeur');
+      allow delete: if isRole('directeur');
+    }
+    
+    // Stages, Levels, Subjects (publicly readable structure)
+    match /stages/{stageId} {
+      allow read: if isUserAuthenticated();
+      allow write: if isRole('directeur') || isRole('supervisor_general');
+    }
+
+    match /levels/{levelId} {
+      allow read: if isUserAuthenticated();
+      allow write: if isRole('directeur') || isRole('supervisor_general');
+    }
+
+    match /subjects/{subjectId} {
+      allow read: if isUserAuthenticated();
+      allow write: if isRole('directeur') || isRole('supervisor_general');
+    }
+
+    // Lessons and their subcollections
+    match /lessons/{lessonId} {
+      allow read: if isUserAuthenticated();
+      // Allow creation/update by author, supervisor, or director
+      allow write: if isUserAuthenticated() && (isRole('directeur') || isRole('supervisor_subject') || request.auth.uid == resource.data.authorId);
+      // Allow deletion only by director
+      allow delete: if isRole('directeur');
+    }
+
+    match /lessons/{lessonId}/exercises/{exerciseId} {
+        allow read, write: if isUserAuthenticated(); // Simplify for now
+    }
+
+    // Student specific data
+    match /users/{studentId}/lessonProgress/{lessonId} {
+      allow read, write: if isUser(studentId);
+    }
+    
+    // Messages
+    match /messages/{messageId} {
       allow read, write: if isUserAuthenticated();
+    }
+    
+    // Supervisor Notes
+    match /supervisor_notes/{noteId} {
+      allow read, write: if isUserAuthenticated() && (isRole('supervisor_subject') || isRole('teacher'));
+    }
+
+    // Structure Proposals
+    match /proposals/{proposalId} {
+      // Any authenticated user can create a proposal
+      allow create: if isUserAuthenticated();
+      // Only the proposer or a director can read a specific proposal
+      allow get: if isUserAuthenticated() && (isRole('directeur') || request.auth.uid == resource.data.proposerId);
+      // Director can see all proposals, proposers can see their own.
+      allow list: if isUserAuthenticated();
+      // Only director can update (approve/reject)
+      allow update: if isRole('directeur');
+      // Only director can delete
+      allow delete: if isRole('directeur');
     }
   }
 }
