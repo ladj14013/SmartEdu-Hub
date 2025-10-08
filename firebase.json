@@ -3,6 +3,11 @@
     "rules": "firestore.rules"
   },
   "hosting": {
-    "source": ".next"
+    "source": ".next",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
   }
 }
