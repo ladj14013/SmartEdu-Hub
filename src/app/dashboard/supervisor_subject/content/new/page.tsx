@@ -19,7 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { ArrowRight, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import type { Level, User, Exercise } from '@/lib/types';
+import type { Level, User as UserType } from '@/lib/types';
 
 
 const newLessonSchema = z.object({
@@ -41,10 +41,10 @@ export default function NewPublicLessonPage() {
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
-  const { user: authUser, isLoading: isAuthLoading } = useUser();
+  const { user: authUser } = useUser();
 
   const supervisorRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: supervisor } = useDoc<User>(supervisorRef);
+  const { data: supervisor } = useDoc<UserType>(supervisorRef);
   
   const levelsQuery = useMemoFirebase(() => {
     if (!firestore || !supervisor?.stageId) return null;
@@ -58,6 +58,7 @@ export default function NewPublicLessonPage() {
       title: '',
       content: '',
       videoUrl: '',
+      levelId: undefined,
       exercises: [],
     },
   });
