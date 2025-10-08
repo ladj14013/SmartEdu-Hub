@@ -101,107 +101,105 @@ export default function NewLessonPage() {
       </PageHeader>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>المعلومات الأساسية للدرس</CardTitle>
-                             <CardDescription>
-                                {isLevelSelected ? 'يمكنك الآن ملء تفاصيل الدرس.' : 'الرجاء اختيار المستوى الدراسي أولاً لتفعيل الحقول.'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <FormField
-                                control={form.control}
-                                name="title"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>عنوان الدرس</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="مثال: مقدمة في الجبر" {...field} disabled={!isLevelSelected} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="content"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>المحتوى النصي للدرس</FormLabel>
-                                    <FormControl>
-                                    <Textarea placeholder="اشرح الدرس هنا..." {...field} rows={10} disabled={!isLevelSelected} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                            <FormField
-                                control={form.control}
-                                name="videoUrl"
-                                render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>رابط فيديو (اختياري)</FormLabel>
-                                    <FormControl>
-                                    <Input placeholder="https://www.youtube.com/watch?v=..." {...field} disabled={!isLevelSelected} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-                </div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            
+            <Card>
+                <CardHeader>
+                    <CardTitle>إعدادات النشر</CardTitle>
+                        <CardDescription>
+                        يجب اختيار المستوى الدراسي أولاً.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                        <FormField
+                        control={form.control}
+                        name="levelId"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>المستوى الدراسي</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger disabled={areLevelsLoading}>
+                                    <SelectValue placeholder={areLevelsLoading ? "جاري تحميل المستويات..." : "اختر المستوى"} />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {levels?.map(level => (
+                                    <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
 
-                <div className="lg:col-span-1 space-y-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>إعدادات النشر</CardTitle>
-                             <CardDescription>
-                                يجب اختيار المستوى الدراسي أولاً.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <FormField
-                                control={form.control}
-                                name="levelId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                    <FormLabel>المستوى الدراسي</FormLabel>
-                                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                        <FormControl>
-                                        <SelectTrigger disabled={areLevelsLoading}>
-                                            <SelectValue placeholder={areLevelsLoading ? "جاري تحميل المستويات..." : "اختر المستوى"} />
-                                        </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                        {levels?.map(level => (
-                                            <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
-                                        ))}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </CardContent>
-                    </Card>
-                    <Button type="submit" variant="accent" className="w-full" disabled={isLoading || !isLevelSelected}>
-                    {isLoading ? (
-                        <>
-                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                        جاري الحفظ...
-                        </>
-                    ) : (
-                        <>
-                        <Save className="ml-2 h-4 w-4"/>
-                        حفظ الدرس
-                        </>
-                    )}
-                    </Button>
-                </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle>المعلومات الأساسية للدرس</CardTitle>
+                        <CardDescription>
+                        {isLevelSelected ? 'يمكنك الآن ملء تفاصيل الدرس.' : 'الرجاء اختيار المستوى الدراسي أولاً لتفعيل الحقول.'}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="title"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>عنوان الدرس</FormLabel>
+                            <FormControl>
+                            <Input placeholder="مثال: مقدمة في الجبر" {...field} disabled={!isLevelSelected} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="content"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>المحتوى النصي للدرس</FormLabel>
+                            <FormControl>
+                            <Textarea placeholder="اشرح الدرس هنا..." {...field} rows={10} disabled={!isLevelSelected} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="videoUrl"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>رابط فيديو (اختياري)</FormLabel>
+                            <FormControl>
+                            <Input placeholder="https://www.youtube.com/watch?v=..." {...field} disabled={!isLevelSelected} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                </CardContent>
+            </Card>
+            
+            <div className="flex justify-end">
+                <Button type="submit" variant="accent" className="w-full md:w-auto" disabled={isLoading || !isLevelSelected}>
+                {isLoading ? (
+                    <>
+                    <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                    جاري الحفظ...
+                    </>
+                ) : (
+                    <>
+                    <Save className="ml-2 h-4 w-4"/>
+                    حفظ الدرس
+                    </>
+                )}
+                </Button>
             </div>
         </form>
       </Form>
