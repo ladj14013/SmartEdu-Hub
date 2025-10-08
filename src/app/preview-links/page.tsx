@@ -75,7 +75,6 @@ export default function PreviewLinksPage() {
             <ul>
                 <PageLink href="/dashboard/supervisor_general">الرئيسية</PageLink>
                 <PageLink href="/dashboard/supervisor_general/supervisors">قائمة مشرفي المواد</PageLink>
-                <PageLink href="/dashboard/supervisor_general/proposals">اقتراح تعديلات</PageLink>
                 <PageLink href="/dashboard/supervisor_general/messages">الرسائل الموجهة</PageLink>
             </ul>
           </CardContent>
