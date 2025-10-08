@@ -1,3 +1,4 @@
+
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,7 +21,7 @@ export default function TeacherDashboard() {
 
   // --- Data Fetching ---
   const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: teacher, isLoading: isTeacherLoading, refetch: refetchTeacher } = useDoc<UserType>(teacherRef);
+  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   const stageRef = useMemoFirebase(() => (firestore && teacher?.stageId) ? doc(firestore, 'stages', teacher.stageId) : null, [firestore, teacher?.stageId]);
   const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
@@ -151,7 +152,7 @@ export default function TeacherDashboard() {
           </CardContent>
         </Card>
         <Link href="/dashboard/teacher/subjects">
-            <Card className="hover:bg-muted/50 transition-colors">
+            <Card className="hover:bg-muted/50 transition-colors h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">الدروس الخاصة</CardTitle>
                 <Presentation className="h-4 w-4 text-muted-foreground" />
