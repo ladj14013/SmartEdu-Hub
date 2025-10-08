@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   BookCopy,
   FolderKanban,
+  Github,
   GraduationCap,
   Home,
   Mail,
@@ -41,6 +42,7 @@ const navLinks = {
     { href: '/dashboard/directeur/content', label: 'إدارة هيكل المحتوى', icon: FolderKanban },
     { href: '/dashboard/directeur/users', label: 'إدارة المستخدمين', icon: Users },
     { href: '/dashboard/directeur/messages', label: 'صندوق الرسائل', icon: Mail },
+    { href: '/dashboard/directeur/github-guide', label: 'دليل GitHub', icon: Github },
   ],
   supervisor_subject: [
     { href: '/dashboard/supervisor_subject', label: 'الرئيسية', icon: Home },

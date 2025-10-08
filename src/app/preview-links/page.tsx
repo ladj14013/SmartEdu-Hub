@@ -46,6 +46,7 @@ export default function PreviewLinksPage() {
               <PageLink href="/dashboard/directeur/content/stage-2/level-2-1/subj-2">محتوى المادة</PageLink>
               <PageLink href="/dashboard/directeur/content/stage-2/level-2-1/subj-2/lesson-1">تعديل درس</PageLink>
               <PageLink href="/dashboard/directeur/messages">صندوق الرسائل</PageLink>
+              <PageLink href="/dashboard/directeur/github-guide">دليل GitHub</PageLink>
             </ul>
           </CardContent>
         </Card>
