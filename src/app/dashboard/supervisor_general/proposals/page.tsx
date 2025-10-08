@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { addDoc, collection, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
+import { addDoc, collection, doc, query, where, serverTimestamp, orderBy } from 'firebase/firestore';
 import type { Stage, User as UserType, StructureProposal } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { PageHeader } from '@/components/common/page-header';
