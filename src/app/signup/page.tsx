@@ -113,12 +113,14 @@ export default function SignupPage() {
       // Generate teacher code if role is teacher
       if(data.role === 'teacher') {
         userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      } else if (data.role === 'student' && data.teacherCode) {
-         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()));
+      } else if (data.role === 'student' && data.teacherCode && data.subjectId) {
+         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()), where('subjectId', '==', data.subjectId));
          const teacherSnapshot = await getDocs(teachersQuery);
          if (!teacherSnapshot.empty) {
             const teacherToLink = teacherSnapshot.docs[0];
-            userData.linkedTeacherId = teacherToLink.id;
+            userData.linkedTeachers = {
+              [data.subjectId]: teacherToLink.id
+            };
          }
       }
       
@@ -312,13 +314,13 @@ export default function SignupPage() {
                     />
                 )}
 
-                {(role === 'teacher' || role === 'supervisor_subject') && selectedStage && (
+                {(role === 'student' || role === 'teacher' || role === 'supervisor_subject') && selectedStage && (
                    <FormField
                       control={form.control}
                       name="subjectId"
                       render={({ field }) => (
                         <FormItem>
-                          <Label>المادة</Label>
+                          <Label>المادة {role === 'student' ? '(للربط مع أستاذ)' : ''}</Label>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>

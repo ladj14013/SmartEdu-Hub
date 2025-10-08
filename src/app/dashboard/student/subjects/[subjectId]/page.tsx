@@ -26,24 +26,22 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   
   const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
-  const { data: student, isLoading: isStudentLoading } = useDoc<UserType>(studentRef);
+  const { data: student, isLoading: isStudentLoading, refetch: refetchStudent } = useDoc<UserType>(studentRef);
 
-  const teacherRef = useMemoFirebase(() => (firestore && student?.linkedTeacherId) ? doc(firestore, 'users', student.linkedTeacherId) : null, [firestore, student]);
+  const linkedTeacherId = student?.linkedTeachers?.[subjectId];
+  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student) return null;
-    
-    // Query all lessons in the subject that are public, or private to the student's level and linked teacher
     return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
-
   }, [firestore, subjectId, student]);
 
   const { data: allLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
   
   const lessons = allLessons?.filter(l => 
       (l.type === 'public' && l.levelId === student?.levelId) || 
-      (l.type === 'private' && l.authorId === student?.linkedTeacherId && l.levelId === student?.levelId)
+      (l.type === 'private' && l.authorId === linkedTeacherId && l.levelId === student?.levelId)
   );
 
   const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || isTeacherLoading || areLessonsLoading;
@@ -52,19 +50,26 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
     if (!firestore || !student || !teacherCode.trim()) return;
     setIsLinking(true);
     try {
-        const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', teacherCode.trim()));
+        const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', teacherCode.trim()), where('subjectId', '==', subjectId));
         const teacherSnapshot = await getDocs(teachersQuery);
 
         if (teacherSnapshot.empty) {
-            toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود. يرجى التأكد منه.', variant: 'destructive' });
+            toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة. يرجى التأكد منه.', variant: 'destructive' });
+            setIsLinking(false);
             return;
         }
 
         const teacherToLink = teacherSnapshot.docs[0];
         const studentDocRef = doc(firestore, 'users', student.id);
-        await updateDoc(studentDocRef, { linkedTeacherId: teacherToLink.id });
+        
+        // Update the map using dot notation for a specific subject
+        await updateDoc(studentDocRef, {
+            [`linkedTeachers.${subjectId}`]: teacherToLink.id
+        });
 
-        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherToLink.data().name}.` });
+        refetchStudent();
+
+        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherToLink.data().name} في هذه المادة.` });
 
     } catch (error) {
         console.error("Failed to link teacher:", error);
@@ -105,7 +110,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
 
       <Card>
         <CardHeader>
-          <CardTitle>الربط مع الأستاذ</CardTitle>
+          <CardTitle>الربط مع أستاذ المادة</CardTitle>
           <CardDescription>أدخل كود الأستاذ الخاص بهذه المادة للوصول إلى دروسه الخاصة.</CardDescription>
         </CardHeader>
         <CardContent>

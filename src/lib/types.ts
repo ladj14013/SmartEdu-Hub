@@ -9,7 +9,7 @@ export interface User {
   levelId?: string;
   subjectId?: string;
   teacherCode?: string;
-  linkedTeacherId?: string;
+  linkedTeachers?: Record<string, string>; // Maps subjectId to teacherId
   linkedStudentIds?: string[];
   avatar: string;
 }
