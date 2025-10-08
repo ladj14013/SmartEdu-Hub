@@ -2,7 +2,7 @@
 
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Clipboard, Github } from 'lucide-react';
+import { Check, Clipboard, Download, Github } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -37,8 +37,8 @@ export default function GitHubGuidePage() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="دليل رفع المشروع إلى GitHub"
-                description="اتبع هذه الخطوات لتهيئة مستودع Git ورفع مشروعك إلى GitHub."
+                title="دليل GitHub"
+                description="اتبع هذه الخطوات لتهيئة مستودع Git ورفع مشروعك أو سحبه من GitHub."
             />
 
             <Card>
@@ -124,6 +124,21 @@ export default function GitHubGuidePage() {
                 </CardHeader>
                 <CardContent>
                     <CodeBlock command="git push -u origin main" />
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                         <Download className="h-6 w-6 text-primary" />
+                        <CardTitle>كيفية سحب (Clone) مشروع من GitHub</CardTitle>
+                    </div>
+                    <CardDescription>
+                        إذا كنت تريد العمل على المشروع من جهاز كمبيوتر آخر، يمكنك نسخه (أو 'سحبه') من GitHub. اذهب إلى صفحة المستودع على GitHub، اضغط على زر 'Code' الأخضر، وانسخ الرابط (HTTPS URL).
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <CodeBlock command="git clone https://github.com/YourUsername/YourRepositoryName.git" />
                 </CardContent>
             </Card>
         </div>
