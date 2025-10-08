@@ -1,4 +1,5 @@
 
+'use client';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -21,6 +22,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MainNav } from '@/components/common/main-nav';
 import { Footer } from '@/components/common/footer';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+
+function AnnouncementBanner() {
+  const firestore = useFirestore();
+  const bannerSettingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'announcement_banner') : null, [firestore]);
+  const { data: bannerSettings } = useDoc(bannerSettingsRef);
+
+  if (!bannerSettings || !bannerSettings.isActive || !bannerSettings.text) {
+    return null;
+  }
+
+  return (
+    <div className="bg-primary text-primary-foreground">
+      <div className="container mx-auto px-4">
+        <div className="relative flex h-10 items-center overflow-hidden">
+          <p className="animate-marquee whitespace-nowrap">{bannerSettings.text}</p>
+          <p className="absolute animate-marquee2 whitespace-nowrap">{bannerSettings.text}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const heroImage = PlaceHolderImages.find(p => p.id === 'hero-background');
@@ -32,6 +56,7 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col">
       <MainNav />
+      <AnnouncementBanner />
       <main className="flex-1">
         <section id="hero" className="relative w-full py-24 md:py-32 lg:py-48">
           {heroImage && 
