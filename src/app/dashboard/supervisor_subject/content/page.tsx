@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function ManagePublicContentPage() {
     const firestore = useFirestore();
     const { user: authUser, isLoading: isAuthLoading } = useUser();
+    const [selectedLevelId, setSelectedLevelId] = useState<string | 'all'>('all');
 
     // Get supervisor data to find their subject and stage
     const supervisorRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -49,8 +51,12 @@ export default function ManagePublicContentPage() {
     // Get public lessons for the supervisor's subject
     const lessonsQuery = useMemoFirebase(() => {
         if (!firestore || !supervisor?.subjectId) return null;
-        return query(collection(firestore, 'lessons'), where('subjectId', '==', supervisor.subjectId), where('type', '==', 'public'));
-    }, [firestore, supervisor?.subjectId]);
+        let q = query(collection(firestore, 'lessons'), where('subjectId', '==', supervisor.subjectId), where('type', '==', 'public'));
+        if (selectedLevelId !== 'all') {
+            q = query(q, where('levelId', '==', selectedLevelId));
+        }
+        return q;
+    }, [firestore, supervisor?.subjectId, selectedLevelId]);
     const { data: publicLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
     
     const isLoading = isAuthLoading || isSupervisorLoading || isSubjectLoading || areLevelsLoading || areLessonsLoading;
@@ -79,8 +85,10 @@ export default function ManagePublicContentPage() {
         title={`إدارة المحتوى العام لمادة ${subject?.name || ''}`}
         description="إدارة الدروس العامة التي تظهر لجميع أساتذة وتلاميذ هذه المادة."
       >
-        <Button variant="accent">
-          <Plus className="ml-2 h-4 w-4" /> أضف درس عام
+        <Button variant="accent" asChild>
+          <Link href="/dashboard/supervisor_subject/content/new">
+            <Plus className="ml-2 h-4 w-4" /> أضف درس عام
+          </Link>
         </Button>
       </PageHeader>
 
@@ -88,7 +96,7 @@ export default function ManagePublicContentPage() {
         <CardHeader>
             <div className='flex flex-col md:flex-row gap-4 justify-between'>
                 <CardTitle>قائمة الدروس العامة</CardTitle>
-                <Select>
+                <Select value={selectedLevelId} onValueChange={setSelectedLevelId}>
                     <SelectTrigger className="w-full md:w-[220px]">
                         <SelectValue placeholder="فلترة حسب المستوى الدراسي" />
                     </SelectTrigger>
