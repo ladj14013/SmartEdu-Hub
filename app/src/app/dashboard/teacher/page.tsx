@@ -152,8 +152,8 @@ export default function TeacherDashboard() {
                 </CardContent>
             </Link>
         </Card>
-        <Link href="/dashboard/teacher/subjects">
-            <Card className="hover:bg-muted/50 transition-colors">
+        <Card className="hover:bg-muted/50 transition-colors">
+            <Link href="/dashboard/teacher/subjects" className="block w-full h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">الدروس الخاصة</CardTitle>
                 <Presentation className="h-4 w-4 text-muted-foreground" />
@@ -162,8 +162,8 @@ export default function TeacherDashboard() {
                 <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
                 <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
             </CardContent>
-            </Card>
-        </Link>
+            </Link>
+        </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">متوسط الأداء</CardTitle>
