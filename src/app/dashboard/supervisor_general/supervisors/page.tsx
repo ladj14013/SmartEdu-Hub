@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
@@ -19,7 +19,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, UserCog } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -33,10 +33,14 @@ import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 export default function SupervisorsListPage() {
   const firestore = useFirestore();
+
+  const [stageFilter, setStageFilter] = useState('all');
+  const [subjectFilter, setSubjectFilter] = useState('all');
 
   // Queries
   const supervisorsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'supervisor_subject')) : null, [firestore]);
@@ -61,6 +65,27 @@ export default function SupervisorsListPage() {
     return acc;
   }, {} as Record<string, string>) || {}, [stages]);
 
+  const filteredSupervisors = useMemo(() => {
+    if (!supervisors) return [];
+    return supervisors.filter(supervisor => {
+      const matchesStage = stageFilter === 'all' || supervisor.stageId === stageFilter;
+      const matchesSubject = subjectFilter === 'all' || supervisor.subjectId === subjectFilter;
+      return matchesStage && matchesSubject;
+    });
+  }, [supervisors, stageFilter, subjectFilter]);
+
+  const availableSubjects = useMemo(() => {
+    if (stageFilter === 'all') return subjects || [];
+    return subjects?.filter(s => s.stageId === stageFilter) || [];
+  }, [subjects, stageFilter]);
+  
+  // Reset subject filter if it's not in the available subjects
+  React.useEffect(() => {
+    if (subjectFilter !== 'all' && !availableSubjects.some(s => s.id === subjectFilter)) {
+      setSubjectFilter('all');
+    }
+  }, [availableSubjects, subjectFilter]);
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -70,7 +95,33 @@ export default function SupervisorsListPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>مشرفو المواد</CardTitle>
+            <div className='flex flex-col md:flex-row gap-4 justify-between'>
+                <CardTitle>مشرفو المواد</CardTitle>
+                <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <Select value={stageFilter} onValueChange={setStageFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="فلترة حسب المرحلة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">كل المراحل</SelectItem>
+                            {stages?.map(stage => (
+                                <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="فلترة حسب المادة" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">كل المواد</SelectItem>
+                            {availableSubjects.map(subject => (
+                                <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -97,7 +148,7 @@ export default function SupervisorsListPage() {
                   </TableRow>
                 ))
               )}
-              {!isLoading && supervisors?.map(supervisor => {
+              {!isLoading && filteredSupervisors?.map(supervisor => {
                 return (
                     <TableRow key={supervisor.id}>
                         <TableCell className="font-medium">
@@ -137,10 +188,10 @@ export default function SupervisorsListPage() {
                     </TableRow>
                 )
               })}
-               {!isLoading && supervisors?.length === 0 && (
+               {!isLoading && filteredSupervisors?.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        لا يوجد مشرفو مواد في المنصة حالياً.
+                        لا توجد نتائج مطابقة لبحثك.
                     </TableCell>
                 </TableRow>
               )}
