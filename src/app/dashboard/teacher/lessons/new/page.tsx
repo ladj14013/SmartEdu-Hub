@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { addDoc, collection, doc, query, where } from 'firebase/firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, Loader2, Save } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import type { Level, User } from '@/lib/types';
+import type { Level, User, Exercise } from '@/lib/types';
 
 
 const newLessonSchema = z.object({
@@ -26,12 +27,17 @@ const newLessonSchema = z.object({
   content: z.string().min(10, "محتوى الدرس قصير جدًا."),
   videoUrl: z.string().url("الرجاء إدخال رابط فيديو صالح.").optional().or(z.literal('')),
   levelId: z.string({ required_error: "الرجاء اختيار المستوى الدراسي." }),
+  exercises: z.array(z.object({
+    id: z.string(),
+    question: z.string().min(1, "السؤال لا يمكن أن يكون فارغًا."),
+    modelAnswer: z.string().min(1, "الإجابة النموذجية لا يمكن أن تكون فارغة."),
+  })).optional(),
 });
 
 type NewLessonFormValues = z.infer<typeof newLessonSchema>;
 
 export default function NewLessonPage() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -52,7 +58,13 @@ export default function NewLessonPage() {
       title: '',
       content: '',
       videoUrl: '',
+      exercises: [],
     },
+  });
+  
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "exercises"
   });
 
   const selectedLevelId = form.watch('levelId');
@@ -63,7 +75,7 @@ export default function NewLessonPage() {
         toast({ title: "خطأ", description: "لا يمكن إنشاء الدرس. البيانات الأساسية غير متوفرة.", variant: "destructive" });
         return;
     }
-    setIsLoading(true);
+    setIsSaving(true);
     try {
         await addDoc(collection(firestore, 'lessons'), {
             title: data.title,
@@ -74,7 +86,7 @@ export default function NewLessonPage() {
             levelId: data.levelId,
             type: 'private',
             isLocked: false,
-            exercises: [],
+            exercises: data.exercises || [],
             createdAt: new Date(),
         });
         toast({ title: "تم إنشاء الدرس بنجاح!" });
@@ -83,7 +95,7 @@ export default function NewLessonPage() {
         console.error("Error creating lesson: ", error);
         toast({ title: "فشل إنشاء الدرس", description: "حدث خطأ غير متوقع.", variant: "destructive" });
     } finally {
-        setIsLoading(false);
+        setIsSaving(false);
     }
   };
 
@@ -185,10 +197,73 @@ export default function NewLessonPage() {
                     />
                 </CardContent>
             </Card>
-            
+
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                    <div>
+                        <CardTitle>التمارين</CardTitle>
+                        <CardDescription>
+                            {isLevelSelected ? 'أضف تمارين تفاعلية للدرس.' : 'اختر المستوى الدراسي لتفعيل هذا القسم.'}
+                        </CardDescription>
+                    </div>
+                    <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => append({ id: uuidv4(), question: '', modelAnswer: '' })}
+                        disabled={!isLevelSelected}
+                    >
+                        <Plus className="ml-2 h-4 w-4" /> أضف تمرين
+                    </Button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {fields.map((field, index) => (
+                        <Card key={field.id} className="bg-muted/50 p-4">
+                             <div className="flex justify-between items-center mb-4">
+                                <h4 className="font-semibold">تمرين {index + 1}</h4>
+                                <Button type="button" variant="ghost" size="icon" className="text-red-500" onClick={() => remove(index)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="space-y-4">
+                                <FormField
+                                    control={form.control}
+                                    name={`exercises.${index}.question`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>السؤال</FormLabel>
+                                            <FormControl>
+                                                <Textarea placeholder="اكتب نص السؤال..." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                 <FormField
+                                    control={form.control}
+                                    name={`exercises.${index}.modelAnswer`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>الإجابة النموذجية</FormLabel>
+                                            <FormControl>
+                                                <Textarea placeholder="اكتب الإجابة المتوقعة من التلميذ..." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </Card>
+                    ))}
+                    {fields.length === 0 && isLevelSelected && (
+                        <p className="text-center text-muted-foreground py-4">لا توجد تمارين مضافة بعد.</p>
+                    )}
+                </CardContent>
+            </Card>
+
             <div className="flex justify-end">
-                <Button type="submit" variant="accent" className="w-full md:w-auto" disabled={isLoading || !isLevelSelected}>
-                {isLoading ? (
+                <Button type="submit" variant="accent" className="w-full md:w-auto" disabled={isSaving || !isLevelSelected}>
+                {isSaving ? (
                     <>
                     <Loader2 className="ml-2 h-4 w-4 animate-spin" />
                     جاري الحفظ...
