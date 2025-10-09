@@ -10,24 +10,24 @@ import { doc } from 'firebase/firestore';
 import type { Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
-// Component to fetch and display teacher's name
-function LessonAuthorInfo({ authorId }: { authorId: string | undefined }) {
-  const firestore = useFirestore();
-  const authorRef = useMemoFirebase(() => (firestore && authorId) ? doc(firestore, 'users', authorId) : null, [firestore, authorId]);
-  const { data: author, isLoading } = useDoc<UserType>(authorRef);
-
+// Component to fetch and display teacher's name using a server action
+async function LessonAuthorInfo({ authorId }: { authorId: string | undefined }) {
   if (!authorId) return null;
 
-  if (isLoading) {
+  // Fetch the teacher's name safely using the server action
+  const { teacherName, error } = await getTeacherByCode({ teacherId: authorId });
+
+  if (error || !teacherName) {
     return <Skeleton className="h-5 w-32" />;
   }
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
       <User className="h-4 w-4" />
-      <span>بواسطة الأستاذ: {author?.name || 'غير معروف'}</span>
+      <span>بواسطة الأستاذ: {teacherName}</span>
     </div>
   );
 }
@@ -83,7 +83,11 @@ export default function StudentLessonPage() {
           </Link>
         </Button>
       </PageHeader>
-       {lesson.type === 'private' && <LessonAuthorInfo authorId={lesson.authorId} />}
+       {lesson.type === 'private' && (
+        <React.Suspense fallback={<Skeleton className="h-5 w-48" />}>
+          <LessonAuthorInfo authorId={lesson.authorId} />
+        </React.Suspense>
+       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
