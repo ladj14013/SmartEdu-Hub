@@ -13,9 +13,11 @@ import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
+import { useParams } from 'next/navigation';
 
-export default function SubjectPage({ params }: { params: { subjectId: string } }) {
-  const { subjectId } = params;
+export default function SubjectPage() {
+  const params = useParams();
+  const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
   const { toast } = useToast();
@@ -24,7 +26,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
 
   // --- Data Fetching ---
-  const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
+  const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
   const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   
   const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
@@ -45,7 +47,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
 
 
   const lessonsQuery = useMemoFirebase(() => {
-    if (!firestore || !student) return null;
+    if (!firestore || !student || !subjectId) return null;
     return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
   }, [firestore, subjectId, student]);
 
@@ -59,7 +61,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || areLessonsLoading;
 
   const handleLinkTeacher = async () => {
-    if (!firestore || !student || !teacherCode.trim()) return;
+    if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
         const result = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId });
