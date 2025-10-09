@@ -1,7 +1,7 @@
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Library, Users, ArrowLeft, Crown } from 'lucide-react';
+import { Library, Users, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -52,9 +52,8 @@ export default function StudentDashboard() {
       <PageHeader
         title={
             <div className="flex items-center gap-3">
-              <Crown className="h-8 w-8 text-amber-500" />
               <span>
-                مرحباً بعودتك أيها التلميذ: <span className="font-bold text-amber-500">{student?.name || ''}</span>
+                مرحباً بعودتك : <span className="font-bold text-amber-500">{student?.name || ''}</span>
               </span>
             </div>
         }
