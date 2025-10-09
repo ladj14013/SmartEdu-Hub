@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ======= Helper Functions =======
+    // --- Helper Functions ---
     function isUserAuthenticated() {
       return request.auth != null;
     }
@@ -12,54 +12,80 @@ service cloud.firestore {
       return isUserAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserRole() {
-      // It's safer to check for existence before accessing .data
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isRole(role) {
+      return isUserAuthenticated() && getUserData(request.auth.uid).role == role;
     }
 
     function isDirector() {
-      return isUserAuthenticated() && getUserRole() == 'directeur';
+      return isRole('directeur');
     }
 
-    // ======= Public Read-Only Data =======
-    // Anyone can read stages, levels, subjects, and settings.
+    // --- Rules ---
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // PUBLIC: Allow anyone to read public content needed for signup and homepage
     match /(stages|levels|subjects|settings)/{docId} {
       allow read: if true;
     }
 
-    // ======= User Data Rules =======
+    // USERS: Complex rules for users collection
     match /users/{userId} {
-      // A user can read their own data. The director can read any user's data.
-      allow read: if isOwner(userId) || isDirector();
+      // Any authenticated user can read their own data.
+      // The Director can read any user's data.
+      // Teachers can read data of students linked to them.
+      allow read: if isOwner(userId) || isDirector() || 
+                  (isRole('teacher') && getUserData(userId).role == 'student' && resource.data.linkedTeachers[getUserData(request.auth.uid).subjectId] == request.auth.uid);
+      
       // A user can update their own data. The director can update any user's data.
       allow write: if isOwner(userId) || isDirector();
     }
     
-    // ======= Lessons Rules =======
+    // LESSONS:
     match /lessons/{lessonId} {
-      // Any authenticated user can read lessons.
-      allow read: if isUserAuthenticated();
-      // The director or the lesson author can write/update/delete.
+      // Anyone authenticated can read public lessons.
+      // Private lessons can be read by their author, the director, or linked students.
+      allow read: if isUserAuthenticated() && (
+                    resource.data.type == 'public' || 
+                    resource.data.authorId == request.auth.uid ||
+                    isDirector() ||
+                    (getUserData(request.auth.uid).role == 'student' && getUserData(request.auth.uid).linkedTeachers[resource.data.subjectId] == resource.data.authorId)
+                  );
+      
+      // Lessons can be written by their author or the director.
       allow write: if isDirector() || (isUserAuthenticated() && request.resource.data.authorId == request.auth.uid);
     }
 
-    // ======= Messages Rules =======
+    // MESSAGES:
     match /messages/{messageId} {
-        // Any user (even unauthenticated) can create a message (contact form)
-        allow create: if true;
-        // Only the director can update (forward) messages.
+        // Any authenticated user can create a message.
+        allow create: if isUserAuthenticated();
+        // Only the director can update (forward) a message.
         allow update: if isDirector();
-        // Only the director or general supervisor can read messages.
-        allow read: if isDirector() || (isUserAuthenticated() && getUserRole() == 'supervisor_general');
     }
-
-    // ======= All other collections/documents =======
-    // By default, deny read/write to everything else unless specified above.
-    // This is implicitly handled, but can be made explicit if needed.
-    // Example for supervisor notes:
+    
+    // STUDENT PROGRESS:
+    match /users/{studentId}/lessonProgress/{lessonId} {
+        // A student can write their own progress.
+        allow write: if isOwner(studentId);
+        // A student can read their own progress. The director and linked teachers can also read it.
+        allow read: if isOwner(studentId) || isDirector() || 
+                    (isRole('teacher') && getUserData(studentId).linkedTeachers[getUserData(request.auth.uid).subjectId] == request.auth.uid);
+    }
+    
+    // OTHER COLLECTIONS for DIRECTOR
+    match /(stages|levels|subjects)/{docId} {
+        allow write: if isDirector();
+    }
     match /supervisor_notes/{noteId} {
-      allow read, write: if isUserAuthenticated() && (getUserRole() == 'supervisor_subject' || getUserRole() == 'teacher');
+        allow read, write: if isRole('supervisor_subject') || isRole('teacher');
     }
-
   }
 }
