@@ -26,6 +26,7 @@ const newLessonSchema = z.object({
   title: z.string().min(3, "عنوان الدرس قصير جدًا."),
   content: z.string().min(10, "محتوى الدرس قصير جدًا."),
   videoUrl: z.string().url("الرجاء إدخال رابط فيديو صالح.").optional().or(z.literal('')),
+  pdfUrl: z.string().url("الرجاء إدخال رابط PDF صالح.").optional().or(z.literal('')),
   levelId: z.string({ required_error: "الرجاء اختيار المستوى الدراسي." }),
   exercises: z.array(z.object({
     id: z.string(),
@@ -58,6 +59,7 @@ export default function NewPublicLessonPage() {
       title: '',
       content: '',
       videoUrl: '',
+      pdfUrl: '',
       levelId: undefined,
       exercises: [],
     },
@@ -82,6 +84,7 @@ export default function NewPublicLessonPage() {
             title: data.title,
             content: data.content,
             videoUrl: data.videoUrl || null,
+            pdfUrl: data.pdfUrl || null,
             authorId: authUser.uid,
             subjectId: supervisor.subjectId,
             levelId: data.levelId,
@@ -191,6 +194,19 @@ export default function NewPublicLessonPage() {
                             <FormLabel>رابط فيديو (اختياري)</FormLabel>
                             <FormControl>
                             <Input placeholder="https://www.youtube.com/watch?v=..." {...field} disabled={!isLevelSelected} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="pdfUrl"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>رابط ملف PDF (اختياري)</FormLabel>
+                            <FormControl>
+                            <Input placeholder="https://example.com/lesson.pdf" {...field} disabled={!isLevelSelected} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

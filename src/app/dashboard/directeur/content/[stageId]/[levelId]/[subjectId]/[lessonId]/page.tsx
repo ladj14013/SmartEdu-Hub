@@ -40,6 +40,7 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
                             <div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-10 w-full" /></div>
                             <div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-20 w-full" /></div>
                             <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
+                             <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
                         </CardContent>
                     </Card>
                     <Card>
@@ -98,6 +99,10 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
                     <div className="space-y-2">
                         <Label htmlFor="videoUrl">رابط الفيديو (اختياري)</Label>
                         <Input id="videoUrl" defaultValue={lesson.videoUrl} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="pdfUrl">رابط ملف PDF (اختياري)</Label>
+                        <Input id="pdfUrl" defaultValue={lesson.pdfUrl} />
                     </div>
                 </CardContent>
             </Card>

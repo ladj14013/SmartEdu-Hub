@@ -29,6 +29,7 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [pdfUrl, setPdfUrl] = useState('');
   const [isLocked, setIsLocked] = useState(false);
   const [exercises, setExercises] = useState<Exercise[]>([]);
 
@@ -40,6 +41,7 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
       setTitle(lesson.title);
       setContent(lesson.content);
       setVideoUrl(lesson.videoUrl || '');
+      setPdfUrl(lesson.pdfUrl || '');
       setIsLocked(lesson.isLocked);
       setExercises(lesson.exercises || []);
     }
@@ -61,6 +63,7 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
               title,
               content,
               videoUrl,
+              pdfUrl,
               isLocked,
               exercises,
           });
@@ -160,6 +163,10 @@ export default function EditViewLessonPage({ params }: { params: { lessonId: str
                     <div className="space-y-2">
                         <Label htmlFor="videoUrl">رابط الفيديو (اختياري)</Label>
                         <Input id="videoUrl" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} readOnly={!isPrivate} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="pdfUrl">رابط ملف PDF (اختياري)</Label>
+                        <Input id="pdfUrl" value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} readOnly={!isPrivate} />
                     </div>
                 </CardContent>
             </Card>

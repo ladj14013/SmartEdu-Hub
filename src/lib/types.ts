@@ -45,6 +45,7 @@ export interface Lesson {
   title: string;
   content: string;
   videoUrl?: string;
+  pdfUrl?: string;
   subjectId: string;
   levelId: string;
   authorId: string;

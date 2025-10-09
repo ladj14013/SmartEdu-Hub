@@ -2,7 +2,7 @@
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, BookOpen, Loader2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Loader2, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { ExerciseEvaluator } from '../../components/exercise-evaluator';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
@@ -65,6 +65,16 @@ export default function StudentLessonPage({ params }: { params: { lessonId: stri
                     <CardTitle>محتوى الدرس</CardTitle>
                 </CardHeader>
                 <CardContent>
+                    {lesson.pdfUrl && (
+                        <div className="mb-6">
+                            <Button asChild variant="secondary" className="w-full">
+                                <a href={lesson.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                    <FileText className="ml-2 h-4 w-4" />
+                                    فتح أو تحميل ملف الدرس (PDF)
+                                </a>
+                            </Button>
+                        </div>
+                    )}
                     <p className="whitespace-pre-wrap text-muted-foreground">{lesson.content}</p>
                     {lesson.videoUrl && (
                         <div className="mt-6">
