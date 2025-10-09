@@ -37,7 +37,7 @@ function AnnouncementBannerControl() {
   const { data: bannerSettings, isLoading, refetch } = useDoc(bannerSettingsRef);
 
   const [text, setText] = useState('');
-  const [isActive, setIsActive] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   React.useEffect(() => {
@@ -154,7 +154,7 @@ export default function DirecteurDashboard() {
             <div className="flex items-center gap-3">
               <Crown className="h-8 w-8 text-amber-500" />
               <span>
-                مرحباً بعودتك، سيدي المدير: <span className="text-amber-500 font-bold">{currentUserData?.name || ''}</span>
+                مرحباً بعودتك، سيدي المدير: <span className="font-bold text-amber-500">{currentUserData?.name || ''}</span>
               </span>
             </div>
           )
