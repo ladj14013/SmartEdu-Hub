@@ -2,14 +2,36 @@
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, BookOpen, Loader2, FileText } from 'lucide-react';
+import { ArrowRight, BookOpen, Loader2, FileText, User } from 'lucide-react';
 import Link from 'next/link';
 import { ExerciseEvaluator } from '../../components/exercise-evaluator';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { Lesson } from '@/lib/types';
+import type { Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
+import React from 'react';
+
+// Component to fetch and display teacher's name
+function LessonAuthorInfo({ authorId }: { authorId: string | undefined }) {
+  const firestore = useFirestore();
+  const authorRef = useMemoFirebase(() => (firestore && authorId) ? doc(firestore, 'users', authorId) : null, [firestore, authorId]);
+  const { data: author, isLoading } = useDoc<UserType>(authorRef);
+
+  if (!authorId) return null;
+
+  if (isLoading) {
+    return <Skeleton className="h-5 w-32" />;
+  }
+
+  return (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+      <User className="h-4 w-4" />
+      <span>بواسطة الأستاذ: {author?.name || 'غير معروف'}</span>
+    </div>
+  );
+}
+
 
 export default function StudentLessonPage() {
   const params = useParams();
@@ -61,6 +83,7 @@ export default function StudentLessonPage() {
           </Link>
         </Button>
       </PageHeader>
+       {lesson.type === 'private' && <LessonAuthorInfo authorId={lesson.authorId} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

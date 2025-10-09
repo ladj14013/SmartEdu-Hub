@@ -52,10 +52,14 @@ export default function SubjectPage() {
   // Fetch linked teacher's name when component mounts or linkedTeacherId changes
   useEffect(() => {
     if (linkedTeacherId) {
+      setLinkedTeacherName(null); // Reset while fetching
       const fetchTeacherName = async () => {
         const result = await getTeacherByCode({ teacherId: linkedTeacherId });
         if (result.teacherName) {
           setLinkedTeacherName(result.teacherName);
+        } else {
+          // Handle case where teacher might not be found, though unlikely
+          setLinkedTeacherName("أستاذ غير معروف");
         }
       };
       fetchTeacherName();
