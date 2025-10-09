@@ -119,7 +119,6 @@ export default function TeacherDashboard() {
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
-  const teacherCode = teacher?.teacherCode;
 
 
   return (
@@ -127,12 +126,12 @@ export default function TeacherDashboard() {
       <PageHeader
         title={
             <span>
-                مرحباً بك أستاذ: <span className="text-amber-500 font-bold">{teacherName}</span>
+                مرحباً بك أستاذ: <span className="text-primary font-bold">{teacherName}</span>
             </span>
         }
         description={
             <span>
-                أنت تدرس مادة <span className="text-amber-500 font-semibold">{subjectName}</span> لـ <span className="text-amber-500 font-semibold">{stageName}</span>.
+                أنت تدرس مادة <span className="text-primary font-semibold">{subjectName}</span> لـ <span className="text-primary font-semibold">{stageName}</span>.
             </span>
         }
       />
@@ -144,14 +143,14 @@ export default function TeacherDashboard() {
             <CardDescription>شارك هذا الكود مع تلاميذك لربطهم بحسابك.</CardDescription>
           </CardHeader>
           <CardContent className="flex items-center justify-between gap-4 p-4 bg-muted rounded-b-lg">
-            {teacherCode ? (
+            {teacher?.teacherCode ? (
               <>
                 <Button onClick={generateTeacherCode} variant="ghost" size="icon" disabled={isGenerating}>
                   {isGenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
                   <span className="sr-only">توليد كود جديد</span>
                 </Button>
-                <p className="text-2xl font-mono font-bold text-primary flex-1 text-center">{teacherCode}</p>
-                <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
+                <p className="text-2xl font-mono font-bold text-primary flex-1 text-center">{teacher.teacherCode}</p>
+                <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacher.teacherCode}>
                   {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
                   <span className="sr-only">نسخ الكود</span>
                 </Button>

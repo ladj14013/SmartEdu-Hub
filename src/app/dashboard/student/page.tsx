@@ -19,7 +19,7 @@ function StudentLevelInfo({ levelId }: { levelId: string | undefined }) {
         return <span className="inline-block h-5 w-32 animate-pulse rounded-md bg-muted" />;
     }
 
-    return <span className="font-bold text-amber-500">{level?.name || ''}</span>;
+    return <strong>{level?.name || ''}</strong>;
 }
 
 
@@ -50,7 +50,7 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={<span>مرحباً <span className="font-bold text-amber-500">{student?.name || ''}</span></span>}
+        title={`مرحباً ${student?.name || ''}`}
         description={
             student?.levelId ? (
               <>
