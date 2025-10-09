@@ -1,16 +1,36 @@
+
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2, Wand2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Lesson, Stage, Subject as SubjectType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
+function TeacherDashboardSkeleton() {
+    return (
+        <div className="space-y-6">
+            <PageHeader
+                title={<Skeleton className="h-8 w-48" />}
+                description={<Skeleton className="h-4 w-72 mt-2" />}
+            />
+             <div className="grid gap-6 md:grid-cols-2">
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
+                <Card className="hover:bg-muted/50 transition-colors"><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
+             </div>
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+                <Skeleton className="h-28 w-full" />
+             </div>
+        </div>
+    )
+}
 
 export default function TeacherDashboard() {
   const [copied, setCopied] = useState(false);
@@ -18,6 +38,11 @@ export default function TeacherDashboard() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // --- Data Fetching ---
   const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -68,16 +93,20 @@ export default function TeacherDashboard() {
     }
   }
 
+  if (!isClient || isLoading) {
+    return <TeacherDashboardSkeleton />;
+  }
+
   const teacherCode = teacher?.teacherCode;
-  const teacherName = teacher?.name || '...';
-  const subjectName = subject?.name || '...';
-  const stageName = stage?.name || '...';
+  const teacherName = teacher?.name || 'أستاذ';
+  const subjectName = subject?.name || 'مادة';
+  const stageName = stage?.name || 'مرحلة';
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isLoading ? <Skeleton className="h-8 w-48" /> : `مرحباً بك أستاذ: ${teacherName}`}
-        description={isLoading ? <Skeleton className="h-4 w-72 mt-2" /> : `أنت تدرس مادة ${subjectName} لـ ${stageName}.`}
+        title={`مرحباً بك أستاذ: ${teacherName}`}
+        description={`أنت تدرس مادة ${subjectName} لـ ${stageName}.`}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -87,27 +116,23 @@ export default function TeacherDashboard() {
                 <CardDescription>شارك هذا الكود مع تلاميذك لربطهم بحسابك.</CardDescription>
             </CardHeader>
             <CardContent className="flex items-center justify-between gap-4 p-4 bg-muted rounded-b-lg">
-                {isLoading ? <Skeleton className="h-10 w-full" /> : (
+                {teacherCode ? (
                     <>
-                        {teacherCode ? (
-                            <>
-                                <Button onClick={generateTeacherCode} variant="ghost" size="icon" disabled={isGenerating}>
-                                    {isGenerating ? <Loader2 className="h-5 w-5 animate-spin"/> : <RefreshCw className="h-5 w-5" />}
-                                    <span className="sr-only">توليد كود جديد</span>
-                                </Button>
-                                <p className="text-2xl font-mono font-bold text-primary flex-1 text-center">{teacherCode}</p>
-                                <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
-                                    {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
-                                    <span className="sr-only">نسخ الكود</span>
-                                </Button>
-                            </>
-                        ) : (
-                            <Button onClick={generateTeacherCode} disabled={isGenerating} className='w-full'>
-                                {isGenerating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Wand2 className="h-4 w-4 ml-2" />}
-                                توليد كود
-                            </Button>
-                        )}
+                        <Button onClick={generateTeacherCode} variant="ghost" size="icon" disabled={isGenerating}>
+                            {isGenerating ? <Loader2 className="h-5 w-5 animate-spin"/> : <RefreshCw className="h-5 w-5" />}
+                            <span className="sr-only">توليد كود جديد</span>
+                        </Button>
+                        <p className="text-2xl font-mono font-bold text-primary flex-1 text-center">{teacherCode}</p>
+                        <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacherCode}>
+                            {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
+                            <span className="sr-only">نسخ الكود</span>
+                        </Button>
                     </>
+                ) : (
+                    <Button onClick={generateTeacherCode} disabled={isGenerating} className='w-full'>
+                        {isGenerating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Wand2 className="h-4 w-4 ml-2" />}
+                        توليد كود
+                    </Button>
                 )}
             </CardContent>
         </Card>
@@ -131,7 +156,7 @@ export default function TeacherDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{linkedStudents?.length ?? 0}</div>}
+            <div className="text-2xl font-bold">{linkedStudents?.length ?? 0}</div>
             <p className="text-xs text-muted-foreground">طالب مرتبط بك</p>
           </CardContent>
         </Card>
@@ -142,7 +167,7 @@ export default function TeacherDashboard() {
                 <Presentation className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>}
+                <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
                 <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
             </CardContent>
             </Card>
@@ -153,7 +178,7 @@ export default function TeacherDashboard() {
             <div className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">82%</div>}
+            <div className="text-2xl font-bold">82%</div>
             <p className="text-xs text-muted-foreground">(عنصر نائب)</p>
           </CardContent>
         </Card>
