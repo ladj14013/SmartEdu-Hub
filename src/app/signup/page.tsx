@@ -34,6 +34,7 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { Stage, Level, Subject } from '@/lib/types';
+import { getTeacherByCode } from '@/ai/flows/get-teacher-by-code';
 
 
 const signupSchema = z.object({
@@ -119,18 +120,16 @@ export default function SignupPage() {
       
       // 3. If student provided a teacher code, link them before creating the doc
       if (data.role === 'student' && data.teacherCode && data.subjectId) {
-         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()), where('subjectId', '==', data.subjectId));
-         const teacherSnapshot = await getDocs(teachersQuery);
-         if (!teacherSnapshot.empty) {
-            const teacherDoc = teacherSnapshot.docs[0];
-            const teacherRef = doc(firestore, 'users', teacherDoc.id);
+         const { teacherId } = await getTeacherByCode({ teacherCode: data.teacherCode.trim(), subjectId: data.subjectId });
+         if (teacherId) {
+            const teacherRef = doc(firestore, 'users', teacherId);
             
             // Add student to teacher's list
             await updateDoc(teacherRef, {
               linkedStudentIds: arrayUnion(user.uid)
             });
             // Add teacher to student's map
-            userData.linkedTeachers[data.subjectId] = teacherDoc.id;
+            userData.linkedTeachers[data.subjectId] = teacherId;
          }
       }
 
@@ -274,7 +273,7 @@ export default function SignupPage() {
                   )}
                 />
                 
-                {(role === 'student' || role === 'teacher' || role === 'supervisor_subject') && (
+                {(role === 'student' || role === 'teacher') && (
                    <FormField
                       control={form.control}
                       name="stageId"
@@ -324,7 +323,7 @@ export default function SignupPage() {
                     />
                 )}
 
-                {(role === 'student' || role === 'teacher' || role === 'supervisor_subject') && selectedStage && (
+                {(role === 'student' || role === 'teacher') && selectedStage && (
                    <FormField
                       control={form.control}
                       name="subjectId"
