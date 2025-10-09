@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc, arrayRemove, getDoc, deleteField } from 'firebase/firestore';
+import { collection, doc, updateDoc, arrayRemove, getDoc, deleteField, arrayUnion } from 'firebase/firestore';
 import type { User as UserType, Role, Stage, Level, Subject } from '@/lib/types';
 
 import { PageHeader } from '@/components/common/page-header';
@@ -12,10 +12,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Save, Loader2, XCircle } from 'lucide-react';
+import { ArrowRight, Save, Loader2, XCircle, Link as LinkIcon, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from '@/components/ui/dialog';
+import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
 
 // A small component to manage unlinking
@@ -85,6 +96,103 @@ function LinkedTeacherItem({ studentId, subjectId, teacherId, onUnlink }: { stud
       </Button>
     </div>
   )
+}
+
+
+function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType, allSubjects: Subject[], onLink: () => void }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [teacherCode, setTeacherCode] = useState('');
+
+  const availableSubjects = allSubjects.filter(
+    (subject) =>
+      subject.stageId === student.stageId &&
+      !student.linkedTeachers?.[subject.id]
+  );
+  
+  const handleLink = async () => {
+    if (!firestore || !selectedSubjectId || !teacherCode) return;
+    setIsLinking(true);
+    try {
+      const { teacherId, teacherName } = await getTeacherByCode({ teacherCode, subjectId: selectedSubjectId });
+      
+      if (!teacherId || !teacherName) {
+        toast({ title: 'فشل الربط', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
+        return;
+      }
+      
+      const studentRef = doc(firestore, 'users', student.id);
+      await updateDoc(studentRef, {
+        [`linkedTeachers.${selectedSubjectId}`]: teacherId,
+      });
+
+      const teacherRef = doc(firestore, 'users', teacherId);
+      await updateDoc(teacherRef, {
+        linkedStudentIds: arrayUnion(student.id),
+      });
+
+      toast({ title: 'تم الربط بنجاح', description: `تم ربط التلميذ بالأستاذ ${teacherName}.` });
+      setIsOpen(false);
+      onLink();
+    } catch (error) {
+      toast({ title: 'فشل الربط', variant: 'destructive' });
+      console.error("Linking failed:", error);
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedSubjectId('');
+      setTeacherCode('');
+    }
+  }, [isOpen]);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          <LinkIcon className="ml-2 h-4 w-4" /> ربط بأستاذ
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>ربط التلميذ بأستاذ</DialogTitle>
+          <DialogDescription>اختر المادة وأدخل كود الأستاذ لإتمام عملية الربط.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="link-subject">المادة</Label>
+            <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+              <SelectTrigger id="link-subject">
+                <SelectValue placeholder="اختر المادة..." />
+              </SelectTrigger>
+              <SelectContent>
+                {availableSubjects.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="link-code">كود الأستاذ</Label>
+            <Input id="link-code" value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)} disabled={!selectedSubjectId} />
+          </div>
+        </div>
+        <DialogFooter>
+          <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
+          <Button onClick={handleLink} disabled={isLinking || !teacherCode || !selectedSubjectId}>
+            {isLinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <LinkIcon className="ml-2 h-4 w-4" />}
+             ربط
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 
@@ -309,9 +417,12 @@ export default function EditUserPage({ params }: { params: { userId: string } })
 
         {user.role === 'student' && (
           <Card>
-            <CardHeader>
-              <CardTitle>الأساتذة المرتبطون</CardTitle>
-              <CardDescription>إدارة ارتباط هذا التلميذ بالأساتذة.</CardDescription>
+            <CardHeader className="flex-row items-center justify-between">
+              <div>
+                <CardTitle>الأساتذة المرتبطون</CardTitle>
+                <CardDescription>إدارة ارتباط هذا التلميذ بالأساتذة.</CardDescription>
+              </div>
+              <LinkTeacherDialog student={user} allSubjects={subjects || []} onLink={refetchUser} />
             </CardHeader>
             <CardContent className="space-y-2">
               {linkedTeachersArray.length > 0 ? (

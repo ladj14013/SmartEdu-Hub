@@ -19,8 +19,12 @@ function LessonAuthorInfo({ authorId }: { authorId: string | undefined }) {
   const authorRef = useMemoFirebase(() => (firestore && authorId) ? doc(firestore, 'users', authorId) : null, [firestore, authorId]);
   const { data: author, isLoading } = useDoc<UserType>(authorRef);
 
-  if (isLoading || !author) {
+  if (isLoading) {
     return <Skeleton className="h-5 w-40 mt-2" />;
+  }
+  
+  if (!author) {
+    return null; // Don't render anything if author not found
   }
 
   return (

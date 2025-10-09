@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
 
 export default function SubjectPage() {
@@ -70,32 +71,28 @@ export default function SubjectPage() {
     if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
-        const teachersCol = collection(firestore, 'users');
-        const q = query(teachersCol, where('teacherCode', '==', teacherCode.trim()), where('subjectId', '==', subjectId as string), where('role', '==', 'teacher'));
-        const teacherSnapshot = await getDocs(q);
+        const { teacherId, teacherName } = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId });
 
-        if (teacherSnapshot.empty) {
+        if (!teacherId || !teacherName) {
             toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
             setIsLinking(false);
             return;
         }
         
-        const teacherDoc = teacherSnapshot.docs[0];
-        const teacherData = teacherDoc.data() as UserType;
-
         // Add teacher to student's linkedTeachers map
         const studentDocRef = doc(firestore, 'users', student.id);
         await updateDoc(studentDocRef, {
-            [`linkedTeachers.${subjectId}`]: teacherDoc.id
+            [`linkedTeachers.${subjectId}`]: teacherId
         });
 
         // Add student to teacher's linkedStudentIds array
-        const teacherDocRef = doc(firestore, 'users', teacherDoc.id);
+        const teacherDocRef = doc(firestore, 'users', teacherId);
         await updateDoc(teacherDocRef, {
           linkedStudentIds: arrayUnion(student.id)
         });
 
-        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherData.name} في هذه المادة.` });
+        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherName} في هذه المادة.` });
+        setTeacherCode('');
         refetchStudent();
 
     } catch (error) {
