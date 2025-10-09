@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { User as UserType, Lesson, Subject, Level } from '@/lib/types';
+import type { User as UserType, Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeacherLessonsPage({ params }: { params: { teacherId: string } }) {
@@ -24,14 +24,7 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
 
   const { data: teacherLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(teacherLessonsQuery);
 
-  const teacherLevelsQuery = useMemoFirebase(() => {
-    if (!firestore || !teacher?.stageId) return null;
-    return query(collection(firestore, 'levels'), where('stageId', '==', teacher.stageId));
-  }, [firestore, teacher?.stageId]);
-
-  const { data: teacherLevels, isLoading: areLevelsLoading } = useCollection<Level>(teacherLevelsQuery);
-
-  const isLoading = isTeacherLoading || areLessonsLoading || areLevelsLoading;
+  const isLoading = isTeacherLoading || areLessonsLoading;
   
   if (isLoading) {
     return (
@@ -62,42 +55,31 @@ export default function TeacherLessonsPage({ params }: { params: { teacherId: st
         </Button>
       </PageHeader>
       
-      <div className="space-y-6">
-        {teacherLevels?.map(level => {
-            const lessonsInLevel = teacherLessons?.filter(lesson => lesson.levelId === level.id);
-
-            if(!lessonsInLevel || lessonsInLevel.length === 0) return null;
-
-            return (
-                <Card key={level.id}>
-                    <CardHeader>
-                        <CardTitle>{level.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="divide-y">
-                            {lessonsInLevel.map(lesson => (
-                                <Link
-                                    key={lesson.id}
-                                    href={`/dashboard/supervisor_subject/teachers/${teacher.id}/lessons/${lesson.id}`}
-                                    className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-md"
-                                >
-                                    <span className="font-medium">{lesson.title}</span>
-                                    <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-                                </Link>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )
-        })}
-         {teacherLessons?.length === 0 && (
-            <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                    هذا الأستاذ لم يضف أي دروس خاصة بعد.
-                </CardContent>
-            </Card>
-         )}
-      </div>
+      <Card>
+          <CardHeader>
+              <CardTitle>قائمة الدروس</CardTitle>
+          </CardHeader>
+          <CardContent>
+              <div className="divide-y">
+                  {teacherLessons && teacherLessons.length > 0 ? (
+                      teacherLessons.map(lesson => (
+                          <Link
+                              key={lesson.id}
+                              href={`/dashboard/supervisor_subject/teachers/${teacher.id}/lessons/${lesson.id}`}
+                              className="flex items-center justify-between p-3 hover:bg-muted/50 rounded-md"
+                          >
+                              <span className="font-medium">{lesson.title}</span>
+                              <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                          </Link>
+                      ))
+                  ) : (
+                      <div className="p-8 text-center text-muted-foreground">
+                          هذا الأستاذ لم يضف أي دروس خاصة بعد.
+                      </div>
+                  )}
+              </div>
+          </CardContent>
+      </Card>
     </div>
   );
 }
