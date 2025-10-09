@@ -42,25 +42,33 @@ const getTeacherByCodeFlow = ai.defineFlow(
     // This flow runs on the server with admin privileges.
     const firestore = getFirestore();
     
+    // Query for the teacher using only the code and role. This is a simple query.
     const teachersCol = firestore.collection('users');
     const q = teachersCol
       .where('teacherCode', '==', teacherCode)
-      .where('subjectId', '==', subjectId)
       .where('role', '==', 'teacher')
       .limit(1);
 
     const teacherSnapshot = await q.get();
 
+    // If no teacher is found with that code, return empty.
     if (teacherSnapshot.empty) {
-        return {}; // Return empty object if not found
+        return {};
     }
     
     const teacherDoc = teacherSnapshot.docs[0];
     const teacherData = teacherDoc.data();
     
+    // Manually verify if the found teacher's subjectId matches the required one.
+    if (teacherData.subjectId !== subjectId) {
+        // The code is correct, but for the wrong subject. Treat as not found.
+        return {};
+    }
+    
+    // If everything matches, return the teacher's data.
     return {
         teacherId: teacherDoc.id,
-        teacherName: teacherData.name, // Corrected from teacherData.name
+        teacherName: teacherData.name,
     };
   }
 );
