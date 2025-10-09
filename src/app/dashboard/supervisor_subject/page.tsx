@@ -7,7 +7,7 @@ import { BookCopy, Users, GraduationCap, ArrowLeft, Loader2, BookLock } from 'lu
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { User as UserType, Lesson, Stage, Subject } from '@/lib/types';
+import type { User as UserType, Lesson, Stage, Subject as SubjectType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const StatCard = ({ title, value, description, icon: Icon, isLoading }: { title: string, value: string | number, description: string, icon: React.ElementType, isLoading: boolean }) => (
@@ -41,7 +41,7 @@ export default function SupervisorSubjectDashboard() {
     const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
 
     const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
-    const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
+    const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
 
     // Query for teachers in the same stage and subject
     const teachersQuery = useMemoFirebase(() => {
@@ -82,6 +82,8 @@ export default function SupervisorSubjectDashboard() {
 
     // Query for private lessons created by the teachers under supervision
     const privateLessonsQuery = useMemoFirebase(() => {
+        // IMPORTANT: Only run this query if there are teacher IDs to query for.
+        // An empty `in` query is invalid in Firestore and throws a permission error.
         if (!firestore || teacherIds.length === 0) return null;
         return query(
             collection(firestore, 'lessons'),
