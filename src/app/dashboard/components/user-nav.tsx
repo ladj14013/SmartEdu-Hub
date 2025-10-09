@@ -37,7 +37,7 @@ export function UserNav() {
   const handleLogout = async () => {
     if (!auth) return;
     await auth.signOut();
-    router.push('/login');
+    router.push('/');
   };
 
   const isLoading = isAuthLoading || (user && isUserLoading);
