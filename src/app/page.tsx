@@ -27,7 +27,14 @@ import { doc } from 'firebase/firestore';
 
 function AnnouncementBanner() {
   const firestore = useFirestore();
-  const bannerSettingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'announcement_banner') : null, [firestore]);
+  // Ensure firestore is initialized before creating the doc reference
+  const bannerSettingsRef = useMemoFirebase(() => {
+    if (firestore) {
+      return doc(firestore, 'settings', 'announcement_banner');
+    }
+    return null;
+  }, [firestore]);
+  
   const { data: bannerSettings } = useDoc(bannerSettingsRef);
 
   if (!bannerSettings || !bannerSettings.isActive || !bannerSettings.text) {
