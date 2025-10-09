@@ -32,6 +32,7 @@ export default function TeacherStudentsPage() {
     if (!firestore || !authUser || !teacher?.subjectId) return null;
     // This query finds all users where the `linkedTeachers` map contains a key matching the teacher's subjectId,
     // and the value for that key is the teacher's UID.
+    // This is more secure and specific than querying all users.
     return query(collection(firestore, 'users'), where(`linkedTeachers.${teacher.subjectId}`, '==', authUser.uid));
   }, [firestore, authUser, teacher?.subjectId]);
   const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
