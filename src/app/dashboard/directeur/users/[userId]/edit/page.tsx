@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Save, Loader2, XCircle, Link as LinkIcon, Plus } from 'lucide-react';
+import { ArrowRight, Save, Loader2, XCircle, Link as LinkIcon, Plus, Search } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -103,39 +104,65 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [isLinking, setIsLinking] = useState(false);
+  
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [teacherCode, setTeacherCode] = useState('');
-
+  
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [isLinking, setIsLinking] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<{ teacherId: string, teacherName: string } | null>(null);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  
   const availableSubjects = allSubjects.filter(
     (subject) =>
       subject.stageId === student.stageId &&
       !student.linkedTeachers?.[subject.id]
   );
   
+  const resetVerification = () => {
+    setVerificationResult(null);
+    setVerificationError(null);
+  }
+
+  const resetAll = () => {
+    resetVerification();
+    setSelectedSubjectId('');
+    setTeacherCode('');
+    setIsLinking(false);
+    setIsVerifying(false);
+  }
+
+  const handleVerifyCode = async () => {
+    if (!selectedSubjectId || !teacherCode.trim()) return;
+    setIsVerifying(true);
+    resetVerification();
+
+    const { teacherId, teacherName, errorCode, errorMessage } = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: selectedSubjectId });
+
+    if (errorCode || !teacherId) {
+      setVerificationError(errorMessage || 'حدث خطأ غير متوقع.');
+    } else {
+      setVerificationResult({ teacherId, teacherName: teacherName! });
+    }
+    
+    setIsVerifying(false);
+  }
+  
   const handleLink = async () => {
-    if (!firestore || !selectedSubjectId || !teacherCode) return;
+    if (!firestore || !verificationResult) return;
     setIsLinking(true);
     try {
-      const { teacherId, teacherName, errorCode, errorMessage } = await getTeacherByCode({ teacherCode, subjectId: selectedSubjectId });
-      
-      if (errorCode || !teacherId || !teacherName) {
-        toast({ title: 'فشل الربط', description: errorMessage || 'حدث خطأ غير متوقع.', variant: 'destructive' });
-        setIsLinking(false);
-        return;
-      }
-      
       const studentRef = doc(firestore, 'users', student.id);
       await updateDoc(studentRef, {
-        [`linkedTeachers.${selectedSubjectId}`]: teacherId,
+        [`linkedTeachers.${selectedSubjectId}`]: verificationResult.teacherId,
       });
 
-      const teacherRef = doc(firestore, 'users', teacherId);
+      const teacherRef = doc(firestore, 'users', verificationResult.teacherId);
       await updateDoc(teacherRef, {
         linkedStudentIds: arrayUnion(student.id),
       });
 
-      toast({ title: 'تم الربط بنجاح', description: `تم ربط التلميذ بالأستاذ ${teacherName}.` });
+      toast({ title: 'تم الربط بنجاح', description: `تم ربط التلميذ بالأستاذ ${verificationResult.teacherName}.` });
       setIsOpen(false);
       onLink();
     } catch (error) {
@@ -148,8 +175,7 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedSubjectId('');
-      setTeacherCode('');
+      resetAll();
     }
   }, [isOpen]);
 
@@ -168,7 +194,7 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="link-subject">المادة</Label>
-            <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+            <Select value={selectedSubjectId} onValueChange={(value) => { setSelectedSubjectId(value); resetVerification(); }} disabled={!!verificationResult}>
               <SelectTrigger id="link-subject">
                 <SelectValue placeholder="اختر المادة..." />
               </SelectTrigger>
@@ -181,12 +207,26 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
           </div>
           <div className="space-y-2">
             <Label htmlFor="link-code">كود الأستاذ</Label>
-            <Input id="link-code" value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)} disabled={!selectedSubjectId} />
+            <div className="flex items-center gap-2">
+                <Input id="link-code" value={teacherCode} onChange={(e) => { setTeacherCode(e.target.value); resetVerification(); }} disabled={!selectedSubjectId || isVerifying || !!verificationResult} />
+                <Button onClick={handleVerifyCode} disabled={isVerifying || !teacherCode.trim() || !selectedSubjectId || !!verificationResult}>
+                  {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="ml-1 h-4 w-4" />}
+                   تحقق
+                </Button>
+            </div>
           </div>
+          {verificationError && (
+              <div className="p-3 text-sm text-destructive-foreground bg-destructive rounded-md">{verificationError}</div>
+          )}
+          {verificationResult && (
+             <div className="p-3 text-sm text-green-800 bg-green-100 rounded-md border border-green-200">
+                تم العثور على الأستاذ: <span className="font-bold">{verificationResult.teacherName}</span>.
+            </div>
+          )}
         </div>
         <DialogFooter>
           <DialogClose asChild><Button type="button" variant="outline">إلغاء</Button></DialogClose>
-          <Button onClick={handleLink} disabled={isLinking || !teacherCode || !selectedSubjectId}>
+          <Button onClick={handleLink} disabled={isLinking || !verificationResult}>
             {isLinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <LinkIcon className="ml-2 h-4 w-4" />}
              ربط
           </Button>
