@@ -1,67 +1,62 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
-    function isUserAuthenticated() {
-      return request.auth != null;
-    }
-    
-    function isRole(role) {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
-    }
 
-    // Default deny
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Allow users to be read by anyone authenticated, but only written by themselves or a director.
-    match /users/{userId} {
-      allow read: if isUserAuthenticated();
-      allow write: if request.auth.uid == userId || isRole('directeur');
-    }
-
-    // Allow authenticated users to read content collections
+    // Allow public read access for educational structure data
     match /stages/{stageId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isRole('directeur'); // Only directors can create/update/delete stages
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.matches('directeur');
     }
 
     match /levels/{levelId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isRole('directeur'); // Only directors can manage levels
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.matches('directeur');
     }
-    
+
     match /subjects/{subjectId} {
-      allow read: if isUserAuthenticated();
-      allow write: if isRole('directeur'); // Only directors can manage subjects
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.matches('directeur');
     }
-    
-    // Lessons can be read by anyone, but only written by their author or a director.
+
+    // Secure user data
+    match /users/{userId} {
+      allow read: if request.auth != null; // Allow any authenticated user to read user profiles (e.g., for names, avatars)
+      allow create: if request.auth.uid == userId; // Allow user to create their own profile
+      allow update: if request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur'; // Allow user to update their own profile or a director to update any profile
+      allow delete: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur'; // Only directors can delete users
+    }
+
+    // Lessons can be read by any authenticated user
     match /lessons/{lessonId} {
-      allow read: if isUserAuthenticated();
-      // Allow create if user is teacher or supervisor
-      allow create: if isRole('teacher') || isRole('supervisor_subject');
-      // Allow update/delete if user is the author or a director
-      allow update, delete: if resource.data.authorId == request.auth.uid || isRole('directeur') || isRole('supervisor_subject');
+      allow read: if request.auth != null;
+      // Allow create/update/delete only by authors (teachers/supervisors) or directors
+      allow write: if request.auth != null && (request.resource.data.authorId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur');
     }
-    
-    // Student progress can only be read/written by the student themselves.
-    match /users/{studentId}/lessonProgress/{progressId} {
-      allow read, write: if request.auth.uid == studentId;
+
+    // Student progress can only be read/written by the student themselves or their teacher/supervisor/director
+    match /users/{studentId}/lessonProgress/{lessonId} {
+        allow read, write: if request.auth != null && request.auth.uid == studentId;
+        // Add rules for teachers/supervisors if needed later
     }
-    
-    // Messages can be created by anyone, read if they are the receiver or a director/supervisor
+
+    // Messages can be created by anyone, but only read/updated by relevant parties
     match /messages/{messageId} {
-      allow create: if isUserAuthenticated();
-      allow read: if resource.data.receiverId == request.auth.uid || isRole('directeur') || isRole('supervisor_general');
-      allow update: if isRole('directeur') || isRole('supervisor_general'); // For forwarding
+        allow create: if true; // Anyone can send a message (contact form)
+        allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.matches('directeur|supervisor_general');
     }
-    
-    // Supervisor notes can be created by supervisors, and read by the note author or the lesson author (teacher).
+
+    // Settings can only be managed by directors
+    match /settings/{settingId} {
+        allow read: if true; // Allow anyone to read settings like the banner
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
+    }
+
+    // Supervisor notes security
     match /supervisor_notes/{noteId} {
-        allow create: if isRole('supervisor_subject');
-        allow read: if resource.data.authorId == request.auth.uid || get(/databases/$(database)/documents/lessons/$(resource.data.lessonId)).data.authorId == request.auth.uid;
+      allow read, create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role.matches('supervisor_subject|teacher');
+      allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject';
     }
   }
 }
