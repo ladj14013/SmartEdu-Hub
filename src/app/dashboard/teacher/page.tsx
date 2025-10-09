@@ -119,6 +119,8 @@ export default function TeacherDashboard() {
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
+  const teacherCode = teacher?.teacherCode;
+
 
   return (
     <div className="space-y-6" suppressHydrationWarning>
