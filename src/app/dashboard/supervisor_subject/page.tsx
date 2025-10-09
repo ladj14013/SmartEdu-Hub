@@ -1,4 +1,3 @@
-
 'use client';
 import { useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
@@ -43,7 +42,18 @@ export default function SupervisorSubjectDashboard() {
     const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
     const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
 
-    // Mock data for teachers and private lessons to avoid query errors
+    // Query for teachers under this supervisor's responsibility
+    const teachersQuery = useMemoFirebase(() => {
+        if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
+        return query(
+            collection(firestore, 'users'),
+            where('role', '==', 'teacher'),
+            where('stageId', '==', supervisor.stageId),
+            where('subjectId', '==', supervisor.subjectId)
+        );
+    }, [firestore, supervisor]);
+    const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
+
     const mockPrivateLessonsCount = 12;
     const arePrivateLessonsLoading = false;
 
@@ -59,7 +69,7 @@ export default function SupervisorSubjectDashboard() {
     }, [firestore, authUser, supervisor]);
     const { data: publicLessons, isLoading: arePublicLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
     
-    const isLoading = isAuthLoading || isSupervisorLoading || isStageLoading || isSubjectLoading || arePublicLessonsLoading;
+    const isLoading = isAuthLoading || isSupervisorLoading || isStageLoading || isSubjectLoading || arePublicLessonsLoading || areTeachersLoading;
     
     const supervisorName = supervisor?.name || '...';
     const subjectName = subject?.name || '...';
@@ -100,6 +110,13 @@ export default function SupervisorSubjectDashboard() {
             description="دروس أنشأها الأساتذة"
             icon={BookLock}
             isLoading={arePrivateLessonsLoading}
+        />
+        <StatCard
+            title="إجمالي الأساتذة"
+            value={teachers?.length ?? 0}
+            description="أستاذًا تشرف عليهم في هذه المادة"
+            icon={Users}
+            isLoading={isLoading}
         />
       </div>
     </div>
