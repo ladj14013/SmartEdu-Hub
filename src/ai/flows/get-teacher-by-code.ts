@@ -10,9 +10,26 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getFirestore } from 'firebase-admin/firestore';
+import { initializeApp as initializeAdminApp, getApps as getAdminApps, cert } from 'firebase-admin/app';
 import { User } from '@/lib/types';
 
-// Initialize Firestore on the server
+// Server-side Firestore initialization
+if (getAdminApps().length === 0) {
+  try {
+    // Attempt to use environment variables for credentials in production
+    const credentials = process.env.GOOGLE_APPLICATION_CREDENTIALS ? JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS) : undefined;
+    if (credentials) {
+      initializeAdminApp({ credential: cert(credentials) });
+    } else {
+      // Fallback for local development if env var is not set, but this might fail.
+      // A better local setup would involve setting the GOOGLE_APPLICATION_CREDENTIALS env var.
+      initializeAdminApp();
+    }
+  } catch (error) {
+    console.error("Failed to initialize Firebase Admin SDK:", error);
+    // In a real app, you might want to handle this more gracefully.
+  }
+}
 const db = getFirestore();
 
 const GetTeacherByCodeInputSchema = z.object({

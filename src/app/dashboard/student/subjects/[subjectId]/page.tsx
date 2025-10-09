@@ -12,7 +12,7 @@ import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { getTeacherByCode } from '@/ai/flows/get-teacher-by-code';
+import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
 export default function SubjectPage({ params }: { params: { subjectId: string } }) {
   const { subjectId } = params;
