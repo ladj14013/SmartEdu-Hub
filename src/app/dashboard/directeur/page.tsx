@@ -1,14 +1,19 @@
 
 'use client';
 
-import { useMemo } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useMemo, useState } from 'react';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, updateDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart, BookCopy, GraduationCap, UserCheck, Users } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { BarChart, BookCopy, GraduationCap, UserCheck, Users, Loader2, Save, Tv } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { User, Lesson, Subject } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string, value: number, icon: React.ElementType, isLoading: boolean }) => (
   <Card>
@@ -25,6 +30,89 @@ const StatCard = ({ title, value, icon: Icon, isLoading }: { title: string, valu
     </CardContent>
   </Card>
 );
+
+function AnnouncementBannerControl() {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const bannerSettingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'announcement_banner') : null, [firestore]);
+  const { data: bannerSettings, isLoading, refetch } = useDoc(bannerSettingsRef);
+
+  const [text, setText] = useState('');
+  const [isActive, setIsActive] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (bannerSettings) {
+      setText(bannerSettings.text || '');
+      setIsActive(bannerSettings.isActive || false);
+    }
+  }, [bannerSettings]);
+
+  const handleSave = async () => {
+    if (!bannerSettingsRef) return;
+    setIsSaving(true);
+    try {
+      await updateDoc(bannerSettingsRef, { text, isActive });
+      toast({ title: 'تم الحفظ', description: 'تم تحديث إعدادات شريط الإعلانات.' });
+      refetch();
+    } catch (e) {
+      toast({ title: 'خطأ', description: 'فشل حفظ الإعدادات.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+     <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Tv className="h-6 w-6 text-primary" />
+          <CardTitle>شريط الإعلانات المتحرك</CardTitle>
+        </div>
+        <CardDescription>تحكم في الشريط الذي يظهر في أعلى الصفحة الرئيسية.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className='space-y-0.5'>
+                    <Label htmlFor="banner-active" className="font-medium">تفعيل الشريط</Label>
+                    <p className="text-xs text-muted-foreground">
+                        هل تريد عرض الشريط في الصفحة الرئيسية؟
+                    </p>
+                </div>
+                <Switch
+                    id="banner-active"
+                    checked={isActive}
+                    onCheckedChange={setIsActive}
+                />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="banner-text">نص الإعلان</Label>
+              <Textarea
+                id="banner-text"
+                placeholder="اكتب رسالتك هنا..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                disabled={!isActive}
+              />
+            </div>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Save className="ml-2 h-4 w-4" />}
+              حفظ الإعدادات
+            </Button>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 
 export default function DirecteurDashboard() {
@@ -64,7 +152,7 @@ export default function DirecteurDashboard() {
         <StatCard title="إجمالي الدروس" value={totalLessons} icon={BookCopy} isLoading={isLoadingLessons} />
       </div>
 
-       <div className="grid gap-6 md:grid-cols-1">
+       <div className="grid gap-6 md:grid-cols-2">
             <Card>
                 <CardHeader>
                 <CardTitle>نشاط المستخدمين</CardTitle>
@@ -76,6 +164,7 @@ export default function DirecteurDashboard() {
                 </div>
                 </CardContent>
             </Card>
+            <AnnouncementBannerControl />
         </div>
     </div>
   );
