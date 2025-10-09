@@ -43,16 +43,8 @@ export default function SupervisorSubjectDashboard() {
     const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
     const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
 
-    // Query for teachers in the same stage and subject - DISABLED
-    const teachersQuery = null; // useMemoFirebase(() => {
-    //     if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
-    //     return query(
-    //         collection(firestore, 'users'),
-    //         where('role', '==', 'teacher'),
-    //         where('stageId', '==', supervisor.stageId),
-    //         where('subjectId', '==', supervisor.subjectId)
-    //     );
-    // }, [firestore, supervisor]);
+    // Query for teachers in the same stage and subject - DISABLED for debugging
+    const teachersQuery = null; 
     const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
 
     const teacherIds = useMemo(() => teachers?.map(t => t.id) || [], [teachers]);
@@ -80,17 +72,8 @@ export default function SupervisorSubjectDashboard() {
     }, [firestore, authUser, supervisor]);
     const { data: publicLessons, isLoading: arePublicLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
 
-    // Query for private lessons created by the teachers under supervision
-    const privateLessonsQuery = useMemoFirebase(() => {
-        // IMPORTANT: Only run this query if there are teacher IDs to query for.
-        // An empty `in` query is invalid in Firestore and throws a permission error.
-        if (!firestore || teacherIds.length === 0) return null;
-        return query(
-            collection(firestore, 'lessons'),
-            where('authorId', 'in', teacherIds),
-            where('type', '==', 'private')
-        );
-    }, [firestore, teacherIds]);
+    // Query for private lessons created by the teachers under supervision - DISABLED for debugging
+    const privateLessonsQuery = null;
     const { data: privateLessons, isLoading: arePrivateLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
 
     const isLoading = isAuthLoading || isSupervisorLoading || isStageLoading || isSubjectLoading || areTeachersLoading || areStudentsLoading || arePublicLessonsLoading || (teacherIds.length > 0 && arePrivateLessonsLoading);
