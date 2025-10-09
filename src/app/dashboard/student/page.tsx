@@ -1,21 +1,45 @@
+'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Library, Users, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-
-// Mock data
-const student = {
-    name: "مريم علي",
-    level: "الصف الأول الإعدادي",
-    stage: "المرحلة الإعدادية",
-};
+import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { User as UserType, Level, Stage } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function StudentDashboard() {
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
+  const firestore = useFirestore();
+
+  const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+  const { data: student, isLoading: isStudentLoading } = useDoc<UserType>(studentRef);
+
+  const levelRef = useMemoFirebase(() => (firestore && student?.levelId) ? doc(firestore, 'levels', student.levelId) : null, [firestore, student?.levelId]);
+  const { data: level, isLoading: isLevelLoading } = useDoc<Level>(levelRef);
+  
+  const isLoading = isAuthLoading || isStudentLoading || isLevelLoading;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader
+          title={<Skeleton className="h-8 w-48" />}
+          description={<Skeleton className="h-4 w-72" />}
+        />
+        <div className="grid gap-6 md:grid-cols-2">
+           <Skeleton className="h-48 w-full" />
+           <Skeleton className="h-48 w-full" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="لوحة تحكم التلميذ"
-        description={`مرحباً ${student.name}، استعد لرحلة تعلم ممتعة في ${student.level}.`}
+        description={`مرحباً ${student?.name || ''}، استعد لرحلة تعلم ممتعة في ${level?.name || ''}.`}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
