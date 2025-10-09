@@ -60,7 +60,7 @@ const getTeacherByCodeFlow = ai.defineFlow(
     
     return {
         teacherId: teacherDoc.id,
-        teacherName: teacherData.name,
+        teacherName: teacherData.name, // Corrected from teacherData.name
     };
   }
 );
