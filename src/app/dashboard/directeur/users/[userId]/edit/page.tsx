@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, arrayRemove, getDoc, deleteField, arrayUnion } from 'firebase/firestore';
 import type { User as UserType, Role, Stage, Level, Subject } from '@/lib/types';
@@ -237,8 +237,9 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
 }
 
 
-export default function EditUserPage({ params }: { params: { userId: string } }) {
-  const { userId } = params;
+export default function EditUserPage() {
+  const params = useParams();
+  const userId = params.userId as string;
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();

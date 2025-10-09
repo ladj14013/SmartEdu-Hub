@@ -18,9 +18,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useState } from 'react';
+import { useParams } from 'next/navigation';
 
-export default function SubjectContentPage({ params }: { params: { stageId: string; levelId: string; subjectId: string } }) {
-  const { stageId, levelId: initialLevelId, subjectId } = params;
+export default function SubjectContentPage() {
+  const params = useParams();
+  const { stageId, levelId: initialLevelId, subjectId } = params as { stageId: string; levelId: string; subjectId: string };
   const firestore = useFirestore();
 
   const [selectedLevelId, setSelectedLevelId] = useState(initialLevelId);
@@ -53,10 +55,9 @@ export default function SubjectContentPage({ params }: { params: { stageId: stri
   if (isLoading) {
     return (
         <div className="space-y-6">
-            <PageHeader title={<Skeleton className="h-8 w-64" />}>
+            <PageHeader title={<Skeleton className="h-8 w-64" />} description={<Skeleton className="h-4 w-80" />}>
                 <Skeleton className="h-10 w-24" />
             </PageHeader>
-            <Skeleton className="h-4 w-80" />
             <div className="flex justify-end"><Skeleton className="h-10 w-48" /></div>
             <Card>
                 <CardContent className="p-0">

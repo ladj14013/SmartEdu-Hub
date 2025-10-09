@@ -12,9 +12,11 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useParams } from 'next/navigation';
 
-export default function ReviewLessonPage({ params }: { params: { teacherId: string, lessonId: string } }) {
-  const { teacherId, lessonId } = params;
+export default function ReviewLessonPage() {
+  const params = useParams();
+  const { teacherId, lessonId } = params as { teacherId: string, lessonId: string };
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const { toast } = useToast();

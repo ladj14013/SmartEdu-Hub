@@ -8,9 +8,11 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase
 import { collection, doc, query, where } from 'firebase/firestore';
 import type { User as UserType, Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useParams } from 'next/navigation';
 
-export default function TeacherLessonsPage({ params }: { params: { teacherId: string } }) {
-  const { teacherId } = params;
+export default function TeacherLessonsPage() {
+  const params = useParams();
+  const teacherId = params.teacherId as string;
   const firestore = useFirestore();
 
   // --- Data Fetching ---

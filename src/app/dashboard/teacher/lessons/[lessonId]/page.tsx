@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -18,8 +18,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { v4 as uuidv4 } from 'uuid';
 
-export default function EditViewLessonPage({ params }: { params: { lessonId: string } }) {
-  const { lessonId } = params;
+export default function EditViewLessonPage() {
+  const params = useParams();
+  const lessonId = params.lessonId as string;
   const { user: authUser, isLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();

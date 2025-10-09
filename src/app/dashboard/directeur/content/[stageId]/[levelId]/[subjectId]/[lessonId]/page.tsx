@@ -14,10 +14,12 @@ import { doc } from 'firebase/firestore';
 import type { Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useParams } from 'next/navigation';
 
 
-export default function EditLessonPage({ params }: { params: { stageId: string; levelId: string; subjectId: string; lessonId: string } }) {
-  const { stageId, levelId, subjectId, lessonId } = params;
+export default function EditLessonPage() {
+  const params = useParams();
+  const { stageId, levelId, subjectId, lessonId } = params as { stageId: string; levelId: string; subjectId: string; lessonId: string };
   const firestore = useFirestore();
 
   const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
