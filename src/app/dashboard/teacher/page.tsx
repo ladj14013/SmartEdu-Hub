@@ -47,6 +47,25 @@ function TeacherDashboardSkeleton() {
   );
 }
 
+const StatCard = ({ title, value, description, icon: Icon, isLoading }: { title: string, value: string | number, description: string, icon: React.ElementType, isLoading: boolean }) => (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+            <Skeleton className="h-8 w-1/2" />
+        ) : (
+            <>
+                <div className="text-2xl font-bold">{value}</div>
+                <p className="text-xs text-muted-foreground">{description}</p>
+            </>
+        )}
+      </CardContent>
+    </Card>
+);
+
 export default function TeacherDashboard() {
   const [isClient, setIsClient] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -119,6 +138,7 @@ export default function TeacherDashboard() {
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
+  const studentCount = teacher?.linkedStudentIds?.length ?? 0;
 
 
   return (
@@ -177,32 +197,20 @@ export default function TeacherDashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Link href="/dashboard/teacher/students">
-            <Card className="hover:bg-muted/50 transition-colors h-full">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">الطلاب المرتبطون</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold">عرض القائمة</div>
-                    <p className="text-xs text-muted-foreground">عرض قائمة الطلاب المرتبطين بك</p>
-                </CardContent>
-            </Card>
-        </Link>
-
-        <Link href="/dashboard/teacher/subjects">
-          <Card className="hover:bg-muted/50 transition-colors h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">الدروس الخاصة</CardTitle>
-              <Presentation className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{privateLessons?.length ?? 0}</div>
-              <p className="text-xs text-muted-foreground">دروس قمت بإنشائها</p>
-            </CardContent>
-          </Card>
-        </Link>
-
+        <StatCard
+            title="الطلاب المرتبطون"
+            value={studentCount}
+            description="إجمالي الطلاب المرتبطين بك حالياً"
+            icon={Users}
+            isLoading={isLoading}
+        />
+        <StatCard
+            title="الدروس الخاصة"
+            value={privateLessons?.length ?? 0}
+            description="دروس قمت بإنشائها"
+            icon={Presentation}
+            isLoading={isLoading}
+        />
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">متوسط الأداء</CardTitle>
