@@ -121,6 +121,7 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
       
       if (!teacherId || !teacherName) {
         toast({ title: 'فشل الربط', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
+        setIsLinking(false);
         return;
       }
       
@@ -445,3 +446,5 @@ export default function EditUserPage({ params }: { params: { userId: string } })
     </div>
   );
 }
+
+    
