@@ -50,6 +50,7 @@ export default function SubjectPage() {
             setLinkedTeacherName('أستاذ غير معروف'); // Fallback
           }
         } catch (error) {
+            console.error("Failed to fetch teacher name:", error);
             setLinkedTeacherName('أستاذ غير معروف');
         } finally {
             setIsFetchingTeacherName(false);
@@ -80,32 +81,22 @@ export default function SubjectPage() {
     if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
-        const teachersRef = collection(firestore, 'users');
-        const q = query(
-          teachersRef, 
-          where('teacherCode', '==', teacherCode.trim()), 
-          where('subjectId', '==', subjectId as string),
-          where('role', '==', 'teacher')
-        );
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) {
-            toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة. يرجى التأكد منه.', variant: 'destructive' });
+        const result = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId as string });
+        
+        if (result.error || !result.teacherId) {
+            toast({ title: 'الكود غير صحيح', description: result.error || 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
             setIsLinking(false);
             return;
         }
 
-        const teacherDoc = snapshot.docs[0];
-        const teacherData = teacherDoc.data();
-
         const studentDocRef = doc(firestore, 'users', student.id);
         
         await updateDoc(studentDocRef, {
-            [`linkedTeachers.${subjectId}`]: teacherDoc.id
+            [`linkedTeachers.${subjectId}`]: result.teacherId
         });
 
-        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherData.fullName} في هذه المادة.` });
-        setLinkedTeacherName(teacherData.fullName); // Set name directly after linking
+        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${result.teacherName} في هذه المادة.` });
+        setLinkedTeacherName(result.teacherName!); // Set name directly after linking
         refetchStudent();
 
     } catch (error) {
