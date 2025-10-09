@@ -44,9 +44,7 @@ export default function SupervisorSubjectDashboard() {
     const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
 
     // Mock data for teachers and private lessons to avoid query errors
-    const mockTeacherCount = 5;
     const mockPrivateLessonsCount = 12;
-    const areTeachersLoading = false; 
     const arePrivateLessonsLoading = false;
 
     // Query for students in the same stage
@@ -85,7 +83,7 @@ export default function SupervisorSubjectDashboard() {
         description={isLoading ? 'جاري تحميل البيانات...' : `مرحباً ${supervisorName}، أنت تشرف على مادة ${subjectName} ل${stageName}.`}
       />
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card className="hover:bg-muted/50 transition-colors">
             <Link href="/dashboard/supervisor_subject/content">
                 <CardHeader>
@@ -110,14 +108,7 @@ export default function SupervisorSubjectDashboard() {
         </Card>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard 
-            title="إجمالي الأساتذة" 
-            value={mockTeacherCount}
-            description="في المادة والمرحلة الخاصة بك"
-            icon={Users}
-            isLoading={areTeachersLoading}
-        />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard 
             title="إجمالي التلاميذ" 
             value={students?.length ?? 0}
