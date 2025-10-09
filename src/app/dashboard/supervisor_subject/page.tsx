@@ -42,18 +42,9 @@ export default function SupervisorSubjectDashboard() {
     const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
     const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
     
-    // Query for teachers under this supervisor's responsibility.
-    // This query is safe because it's highly specific and protected by security rules.
-    const teachersQuery = useMemoFirebase(() => {
-        if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
-        return query(
-            collection(firestore, 'users'),
-            where('role', '==', 'teacher'),
-            where('stageId', '==', supervisor.stageId),
-            where('subjectId', '==', supervisor.subjectId)
-        );
-    }, [firestore, supervisor]);
-    const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
+    // teachersQuery is disabled to prevent permission errors
+    const areTeachersLoading = false;
+    const teachers = [];
 
     const mockPrivateLessonsCount = 12;
     const arePrivateLessonsLoading = false;
@@ -83,7 +74,18 @@ export default function SupervisorSubjectDashboard() {
         description={isLoading ? 'جاري تحميل البيانات...' : `مرحباً ${supervisorName}، أنت تشرف على مادة ${subjectName} ل${stageName}.`}
       />
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 md:grid-cols-2">
+         <Card className="hover:bg-muted/50 transition-colors">
+            <Link href="/dashboard/supervisor_subject/teachers">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <CardTitle>متابعة الأساتذة</CardTitle>
+                        <ArrowLeft className="h-5 w-5 text-primary" />
+                    </div>
+                    <CardDescription>عرض الدروس الخاصة بالأساتذة الذين تشرف عليهم وتقديم ملاحظات.</CardDescription>
+                </CardHeader>
+            </Link>
+        </Card>
         <Card className="hover:bg-muted/50 transition-colors">
             <Link href="/dashboard/supervisor_subject/content">
                 <CardHeader>
