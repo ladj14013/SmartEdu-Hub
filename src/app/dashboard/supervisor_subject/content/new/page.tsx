@@ -17,9 +17,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, Loader2, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, Save, Trash2, FileUp } from 'lucide-react';
 import Link from 'next/link';
 import type { Level, User as UserType } from '@/lib/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const newLessonSchema = z.object({
@@ -151,6 +152,14 @@ export default function NewPublicLessonPage() {
                     />
                 </CardContent>
             </Card>
+            
+            <Alert>
+              <FileUp className="h-4 w-4" />
+              <AlertTitle>ملاحظة حول رفع الملفات</AlertTitle>
+              <AlertDescription>
+                لإضافة ملف PDF، قم برفعه على خدمة مثل Google Drive أو Dropbox، ثم انسخ رابط المشاركة العام والصقه في حقل "رابط ملف PDF".
+              </AlertDescription>
+            </Alert>
 
             <Card>
                 <CardHeader>
@@ -206,7 +215,7 @@ export default function NewPublicLessonPage() {
                         <FormItem>
                             <FormLabel>رابط ملف PDF (اختياري)</FormLabel>
                             <FormControl>
-                            <Input placeholder="https://example.com/lesson.pdf" {...field} disabled={!isLevelSelected} />
+                            <Input type="url" placeholder="https://example.com/file.pdf" {...field} disabled={!isLevelSelected} />
                             </FormControl>
                             <FormMessage />
                         </FormItem>

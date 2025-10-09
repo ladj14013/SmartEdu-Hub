@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { Lesson, Exercise } from '@/lib/types';
-import { ArrowRight, Plus, Save, Trash2, Info, Loader2 } from 'lucide-react';
+import { ArrowRight, Plus, Save, Trash2, Info, Loader2, FileUp } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -147,6 +147,14 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
         </Alert>
       )}
 
+      <Alert>
+        <FileUp className="h-4 w-4" />
+        <AlertTitle>ملاحظة حول رفع الملفات</AlertTitle>
+        <AlertDescription>
+          لإضافة ملف PDF، قم برفعه على خدمة مثل Google Drive أو Dropbox، ثم انسخ رابط المشاركة العام والصقه في حقل "رابط ملف PDF".
+        </AlertDescription>
+      </Alert>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
             <Card>
@@ -166,7 +174,7 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="pdfUrl">رابط ملف PDF (اختياري)</Label>
-                        <Input id="pdfUrl" value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} readOnly={!canEdit} />
+                        <Input id="pdfUrl" type="url" placeholder="https://example.com/file.pdf" value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} readOnly={!canEdit} />
                     </div>
                 </CardContent>
             </Card>

@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, Plus, Save, Trash2 } from 'lucide-react';
+import { ArrowRight, Plus, Save, Trash2, FileUp } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 export default function EditLessonPage({ params }: { params: { stageId: string; levelId: string; subjectId: string; lessonId: string } }) {
@@ -25,35 +26,14 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
   if (isLoading) {
     return (
         <div className="space-y-6">
-            <PageHeader title={<Skeleton className="h-8 w-56" />}>
-                <div className="flex gap-2">
-                    <Skeleton className="h-10 w-24" />
-                    <Skeleton className="h-10 w-36" />
-                </div>
-            </PageHeader>
+            <PageHeader title={<Skeleton className="h-8 w-56" />}><div className="flex gap-2"><Skeleton className="h-10 w-24" /><Skeleton className="h-10 w-36" /></div></PageHeader>
             <Skeleton className="h-4 w-72" />
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-10 w-full" /></div>
-                            <div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-20 w-full" /></div>
-                            <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
-                             <div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitle><Skeleton className="h-6 w-24" /></CardTitle></CardHeader>
-                        <CardContent><Skeleton className="h-24 w-full" /></CardContent>
-                    </Card>
+                    <Card><CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader><CardContent className="space-y-4"><div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-10 w-full" /></div><div className="space-y-2"><Skeleton className="h-4 w-16" /><Skeleton className="h-20 w-full" /></div><div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div><div className="space-y-2"><Skeleton className="h-4 w-24" /><Skeleton className="h-10 w-full" /></div></CardContent></Card>
+                    <Card><CardHeader><CardTitle><Skeleton className="h-6 w-24" /></CardTitle></CardHeader><CardContent><Skeleton className="h-24 w-full" /></CardContent></Card>
                 </div>
-                <div className="lg:col-span-1">
-                    <Card>
-                        <CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader>
-                        <CardContent><Skeleton className="h-12 w-full" /></CardContent>
-                    </Card>
-                </div>
+                <div className="lg:col-span-1"><Card><CardHeader><CardTitle><Skeleton className="h-6 w-32" /></CardTitle></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card></div>
             </div>
         </div>
     );
@@ -80,6 +60,14 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
             </Button>
         </div>
       </PageHeader>
+      
+      <Alert>
+        <FileUp className="h-4 w-4" />
+        <AlertTitle>ملاحظة حول رفع الملفات</AlertTitle>
+        <AlertDescription>
+          لإضافة ملف PDF، قم برفعه على خدمة مثل Google Drive أو Dropbox، ثم انسخ رابط المشاركة العام والصقه في حقل "رابط ملف PDF".
+        </AlertDescription>
+      </Alert>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -102,7 +90,7 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="pdfUrl">رابط ملف PDF (اختياري)</Label>
-                        <Input id="pdfUrl" defaultValue={lesson.pdfUrl} />
+                        <Input id="pdfUrl" type="url" placeholder="https://example.com/file.pdf" defaultValue={lesson.pdfUrl} />
                     </div>
                 </CardContent>
             </Card>
