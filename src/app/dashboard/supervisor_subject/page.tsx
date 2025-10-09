@@ -65,7 +65,7 @@ export default function SupervisorSubjectDashboard() {
             where('role', '==', 'student'),
             where('stageId', '==', supervisor.stageId)
         );
-    }, [firestore, supervisor]);
+    }, [firestore, supervisor?.stageId]);
     const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(studentsQuery);
 
     // Query for public lessons created by this supervisor
