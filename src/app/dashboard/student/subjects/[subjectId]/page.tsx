@@ -9,12 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc, arrayUnion, arrayRemove, deleteField, getDocs } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'next/navigation';
-import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,8 +37,6 @@ export default function SubjectPage() {
   const [isLinking, setIsLinking] = useState(false);
   const [isUnlinking, setIsUnlinking] = useState(false);
   const [teacherCode, setTeacherCode] = useState('');
-  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
-  const [isFetchingTeacherName, setIsFetchingTeacherName] = useState(true);
   
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -50,31 +47,9 @@ export default function SubjectPage() {
 
   const linkedTeacherId = student?.linkedTeachers?.[subjectId as string];
   
-  // Effect to fetch teacher name if already linked on page load
-  useEffect(() => {
-    const fetchName = async () => {
-      if (linkedTeacherId) {
-        setIsFetchingTeacherName(true);
-        try {
-          const result = await getTeacherByCode({ teacherId: linkedTeacherId });
-          if (result && result.teacherName) {
-            setLinkedTeacherName(result.teacherName);
-          } else {
-            setLinkedTeacherName('أستاذ غير معروف'); // Fallback
-          }
-        } catch (error) {
-            console.error("Failed to fetch teacher name:", error);
-            setLinkedTeacherName('أستاذ غير معروف');
-        } finally {
-            setIsFetchingTeacherName(false);
-        }
-      } else {
-        setIsFetchingTeacherName(false);
-        setLinkedTeacherName(null);
-      }
-    };
-    fetchName();
-  }, [linkedTeacherId]);
+  // Fetch linked teacher's data directly using useDoc, enabled by new security rules
+  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
+  const { data: linkedTeacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
 
   const lessonsQuery = useMemoFirebase(() => {
@@ -89,35 +64,38 @@ export default function SubjectPage() {
       (l.type === 'private' && l.authorId === linkedTeacherId && l.levelId === student?.levelId)
   );
 
-  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || areLessonsLoading;
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || areLessonsLoading || (linkedTeacherId && isTeacherLoading);
   
   const handleLinkTeacher = async () => {
     if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
-        const result = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId as string });
-        
-        if (result.error || !result.teacherId) {
-            toast({ title: 'الكود غير صحيح', description: result.error || 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
+        const teachersCol = collection(firestore, 'users');
+        const q = query(teachersCol, where('teacherCode', '==', teacherCode.trim()), where('subjectId', '==', subjectId as string), where('role', '==', 'teacher'));
+        const teacherSnapshot = await getDocs(q);
+
+        if (teacherSnapshot.empty) {
+            toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
             setIsLinking(false);
             return;
         }
         
+        const teacherDoc = teacherSnapshot.docs[0];
+        const teacherData = teacherDoc.data() as UserType;
+
         // Add teacher to student's linkedTeachers map
         const studentDocRef = doc(firestore, 'users', student.id);
         await updateDoc(studentDocRef, {
-            [`linkedTeachers.${subjectId}`]: result.teacherId
+            [`linkedTeachers.${subjectId}`]: teacherDoc.id
         });
 
         // Add student to teacher's linkedStudentIds array
-        const teacherDocRef = doc(firestore, 'users', result.teacherId);
+        const teacherDocRef = doc(firestore, 'users', teacherDoc.id);
         await updateDoc(teacherDocRef, {
           linkedStudentIds: arrayUnion(student.id)
         });
 
-
-        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${result.teacherName} في هذه المادة.` });
-        setLinkedTeacherName(result.teacherName!); // Set name directly after linking
+        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherData.name} في هذه المادة.` });
         refetchStudent();
 
     } catch (error) {
@@ -146,7 +124,6 @@ export default function SubjectPage() {
       });
 
       toast({ title: 'تم إلغاء الارتباط بنجاح', description: `لم تعد مرتبطًا بالأستاذ في هذه المادة.` });
-      setLinkedTeacherName(null);
       refetchStudent();
     } catch (error) {
       console.error("Failed to unlink teacher:", error);
@@ -197,7 +174,7 @@ export default function SubjectPage() {
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-6 w-6 text-green-600" />
                 <p className="font-semibold">
-                    أنت مرتبط مع الأستاذ: {isFetchingTeacherName ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacherName}</span>}
+                    أنت مرتبط مع الأستاذ: {isTeacherLoading ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacher?.name || 'أستاذ غير معروف'}</span>}
                 </p>
               </div>
                <AlertDialog>

@@ -8,28 +8,25 @@ import Link from 'next/link';
 import { ExerciseEvaluator } from '../../components/exercise-evaluator';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { Lesson } from '@/lib/types';
+import type { Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
 import React from 'react';
-import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
-// Component to fetch and display teacher's name using a server action
-async function LessonAuthorInfo({ authorId }: { authorId: string | undefined }) {
-  if (!authorId) {
-    return null;
-  }
-  
-  const { teacherName, error } = await getTeacherByCode({ teacherId: authorId });
+// Component to fetch and display teacher's name using useDoc, enabled by security rules
+function LessonAuthorInfo({ authorId }: { authorId: string | undefined }) {
+  const firestore = useFirestore();
+  const authorRef = useMemoFirebase(() => (firestore && authorId) ? doc(firestore, 'users', authorId) : null, [firestore, authorId]);
+  const { data: author, isLoading } = useDoc<UserType>(authorRef);
 
-  if (error || !teacherName) {
-     return <Skeleton className="h-5 w-32" />;
+  if (isLoading || !author) {
+    return <Skeleton className="h-5 w-40 mt-2" />;
   }
 
   return (
     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
       <User className="h-4 w-4" />
-      <span>بواسطة الأستاذ: {teacherName}</span>
+      <span>بواسطة الأستاذ: {author.name}</span>
     </div>
   );
 }
@@ -86,9 +83,7 @@ export default function StudentLessonPage() {
         </Button>
       </PageHeader>
        {lesson.type === 'private' && (
-         <React.Suspense fallback={<Skeleton className="h-5 w-48" />}>
-            <LessonAuthorInfo authorId={lesson.authorId} />
-         </React.Suspense>
+         <LessonAuthorInfo authorId={lesson.authorId} />
        )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
