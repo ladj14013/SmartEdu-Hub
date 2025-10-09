@@ -75,7 +75,7 @@ export default function SupervisorSubjectDashboard() {
       />
 
       <div className="grid gap-6 md:grid-cols-2">
-         <Card className="hover:bg-muted/50 transition-colors">
+         {/* <Card className="hover:bg-muted/50 transition-colors">
             <Link href="/dashboard/supervisor_subject/teachers">
                 <CardHeader>
                     <div className="flex items-center justify-between">
@@ -85,7 +85,7 @@ export default function SupervisorSubjectDashboard() {
                     <CardDescription>عرض الدروس الخاصة بالأساتذة الذين تشرف عليهم وتقديم ملاحظات.</CardDescription>
                 </CardHeader>
             </Link>
-        </Card>
+        </Card> */}
         <Card className="hover:bg-muted/50 transition-colors">
             <Link href="/dashboard/supervisor_subject/content">
                 <CardHeader>
