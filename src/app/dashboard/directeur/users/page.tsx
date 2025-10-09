@@ -52,7 +52,7 @@ const roleMap: { [key in Role]?: { name: string; icon: React.ElementType } } = {
 
 export default function UsersPage() {
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
 
   const currentUserRef = useMemoFirebase(
     () => (firestore && authUser ? firestoreDoc(firestore, 'users', authUser.uid) : null),
@@ -63,7 +63,7 @@ export default function UsersPage() {
   const isDirector = currentUserData?.role === 'directeur';
 
   const usersQuery = useMemoFirebase(() => {
-    // IMPORTANT: Only create the query if the user is a director
+    // IMPORTANT: Only create the query if we've confirmed the user is a director
     if (firestore && isDirector) {
       return collection(firestore, 'users');
     }
@@ -75,7 +75,9 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   
-  const isLoading = isCurrentUserLoading || (isDirector && areUsersLoading);
+  // The page is loading if auth is loading, or we're waiting for the current user's role,
+  // OR if we know they are a director and we are now waiting for the full user list.
+  const isLoading = isAuthLoading || isCurrentUserLoading || (isDirector && areUsersLoading);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
