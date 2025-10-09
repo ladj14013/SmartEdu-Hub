@@ -2,109 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions to check user authentication and role
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-
-    function isRole(role) {
-      return isAuth() && getUserData(request.auth.uid).role == role;
-    }
-
-    // DIRECTOR: Can read/write everything. This is a broad permission for admin users.
+    // Rules will be built page by page from here.
+    // WARNING: This allows anyone to read, write, and delete any data.
+    // This should not be used in production.
     match /{document=**} {
-      allow read, write: if isRole('directeur');
-    }
-    
-    // GENERAL SUPERVISOR: Can read users and messages.
-    match /users/{userId} {
-        allow read: if isRole('supervisor_general');
-    }
-    match /messages/{messageId} {
-        allow read, write: if isRole('supervisor_general');
-    }
-
-    // SUBJECT SUPERVISOR: Can manage public content and view their teachers/students.
-    match /users/{userId} {
-        // Allow a subject supervisor to read users that are in their stage/subject
-        allow read: if isRole('supervisor_subject') && (
-                        (resource.data.role == 'teacher' && resource.data.subjectId == getUserData(request.auth.uid).subjectId) ||
-                        (resource.data.role == 'student' && resource.data.stageId == getUserData(request.auth.uid).stageId)
-                    );
-    }
-    match /lessons/{lessonId} {
-        allow read, write: if isRole('supervisor_subject');
-    }
-    match /supervisor_notes/{noteId} {
-        allow read, create: if isRole('supervisor_subject');
-    }
-    
-    // TEACHER: Can manage their private content and view linked students.
-    match /lessons/{lessonId} {
-        allow read: if isRole('teacher'); // Can read all lessons (public and their own private)
-        allow create, update, delete: if isRole('teacher') && request.resource.data.authorId == request.auth.uid;
-    }
-    match /users/{userId} {
-      // Teacher can read data of a student they are linked with.
-      allow get: if isRole('teacher') && userId in getUserData(request.auth.uid).linkedStudentIds;
-    }
-    match /supervisor_notes/{noteId} {
-        allow read: if isRole('teacher') && resource.data.lessonId in getUserData(request.auth.uid).lessonIds;
-    }
-
-
-    // STUDENT: Can read their content and linked teacher's name.
-    match /users/{userId} {
-      // 1. A user can read their own data.
-      // 2. A student can read the data of a teacher they are linked with.
-      allow get: if (isAuth() && request.auth.uid == userId) || 
-                    (isAuth() && userId in getUserData(request.auth.uid).linkedTeachers);
-    }
-
-    match /lessons/{lessonId} {
-        // Allow student to read a lesson if:
-        // 1. It's public and for their level.
-        // 2. It's private, not locked, and the author is a teacher they are linked to.
-        allow read: if isAuth() && isRole('student') && (
-            (resource.data.type == 'public' && resource.data.levelId == getUserData(request.auth.uid).levelId) ||
-            (
-                resource.data.type == 'private' && 
-                resource.data.isLocked == false &&
-                resource.data.authorId in getUserData(request.auth.uid).linkedTeachers
-            )
-        );
-    }
-    match /users/{studentId}/lessonProgress/{lessonId} {
-      allow write: if isAuth() && request.auth.uid == studentId;
-    }
-
-    // PARENT: (Future rules)
-    // match /users/{userId} {
-    //   allow read: if isRole('parent') && userId in getUserData(request.auth.uid).childIds;
-    // }
-
-    // PUBLIC: Everyone can read stages, levels, subjects and banner settings.
-    match /stages/{stageId} {
-      allow read: if true;
-    }
-    match /levels/{levelId} {
-      allow read: if true;
-    }
-    match /subjects/{subjectId} {
-      allow read: if true;
-    }
-    match /settings/announcement_banner {
-        allow read: if true;
-    }
-
-    // MESSAGES: Logged-in users can send messages.
-    match /messages/{messageId} {
-      allow create: if isAuth();
+      allow read, write: if true;
     }
   }
 }
