@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { User as UserType, Level } from '@/lib/types';
+import type { User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowRight } from 'lucide-react';
 
@@ -30,30 +30,12 @@ export default function TeacherStudentsPage() {
   // Get students linked to this teacher for this teacher's subject
   const linkedStudentsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !teacher?.subjectId) return null;
-    // This query finds all users where the `linkedTeachers` map contains a key matching the teacher's subjectId,
-    // and the value for that key is the teacher's UID.
-    // This is more secure and specific than querying all users.
     return query(collection(firestore, 'users'), where(`linkedTeachers.${teacher.subjectId}`, '==', authUser.uid));
   }, [firestore, authUser, teacher?.subjectId]);
+  
   const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
   
-  // Get all levels to display student's level name
-  const levelsQuery = useMemoFirebase(() => {
-    if (!firestore || !teacher?.stageId) return null;
-    return query(collection(firestore, 'levels'), where('stageId', '==', teacher.stageId));
-  }, [firestore, teacher?.stageId]);
-
-  const { data: levels, isLoading: areLevelsLoading } = useCollection<Level>(levelsQuery);
-  
-  const levelsMap = useMemo(() => {
-    if (!levels) return {};
-    return levels.reduce((acc, level) => {
-        acc[level.id] = level.name;
-        return acc;
-    }, {} as Record<string, string>);
-  }, [levels]);
-
-  const isLoading = isAuthLoading || isTeacherLoading || areStudentsLoading || areLevelsLoading;
+  const isLoading = isAuthLoading || isTeacherLoading || areStudentsLoading;
 
   return (
     <div className="space-y-6">
@@ -78,7 +60,6 @@ export default function TeacherStudentsPage() {
               <TableRow>
                 <TableHead>الطالب</TableHead>
                 <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>المستوى الدراسي</TableHead>
                 <TableHead>الإجراء</TableHead>
               </TableRow>
             </TableHeader>
@@ -87,7 +68,6 @@ export default function TeacherStudentsPage() {
                 <TableRow key={i}>
                     <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-9 w-24" /></TableCell>
                 </TableRow>
               ))}
@@ -104,7 +84,6 @@ export default function TeacherStudentsPage() {
                             </div>
                         </TableCell>
                         <TableCell>{student.email}</TableCell>
-                        <TableCell>{student.levelId ? levelsMap[student.levelId] : 'غير محدد'}</TableCell>
                         <TableCell>
                             <Button asChild variant="outline" size="sm" disabled>
                                 <Link href={`#`}>
@@ -117,7 +96,7 @@ export default function TeacherStudentsPage() {
               })}
               {!isLoading && students?.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={3} className="h-24 text-center">
                         لم يقم أي طالب بالربط معك حتى الآن.
                     </TableCell>
                 </TableRow>
