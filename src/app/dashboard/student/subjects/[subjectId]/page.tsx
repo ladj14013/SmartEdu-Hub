@@ -5,15 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2, Link2Off } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc, getDocs, arrayRemove } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'next/navigation';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 export default function SubjectPage() {
@@ -24,6 +35,7 @@ export default function SubjectPage() {
   const { toast } = useToast();
   
   const [isLinking, setIsLinking] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
   const [teacherCode, setTeacherCode] = useState('');
   const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
   const [isFetchingTeacherName, setIsFetchingTeacherName] = useState(false);
@@ -88,12 +100,19 @@ export default function SubjectPage() {
             setIsLinking(false);
             return;
         }
-
-        const studentDocRef = doc(firestore, 'users', student.id);
         
+        // Add teacher to student's linkedTeachers map
+        const studentDocRef = doc(firestore, 'users', student.id);
         await updateDoc(studentDocRef, {
             [`linkedTeachers.${subjectId}`]: result.teacherId
         });
+
+        // Add student to teacher's linkedStudentIds array
+        const teacherDocRef = doc(firestore, 'users', result.teacherId);
+        await updateDoc(teacherDocRef, {
+          linkedStudentIds: arrayUnion(student.id)
+        });
+
 
         toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${result.teacherName} في هذه المادة.` });
         setLinkedTeacherName(result.teacherName!); // Set name directly after linking
@@ -106,6 +125,36 @@ export default function SubjectPage() {
         setIsLinking(false);
     }
   }
+
+  const handleUnlinkTeacher = async () => {
+    if (!firestore || !student || !linkedTeacherId || !subjectId) return;
+    setIsUnlinking(true);
+
+    try {
+        const studentDocRef = doc(firestore, 'users', student.id);
+        const teacherDocRef = doc(firestore, 'users', linkedTeacherId);
+
+        // Remove studentId from teacher's linkedStudentIds array
+        await updateDoc(teacherDocRef, {
+            linkedStudentIds: arrayRemove(student.id)
+        });
+
+        // Remove teacherId from student's linkedTeachers map
+        await updateDoc(studentDocRef, {
+            [`linkedTeachers.${subjectId}`]: deleteField()
+        });
+
+        toast({ title: 'تم إلغاء الارتباط بنجاح', description: 'لم تعد مرتبطاً بهذا الأستاذ في هذه المادة.' });
+        setLinkedTeacherName(null);
+        refetchStudent();
+    } catch (error) {
+        console.error("Failed to unlink teacher:", error);
+        toast({ title: 'فشل إلغاء الارتباط', description: 'حدث خطأ أثناء محاولة إلغاء الارتباط.', variant: 'destructive' });
+    } finally {
+        setIsUnlinking(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -143,14 +192,38 @@ export default function SubjectPage() {
         </CardHeader>
         <CardContent>
           {linkedTeacherId ? (
-            <div className="flex items-center gap-3 p-4 bg-green-50 border-r-4 border-green-500 rounded-md">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-              <div>
-                <p className="font-semibold">
-                    أنت مرتبط مع الأستاذ: {isFetchingTeacherName ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacherName}</span>}
-                </p>
-                <p className="text-sm text-muted-foreground">يمكنك الآن الوصول إلى الدروس الخاصة بهذا الأستاذ.</p>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-green-50 border-r-4 border-green-500 rounded-md">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
+                <div>
+                  <p className="font-semibold">
+                      أنت مرتبط مع الأستاذ: {isFetchingTeacherName ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacherName}</span>}
+                  </p>
+                  <p className="text-sm text-muted-foreground">يمكنك الآن الوصول إلى الدروس الخاصة بهذا الأستاذ.</p>
+                </div>
               </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" disabled={isUnlinking}>
+                        {isUnlinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Link2Off className="ml-2 h-4 w-4" />}
+                        إلغاء الارتباط
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        سيؤدي هذا الإجراء إلى إلغاء ارتباطك بالأستاذ في هذه المادة. ستفقد الوصول إلى دروسه الخاصة. يمكنك الارتباط به مرة أخرى لاحقًا باستخدام كوده.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleUnlinkTeacher} disabled={isUnlinking}>
+                        {isUnlinking ? 'جاري الإلغاء...' : 'تأكيد'}
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : (
             <div className="flex items-center gap-2">

@@ -107,7 +107,8 @@ export default function SignupPage() {
         stageId: data.stageId || null,
         levelId: data.levelId || null,
         subjectId: data.subjectId || null,
-        avatar: `https://i.pravatar.cc/150?u=${user.uid}`
+        avatar: `https://i.pravatar.cc/150?u=${user.uid}`,
+        linkedTeachers: {}
       };
       
       // Generate teacher code if role is teacher
@@ -116,28 +117,25 @@ export default function SignupPage() {
         userData.linkedStudentIds = []; // Initialize empty array
       }
       
-      // 3. Create user document in Firestore
-      await setDoc(doc(firestore, "users", user.uid), userData);
-
-      // 4. If student provided a teacher code, link them
+      // 3. If student provided a teacher code, link them before creating the doc
       if (data.role === 'student' && data.teacherCode && data.subjectId) {
          const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()), where('subjectId', '==', data.subjectId));
          const teacherSnapshot = await getDocs(teachersQuery);
          if (!teacherSnapshot.empty) {
             const teacherDoc = teacherSnapshot.docs[0];
             const teacherRef = doc(firestore, 'users', teacherDoc.id);
-            const studentRef = doc(firestore, 'users', user.uid);
             
             // Add student to teacher's list
             await updateDoc(teacherRef, {
               linkedStudentIds: arrayUnion(user.uid)
             });
-            // Add teacher to student's list
-            await updateDoc(studentRef, {
-              [`linkedTeachers.${data.subjectId}`]: teacherDoc.id
-            });
+            // Add teacher to student's map
+            userData.linkedTeachers[data.subjectId] = teacherDoc.id;
          }
       }
+
+      // 4. Create user document in Firestore
+      await setDoc(doc(firestore, "users", user.uid), userData);
       
       toast({
         title: "تم إنشاء الحساب بنجاح!",
