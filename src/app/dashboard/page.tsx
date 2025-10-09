@@ -23,10 +23,10 @@ export default function DashboardRedirectPage() {
 
     useEffect(() => {
         if (!isAuthLoading && !user) {
-            // If auth loading is finished and there's no user, redirect to login
-            router.replace('/login');
+            // If auth loading is finished and there's no user, redirect to home
+            router.replace('/');
         } else if (user && userData) {
-            // If there is a user and we have their data, redirect
+            // If there is a user and we have their data, redirect to their role-specific dashboard
             const role = userData.role;
             if (role) {
                 router.replace(`/dashboard/${role}`);
