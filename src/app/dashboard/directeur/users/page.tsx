@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, doc as firestoreDoc } from 'firebase/firestore';
+import { collection, doc as firestoreDoc, query } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -75,8 +75,6 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   
-  // The page is loading if auth is loading, or we're waiting for the current user's role,
-  // OR if we know they are a director and we are now waiting for the full user list.
   const isLoading = isAuthLoading || isCurrentUserLoading || (isDirector && areUsersLoading);
 
   const filteredUsers = useMemo(() => {
