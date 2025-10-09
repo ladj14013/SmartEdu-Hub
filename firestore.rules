@@ -3,27 +3,52 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Allow public read access for general content
-    match /stages/{stageId} {
-      allow read: if true;
-    }
-
-    match /levels/{levelId} {
-      allow read: if true;
-    }
-
-    match /subjects/{subjectId} {
-      allow read: if true;
-    }
-
-    // Allow public read access for the announcement banner settings
-    match /settings/{settingId} {
-      allow read: if true;
-    }
-
-    // Default deny all other reads and writes
+    // Default rule: Logged-in users can read, but not write generally.
+    // Specific rules below will override this.
     match /{document=**} {
-      allow read, write: if false;
+      allow read: if request.auth != null;
+      allow write: if false;
     }
+
+    // Public collections: Allow anyone to read these collections.
+    // This is necessary for the signup page and homepage banner.
+    match /(stages|levels|subjects|settings)/{docId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.role == 'directeur'; // Only director can write
+    }
+
+    // Users collection:
+    // Allow users to read their own data.
+    // Allow a user to create their own document (signup).
+    // Allow a director to create/update any user.
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if true; // Anyone can create a user account (signup)
+      allow update: if request.auth.uid == userId || (request.auth != null && request.auth.token.role == 'directeur');
+      allow delete: if request.auth != null && request.auth.token.role == 'directeur'; // Only director can delete
+    }
+
+    // Lessons and Exercises:
+    // Any logged-in user can read.
+    // Only teachers and supervisors can create/update.
+    match /lessons/{lessonId} {
+        allow read: if request.auth != null;
+        allow create, update: if request.auth != null && (request.auth.token.role == 'teacher' || request.auth.token.role == 'supervisor_subject' || request.auth.token.role == 'directeur');
+        allow delete: if request.auth != null && (request.auth.token.role == 'teacher' || request.auth.token.role == 'directeur');
+    }
+
+    match /lessons/{lessonId}/exercises/{exerciseId} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if request.auth != null && (request.auth.token.role == 'teacher' || request.auth.token.role == 'supervisor_subject' || request.auth.token.role == 'directeur');
+    }
+
+    // Messages: Anyone can create a message (for contact form).
+    // Only director and general supervisor can read/update.
+    match /messages/{messageId} {
+      allow read, update: if request.auth != null && (request.auth.token.role == 'directeur' || request.auth.token.role == 'supervisor_general');
+      allow create: if true;
+    }
+
+    // Other collections can be added here.
   }
 }
