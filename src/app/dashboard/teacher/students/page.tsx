@@ -27,9 +27,11 @@ export default function TeacherStudentsPage() {
   const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
-  // Get students linked to this teacher
+  // Get students linked to this teacher for this teacher's subject
   const linkedStudentsQuery = useMemoFirebase(() => {
     if (!firestore || !authUser || !teacher?.subjectId) return null;
+    // This query finds all users where the `linkedTeachers` map contains a key matching the teacher's subjectId,
+    // and the value for that key is the teacher's UID.
     return query(collection(firestore, 'users'), where(`linkedTeachers.${teacher.subjectId}`, '==', authUser.uid));
   }, [firestore, authUser, teacher?.subjectId]);
   const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);

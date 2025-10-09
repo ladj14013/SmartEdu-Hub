@@ -81,7 +81,7 @@ export default function TeachersListPage() {
                     <TableRow key={teacher.id}>
                         <TableCell>
                             <div className="flex items-center gap-3">
-                                <Avatar>
+                                <Avatar className="h-9 w-9">
                                     <AvatarImage src={teacher.avatar} alt={teacher.name} />
                                     <AvatarFallback>{teacher.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
