@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowRight, Loader2, Plus, Save, Trash2, FileUp } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, Save, Trash2, FileUp, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import type { Level, User as UserType } from '@/lib/types';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -153,11 +153,11 @@ export default function NewPublicLessonPage() {
                 </CardContent>
             </Card>
             
-            <Alert>
-              <FileUp className="h-4 w-4" />
-              <AlertTitle>ملاحظة حول رفع الملفات</AlertTitle>
+            <Alert variant="destructive">
+              <UploadCloud className="h-4 w-4" />
+              <AlertTitle>ملاحظة حول رفع الملفات (قيد التطوير)</AlertTitle>
               <AlertDescription>
-                لإضافة ملف PDF، قم برفعه على خدمة مثل Google Drive أو Dropbox، ثم انسخ رابط المشاركة العام والصقه في حقل "رابط ملف PDF".
+                حاليًا، ميزة الرفع المباشر للملفات غير مكتملة. لربط ملف PDF، يرجى رفعه أولاً على خدمة مثل Google Drive أو Dropbox، ثم انسخ **رابط المشاركة العام** والصقه في الحقل المخصص.
               </AlertDescription>
             </Alert>
 
@@ -213,10 +213,15 @@ export default function NewPublicLessonPage() {
                         name="pdfUrl"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>رابط ملف PDF (اختياري)</FormLabel>
-                            <FormControl>
-                            <Input type="url" placeholder="https://example.com/file.pdf" {...field} disabled={!isLevelSelected} />
-                            </FormControl>
+                            <FormLabel>رابط ملف PDF</FormLabel>
+                             <div className='flex gap-2'>
+                                <FormControl>
+                                  <Input type="url" placeholder="https://example.com/file.pdf" {...field} disabled={!isLevelSelected} />
+                                </FormControl>
+                               <Button variant="outline" type="button" disabled>
+                                  <FileUp className="ml-2 h-4 w-4" /> رفع ملف
+                               </Button>
+                            </div>
                             <FormMessage />
                         </FormItem>
                         )}

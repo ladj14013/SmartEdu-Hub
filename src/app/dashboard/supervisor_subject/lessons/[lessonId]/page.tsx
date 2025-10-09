@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { Lesson, Exercise } from '@/lib/types';
-import { ArrowRight, Plus, Save, Trash2, Info, Loader2, FileUp } from 'lucide-react';
+import { ArrowRight, Plus, Save, Trash2, Info, Loader2, FileUp, UploadCloud } from 'lucide-react';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -147,11 +147,11 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
         </Alert>
       )}
 
-      <Alert>
-        <FileUp className="h-4 w-4" />
-        <AlertTitle>ملاحظة حول رفع الملفات</AlertTitle>
+      <Alert variant="destructive">
+        <UploadCloud className="h-4 w-4" />
+        <AlertTitle>ملاحظة حول رفع الملفات (قيد التطوير)</AlertTitle>
         <AlertDescription>
-          لإضافة ملف PDF، قم برفعه على خدمة مثل Google Drive أو Dropbox، ثم انسخ رابط المشاركة العام والصقه في حقل "رابط ملف PDF".
+          حاليًا، ميزة الرفع المباشر للملفات غير مكتملة. لربط ملف PDF، يرجى رفعه أولاً على خدمة مثل Google Drive أو Dropbox، ثم انسخ **رابط المشاركة العام** والصقه في الحقل المخصص.
         </AlertDescription>
       </Alert>
 
@@ -173,8 +173,13 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
                         <Input id="videoUrl" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} readOnly={!canEdit} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="pdfUrl">رابط ملف PDF (اختياري)</Label>
-                        <Input id="pdfUrl" type="url" placeholder="https://example.com/file.pdf" value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} readOnly={!canEdit} />
+                        <Label htmlFor="pdfUrl">رابط ملف PDF</Label>
+                         <div className='flex gap-2'>
+                           <Input id="pdfUrl" type="url" placeholder="https://example.com/file.pdf" value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} readOnly={!canEdit} />
+                           <Button variant="outline" type="button" disabled>
+                              <FileUp className="ml-2 h-4 w-4" /> رفع ملف
+                           </Button>
+                         </div>
                     </div>
                 </CardContent>
             </Card>
