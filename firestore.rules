@@ -3,113 +3,108 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if a user is authenticated
-    function isAuthenticated() {
+    // Helper functions to check user authentication and role
+    function isAuth() {
       return request.auth != null;
     }
 
-    // Helper function to get the requesting user's data
-    function getRequestingUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isRole(role) {
+      return isAuth() && getUserData(request.auth.uid).role == role;
+    }
+
+    // DIRECTOR: Can read/write everything. This is a broad permission for admin users.
+    match /{document=**} {
+      allow read, write: if isRole('directeur');
     }
     
-    // Helper function to check if a user has a specific role
-    function hasRole(role) {
-      return isAuthenticated() && getRequestingUserData().role == role;
+    // GENERAL SUPERVISOR: Can read users and messages.
+    match /users/{userId} {
+        allow read: if isRole('supervisor_general');
+    }
+    match /messages/{messageId} {
+        allow read, write: if isRole('supervisor_general');
     }
 
-    // Rules for the 'users' collection
+    // SUBJECT SUPERVISOR: Can manage public content and view their teachers/students.
     match /users/{userId} {
-      // Allow read access if:
-      // 1. The user is reading their own profile.
-      // 2. The user is a director.
-      // 3. The user is a supervisor_general.
-      // 4. The user is a supervisor_subject reading a teacher's profile in their stage/subject.
-      // 5. The user is a student reading the profile of a linked teacher.
-      allow get: if isAuthenticated() && (
-                    request.auth.uid == userId ||
-                    hasRole('directeur') ||
-                    hasRole('supervisor_general') ||
-                    (hasRole('supervisor_subject') && resource.data.role == 'teacher' && resource.data.stageId == getRequestingUserData().stageId && resource.data.subjectId == getRequestingUserData().subjectId) ||
-                    (hasRole('student') && userId in getRequestingUserData().linkedTeachers.values())
-                  );
-
-      allow list: if hasRole('directeur') || hasRole('supervisor_general');
-
-      // Allow creating a user (signup) for anyone
-      allow create: if true;
-      
-      // Allow update if:
-      // 1. User is updating their own profile (for certain fields)
-      // 2. User is a director
-      allow update: if isAuthenticated() && (
-                      (request.auth.uid == userId) ||
-                      hasRole('directeur')
+        // Allow a subject supervisor to read users that are in their stage/subject
+        allow read: if isRole('supervisor_subject') && (
+                        (resource.data.role == 'teacher' && resource.data.subjectId == getUserData(request.auth.uid).subjectId) ||
+                        (resource.data.role == 'student' && resource.data.stageId == getUserData(request.auth.uid).stageId)
                     );
     }
-
-    // Rules for 'stages', 'levels', 'subjects' collections
-    match /{collectionName}/{docId} where collectionName in ['stages', 'levels', 'subjects'] {
-      // Directors can do anything
-      allow read, write, delete: if hasRole('directeur');
-      // Other authenticated users can read
-      allow get, list: if isAuthenticated();
-    }
-    
-    // Rules for the 'lessons' collection
     match /lessons/{lessonId} {
-        // Allow create/update/delete for directors, supervisors, and teachers for their own lessons
-        allow write, delete: if hasRole('directeur') || 
-                                (hasRole('supervisor_subject') && resource.data.type == 'public') || 
-                                (hasRole('teacher') && request.resource.data.authorId == request.auth.uid);
-        
-        // Allow reading a lesson if:
-        // 1. It's a public lesson.
-        // 2. It's a private lesson and the user is the author (teacher) or a linked student.
-        // 3. The user is a director or a supervisor.
-        allow get: if isAuthenticated() && (
-                    resource.data.type == 'public' ||
-                    (resource.data.type == 'private' && (resource.data.authorId == request.auth.uid || request.auth.uid in get(/databases/$(database)/documents/users/$(resource.data.authorId)).data.linkedStudentIds)) ||
-                    hasRole('directeur') ||
-                    hasRole('supervisor_general') ||
-                    hasRole('supervisor_subject')
-                  );
-                  
-        // Allow listing lessons if:
-        // 1. The user is a director or supervisor.
-        // 2. The user is a teacher (will see their private and relevant public lessons).
-        // 3. The user is a student (will see relevant public and linked-teacher private lessons).
-        allow list: if isAuthenticated();
+        allow read, write: if isRole('supervisor_subject');
     }
-    
-    // Sub-collection rules for exercises (embedded in lessons, no separate rule needed unless it's a sub-collection)
-
-    // Rules for 'studentLessonProgress'
-    match /users/{studentId}/lessonProgress/{progressId} {
-      // Students can only access their own progress
-      allow read, write: if request.auth.uid == studentId;
-    }
-    
-    // Rules for 'messages'
-    match /messages/{messageId} {
-        // Anyone can create a message (for the contact form)
-        allow create: if true;
-        // Only directors and supervisors can read/update messages
-        allow read, update: if hasRole('directeur') || hasRole('supervisor_general');
-    }
-    
-    // Rules for 'supervisor_notes'
     match /supervisor_notes/{noteId} {
-        // Supervisors can create notes
-        allow create: if hasRole('supervisor_subject');
-        // Supervisors and the relevant teacher can read notes for a lesson
-        allow read: if hasRole('supervisor_subject') || (hasRole('teacher') && request.auth.uid == get(/databases/$(database)/documents/lessons/$(resource.data.lessonId)).data.authorId);
+        allow read, create: if isRole('supervisor_subject');
     }
     
-     // Rules for settings like announcement banner
-    match /settings/{settingId} {
-      allow get: if true; // Everyone can read
-      allow write: if hasRole('directeur'); // Only director can change settings
+    // TEACHER: Can manage their private content and view linked students.
+    match /lessons/{lessonId} {
+        allow read: if isRole('teacher'); // Can read all lessons (public and their own private)
+        allow create, update, delete: if isRole('teacher') && request.resource.data.authorId == request.auth.uid;
+    }
+    match /users/{userId} {
+      // Teacher can read data of a student they are linked with.
+      allow get: if isRole('teacher') && userId in getUserData(request.auth.uid).linkedStudentIds;
+    }
+    match /supervisor_notes/{noteId} {
+        allow read: if isRole('teacher') && resource.data.lessonId in getUserData(request.auth.uid).lessonIds;
+    }
+
+
+    // STUDENT: Can read their content and linked teacher's name.
+    match /users/{userId} {
+      // 1. A user can read their own data.
+      // 2. A student can read the data of a teacher they are linked with.
+      allow get: if (isAuth() && request.auth.uid == userId) || 
+                    (isAuth() && userId in getUserData(request.auth.uid).linkedTeachers);
+    }
+
+    match /lessons/{lessonId} {
+        // Allow student to read a lesson if:
+        // 1. It's public and for their level.
+        // 2. It's private, not locked, and the author is a teacher they are linked to.
+        allow read: if isAuth() && isRole('student') && (
+            (resource.data.type == 'public' && resource.data.levelId == getUserData(request.auth.uid).levelId) ||
+            (
+                resource.data.type == 'private' && 
+                resource.data.isLocked == false &&
+                resource.data.authorId in getUserData(request.auth.uid).linkedTeachers
+            )
+        );
+    }
+    match /users/{studentId}/lessonProgress/{lessonId} {
+      allow write: if isAuth() && request.auth.uid == studentId;
+    }
+
+    // PARENT: (Future rules)
+    // match /users/{userId} {
+    //   allow read: if isRole('parent') && userId in getUserData(request.auth.uid).childIds;
+    // }
+
+    // PUBLIC: Everyone can read stages, levels, subjects and banner settings.
+    match /stages/{stageId} {
+      allow read: if true;
+    }
+    match /levels/{levelId} {
+      allow read: if true;
+    }
+    match /subjects/{subjectId} {
+      allow read: if true;
+    }
+    match /settings/announcement_banner {
+        allow read: if true;
+    }
+
+    // MESSAGES: Logged-in users can send messages.
+    match /messages/{messageId} {
+      allow create: if isAuth();
     }
   }
 }
