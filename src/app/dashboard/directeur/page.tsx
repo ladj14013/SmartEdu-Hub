@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { BarChart, BookCopy, GraduationCap, UserCheck, Users, Loader2, Save, Tv } from 'lucide-react';
