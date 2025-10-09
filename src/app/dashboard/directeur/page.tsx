@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, setDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BarChart, BookCopy, GraduationCap, UserCheck, Users, Loader2, Save, Tv } from 'lucide-react';
+import { BarChart, BookCopy, GraduationCap, UserCheck, Users, Loader2, Save, Tv, Crown } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { User, Lesson, Subject } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -117,14 +117,19 @@ function AnnouncementBannerControl() {
 
 export default function DirecteurDashboard() {
   const firestore = useFirestore();
+  const { user: authUser } = useUser();
 
   const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
   const lessonsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'lessons') : null, [firestore]);
   const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
+  
+  const currentUserRef = useMemoFirebase(() => firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
 
   const { data: usersData, isLoading: isLoadingUsers } = useCollection<User>(usersQuery);
   const { data: lessonsData, isLoading: isLoadingLessons } = useCollection<Lesson>(lessonsQuery);
   const { data: subjectsData, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
+  const { data: currentUserData, isLoading: isLoadingCurrentUser } = useDoc<User>(currentUserRef);
+
 
   const stats = useMemo(() => {
     if (!usersData) {
@@ -137,12 +142,22 @@ export default function DirecteurDashboard() {
 
   const totalLessons = lessonsData?.length ?? 0;
   const totalSubjects = subjectsData?.length ?? 0;
+  const isLoading = isLoadingUsers || isLoadingLessons || isLoadingSubjects || isLoadingCurrentUser;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="لوحة تحكم المدير"
-        description="مرحباً بعودتك، إليك نظرة عامة على المنصة."
+        title={
+          isLoading ? (
+            <Skeleton className="h-8 w-64" />
+          ) : (
+            <div className="flex items-center gap-3">
+              <Crown className="h-8 w-8 text-amber-500" />
+              <span>مرحباً بعودتك، سيدي المدير: {currentUserData?.name || ''}</span>
+            </div>
+          )
+        }
+        description="إليك نظرة عامة على المنصة."
       />
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
