@@ -2,14 +2,13 @@
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, BookOpen, Loader2 } from 'lucide-react';
+import { ArrowRight, BookOpen, Loader2, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { ExerciseEvaluator } from '../../components/exercise-evaluator';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PdfViewer } from '@/components/common/pdf-viewer';
 
 export default function StudentLessonPage({ params }: { params: { lessonId: string } }) {
   const { lessonId } = params;
@@ -63,16 +62,6 @@ export default function StudentLessonPage({ params }: { params: { lessonId: stri
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-            {lesson.pdfUrl && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>مستند الدرس (PDF)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                   <PdfViewer file={lesson.pdfUrl} />
-                </CardContent>
-              </Card>
-            )}
             <Card>
                 <CardHeader className="flex-row items-center gap-2 space-y-0">
                     <BookOpen className="h-5 w-5 text-primary" />
@@ -89,6 +78,16 @@ export default function StudentLessonPage({ params }: { params: { lessonId: stri
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
                             ></iframe>
+                        </div>
+                    )}
+                     {lesson.pdfUrl && (
+                        <div className="mt-6">
+                            <Button asChild variant="secondary" className='w-full'>
+                                <Link href={lesson.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                    <FileText className="ml-2 h-4 w-4" />
+                                    فتح ملف الدرس (PDF)
+                                </Link>
+                            </Button>
                         </div>
                     )}
                 </CardContent>
