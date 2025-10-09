@@ -5,8 +5,22 @@ import { Library, Users, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { User as UserType, Level, Stage } from '@/lib/types';
+import type { User as UserType, Level } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+
+// A separate component to fetch and display level information
+function StudentLevelInfo({ levelId }: { levelId: string | undefined }) {
+    const firestore = useFirestore();
+    const levelRef = useMemoFirebase(() => (firestore && levelId) ? doc(firestore, 'levels', levelId) : null, [firestore, levelId]);
+    const { data: level, isLoading } = useDoc<Level>(levelRef);
+
+    if (isLoading) {
+        return <Skeleton className="h-5 w-32 inline-block" />;
+    }
+
+    return <span>{level?.name || ''}</span>;
+}
+
 
 export default function StudentDashboard() {
   const { user: authUser, isLoading: isAuthLoading } = useUser();
@@ -14,11 +28,8 @@ export default function StudentDashboard() {
 
   const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
   const { data: student, isLoading: isStudentLoading } = useDoc<UserType>(studentRef);
-
-  const levelRef = useMemoFirebase(() => (firestore && student?.levelId) ? doc(firestore, 'levels', student.levelId) : null, [firestore, student?.levelId]);
-  const { data: level, isLoading: isLevelLoading } = useDoc<Level>(levelRef);
   
-  const isLoading = isAuthLoading || isStudentLoading || isLevelLoading;
+  const isLoading = isAuthLoading || isStudentLoading;
 
   if (isLoading) {
     return (
@@ -38,8 +49,16 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="لوحة تحكم التلميذ"
-        description={`مرحباً ${student?.name || ''}، استعد لرحلة تعلم ممتعة في ${level?.name || ''}.`}
+        title={`مرحباً ${student?.name || ''}`}
+        description={
+            student?.levelId ? (
+              <>
+                استعد لرحلة تعلم ممتعة في <StudentLevelInfo levelId={student.levelId} />
+              </>
+            ) : (
+              'أكمل إعدادات ملفك الشخصي.'
+            )
+        }
       />
 
       <div className="grid gap-6 md:grid-cols-2">
