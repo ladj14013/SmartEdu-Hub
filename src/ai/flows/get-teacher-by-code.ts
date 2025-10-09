@@ -62,7 +62,7 @@ const getTeacherByCodeFlow = ai.defineFlow(
         const teacherData = teacherDoc.data() as User;
         return {
             teacherId: teacherDoc.id,
-            teacherName: teacherData.name,
+            teacherName: teacherData.fullName,
         };
       }
 
@@ -83,7 +83,7 @@ const getTeacherByCodeFlow = ai.defineFlow(
 
         return {
           teacherId: teacherDoc.id,
-          teacherName: teacherData.name,
+          teacherName: teacherData.fullName,
         };
       }
 
