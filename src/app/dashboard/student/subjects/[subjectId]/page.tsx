@@ -92,7 +92,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   if (isLoading) {
     return (
         <div className="space-y-6">
-            <PageHeader title={<Skeleton className="h-8 w-48" />} description={<Skeleton className="h-4 w-72 mt-2" />}>
+            <PageHeader title={<Skeleton className="h-8 w-48" />} description="جاري تحميل تفاصيل المادة...">
                  <Skeleton className="h-10 w-32" />
             </PageHeader>
             <Card><CardContent className="p-6"><Skeleton className="h-20 w-full" /></CardContent></Card>
