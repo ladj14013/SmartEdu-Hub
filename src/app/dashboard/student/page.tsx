@@ -25,7 +25,7 @@ export default function StudentDashboard() {
       <div className="space-y-6">
         <PageHeader
           title={<Skeleton className="h-8 w-48" />}
-          description={<Skeleton className="h-4 w-72" />}
+          description="جاري تحميل بياناتك..."
         />
         <div className="grid gap-6 md:grid-cols-2">
            <Skeleton className="h-48 w-full" />
