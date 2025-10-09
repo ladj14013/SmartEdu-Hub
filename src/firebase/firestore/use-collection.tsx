@@ -69,20 +69,29 @@ export function useCollection<T = any>(
     setRefetchIndex(prev => prev + 1);
   };
 
-  const isLoading = isUserLoading || (memoizedTargetRefOrQuery && !data && !error);
+  // isLoading is true if auth is still loading, OR if we have a query but no data or error yet.
+  const isLoading = isUserLoading || (!!memoizedTargetRefOrQuery && !data && !error);
 
 
   useEffect(() => {
-    // Crucial Change: Wait for auth to complete AND for a user to be present.
-    if (!memoizedTargetRefOrQuery || isUserLoading || !user) {
+    // Wait for auth to complete. If there's no user, we stop (as rules likely prevent access).
+    // If there's no query, we also stop.
+    if (isUserLoading || !memoizedTargetRefOrQuery) {
       setData(null);
       setError(null);
       return;
     }
 
+    // If auth is done and there's no user, we don't proceed to fetch data,
+    // as it will almost certainly fail due to security rules.
+    if (!user) {
+        setData(null);
+        setError(null); // No error, just no data because no user.
+        return;
+    }
+
     setError(null);
 
-    // Directly use memoizedTargetRefOrQuery as it's assumed to be the final query
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
@@ -114,7 +123,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery, isUserLoading, user, refetchIndex]); // Re-run if the target query/reference or auth state changes.
+  }, [memoizedTargetRefOrQuery, user, isUserLoading, refetchIndex]); // Re-run if query, user, or auth state changes.
 
   if(memoizedTargetRefOrQuery && !memoizedTargetRefOrQuery.__memo) {
     throw new Error(memoizedTargetRefOrQuery + ' was not properly memoized using useMemoFirebase');

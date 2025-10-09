@@ -48,25 +48,34 @@ export function useDoc<T = any>(
   const [data, setData] = useState<StateDataType>(null);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
   const [refetchIndex, setRefetchIndex] = useState(0);
-  const { isUserLoading } = useUser();
+  const { user, isLoading: isUserLoading } = useUser();
 
   const refetch = () => {
     setRefetchIndex(prev => prev + 1);
   };
   
-  const isLoading = isUserLoading || (memoizedDocRef && !data && !error);
+  const isLoading = isUserLoading || (!!memoizedDocRef && !data && !error);
 
 
   useEffect(() => {
-    if (!memoizedDocRef || isUserLoading) {
+    // Wait for auth to complete. If there's no user, we stop (as rules likely prevent access).
+    // If there's no doc ref, we also stop.
+    if (isUserLoading || !memoizedDocRef) {
       setData(null);
       setError(null);
       return;
     }
+    
+    // If auth is done and there's no user, we don't proceed to fetch data,
+    // as it will almost certainly fail due to security rules.
+    if (!user) {
+        setData(null);
+        setError(null); // No error, just no data because no user.
+        return;
+    }
 
     setError(null);
-    // Optional: setData(null); // Clear previous data instantly
-
+    
     const unsubscribe = onSnapshot(
       memoizedDocRef,
       (snapshot: DocumentSnapshot<DocumentData>) => {
@@ -93,7 +102,7 @@ export function useDoc<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedDocRef, isUserLoading, refetchIndex]); // Re-run if the memoizedDocRef or auth state changes.
+  }, [memoizedDocRef, user, isUserLoading, refetchIndex]); // Re-run if the docRef, user or auth state changes.
 
   return { data, isLoading, error, refetch };
 }
