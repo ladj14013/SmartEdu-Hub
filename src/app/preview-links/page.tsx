@@ -91,6 +91,7 @@ export default function PreviewLinksPage() {
                 <PageLink href="/dashboard/teacher/subjects">إدارة الدروس</PageLink>
                 <PageLink href="/dashboard/teacher/lessons/new">إضافة درس جديد</PageLink>
                 <PageLink href="/dashboard/teacher/lessons/lesson-2">تعديل/عرض درس</PageLink>
+                <PageLink href="/dashboard/teacher/students">قائمة الطلاب</PageLink>
             </ul>
           </CardContent>
         </Card>
