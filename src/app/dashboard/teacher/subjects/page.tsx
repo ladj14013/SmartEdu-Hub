@@ -9,14 +9,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Plus, Pencil, Trash2, Eye, Loader2 } from 'lucide-react';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
+import { MoreHorizontal, Plus, Pencil, Trash2, Eye, Loader2, Book, User } from 'lucide-react';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -28,17 +21,23 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
   } from "@/components/ui/alert-dialog"
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, deleteDoc } from 'firebase/firestore';
 import type { Lesson, Level, User as UserType, Subject } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 export default function TeacherSubjectsPage() {
     const firestore = useFirestore();
     const { user: authUser, isLoading: isAuthLoading } = useUser();
-    const [selectedLevelId, setSelectedLevelId] = useState<string | 'all'>('all');
     const [isDeleting, setIsDeleting] = useState(false);
     const { toast } = useToast();
 
@@ -85,27 +84,16 @@ export default function TeacherSubjectsPage() {
         }
     };
     
-    const filterLessonsByLevel = (lessons: Lesson[] | undefined) => {
-        if (!lessons) return [];
-        if (selectedLevelId === 'all') return lessons;
-        return lessons.filter(l => l.levelId === selectedLevelId);
-    }
-    
-    const privateLessons = filterLessonsByLevel(allLessons?.filter(l => l.authorId === authUser?.uid && l.type === 'private'));
-    const publicLessons = filterLessonsByLevel(allLessons?.filter(l => l.type === 'public'));
-    
-    const selectedLevelName = selectedLevelId !== 'all' ? levels?.find(l => l.id === selectedLevelId)?.name : null;
-
     if (isLoading) {
       return (
         <div className="space-y-6">
-          <PageHeader title={<Skeleton className="h-8 w-72" />} description="جاري تحميل الدروس..." />
-          <div className="flex justify-end">
-            <Skeleton className="h-10 w-56" />
-          </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
-            <Card><CardHeader><Skeleton className="h-6 w-32" /></CardHeader><CardContent className="p-6"><Skeleton className="h-32 w-full" /></CardContent></Card>
+          <PageHeader title={<Skeleton className="h-8 w-72" />} description="جاري تحميل الدروس...">
+             <Skeleton className="h-10 w-36" />
+          </PageHeader>
+          <div className="space-y-4">
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
           </div>
         </div>
       );
@@ -115,115 +103,100 @@ export default function TeacherSubjectsPage() {
         <div className="space-y-6">
             <PageHeader
                 title={`إدارة دروس مادة: ${subject?.name || ''}`}
-                description="إدارة دروسك الخاصة والاطلاع على الدروس العامة المتاحة."
-            />
-            
-            <div className="flex justify-end">
-                <Select value={selectedLevelId} onValueChange={setSelectedLevelId}>
-                    <SelectTrigger className="w-full md:w-[220px]">
-                        <SelectValue placeholder="اختر المستوى الدراسي" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">كل المستويات</SelectItem>
-                        {levels?.map(level => (
-                            <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+                description="إدارة دروسك الخاصة والاطلاع على الدروس العامة المتاحة حسب كل مستوى."
+            >
+                 <Button variant="accent" size="sm" asChild>
+                   <Link href="/dashboard/teacher/lessons/new">
+                     <Plus className="ml-2 h-4 w-4" /> أضف درس خاص
+                   </Link>
+                </Button>
+            </PageHeader>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Private Lessons */}
-                <Card>
-                    <CardHeader className="flex-row items-start justify-between">
-                        <div>
-                            <CardTitle>دروسك الخاصة</CardTitle>
-                            <CardDescription>
-                                {selectedLevelName ? `الدروس الخاصة بالمستوى: ${selectedLevelName}` : 'هذه الدروس تظهر لتلاميذك فقط.'}
-                            </CardDescription>
-                        </div>
-                        <Button variant="accent" size="sm" asChild>
-                           <Link href="/dashboard/teacher/lessons/new">
-                             <Plus className="ml-2 h-4 w-4" /> أضف درس خاص
-                           </Link>
-                        </Button>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="divide-y rounded-md border">
-                            {privateLessons?.map((lesson) => (
-                                <div key={lesson.id} className="flex items-center justify-between p-3">
-                                    <span className="font-medium">{lesson.title}</span>
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem asChild>
-                                                <Link href={`/dashboard/teacher/lessons/${lesson.id}`} className="flex items-center w-full">
-                                                    <Pencil className="ml-2 h-4 w-4" />تعديل
-                                                </Link>
-                                            </DropdownMenuItem>
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500">
-                                                        <Trash2 className="ml-2 h-4 w-4" />حذف
-                                                    </DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            هذا الإجراء سيحذف الدرس "{lesson.title}" بشكل دائم.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(lesson.id)} disabled={isDeleting}>
-                                                            {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
-                            ))}
-                            {privateLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">
-                                {selectedLevelId === 'all' ? 'لم تقم بإضافة دروس خاصة بعد.' : 'لا توجد دروس خاصة في هذا المستوى.'}
-                            </p>}
-                        </div>
-                    </CardContent>
-                </Card>
+            <Accordion type="multiple" className="w-full space-y-4" defaultValue={levels?.map(l => l.id)}>
+                {levels?.map(level => {
+                    const levelLessons = allLessons?.filter(l => l.levelId === level.id) || [];
+                    const privateLessons = levelLessons.filter(l => l.authorId === authUser?.uid && l.type === 'private');
+                    const publicLessons = levelLessons.filter(l => l.type === 'public');
 
-                {/* Public Lessons */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>الدروس العامة</CardTitle>
-                        <CardDescription>
-                             {selectedLevelName ? `الدروس العامة بالمستوى: ${selectedLevelName}` : 'محتوى متاح من المشرفين يمكنك استخدامه.'}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="divide-y rounded-md border">
-                            {publicLessons?.map((lesson) => (
-                                <div key={lesson.id} className="flex items-center justify-between p-3">
-                                    <span className="font-medium">{lesson.title}</span>
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link href={`/dashboard/teacher/lessons/${lesson.id}`}>
-                                            <Eye className="ml-2 h-4 w-4" /> عرض
-                                        </Link>
-                                    </Button>
-                                </div>
-                            ))}
-                            {publicLessons?.length === 0 && <p className="text-center p-4 text-muted-foreground">
-                                {selectedLevelId === 'all' ? 'لا توجد دروس عامة متاحة حالياً.' : 'لا توجد دروس عامة في هذا المستوى.'}
-                            </p>}
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+                    return (
+                        <AccordionItem value={level.id} key={level.id} className="border rounded-lg bg-card">
+                            <AccordionTrigger className="p-4 hover:no-underline">
+                                <span className="font-bold text-lg">{level.name}</span>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-4 pt-0">
+                                {levelLessons.length === 0 ? (
+                                    <p className="text-center text-muted-foreground p-4">لا توجد دروس في هذا المستوى بعد.</p>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {/* Private Lessons */}
+                                        {privateLessons.length > 0 && (
+                                            <div>
+                                                <h4 className="font-semibold mb-2 flex items-center gap-2"><User className="h-4 w-4" /> دروسك الخاصة</h4>
+                                                <div className="divide-y rounded-md border">
+                                                    {privateLessons.map(lesson => (
+                                                        <div key={lesson.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
+                                                            <span className="font-medium">{lesson.title}</span>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                                        <MoreHorizontal className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem asChild>
+                                                                        <Link href={`/dashboard/teacher/lessons/${lesson.id}`} className="flex items-center w-full">
+                                                                            <Pencil className="ml-2 h-4 w-4" />تعديل
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                    <AlertDialog>
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-500">
+                                                                                <Trash2 className="ml-2 h-4 w-4" />حذف
+                                                                            </DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                        <AlertDialogContent>
+                                                                            <AlertDialogHeader><AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle><AlertDialogDescription>هذا الإجراء سيحذف الدرس "{lesson.title}" بشكل دائم.</AlertDialogDescription></AlertDialogHeader>
+                                                                            <AlertDialogFooter>
+                                                                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                                                                <AlertDialogAction onClick={() => handleDelete(lesson.id)} disabled={isDeleting}>
+                                                                                    {isDeleting ? 'جاري الحذف...' : 'نعم، حذف'}
+                                                                                </AlertDialogAction>
+                                                                            </AlertDialogFooter>
+                                                                        </AlertDialogContent>
+                                                                    </AlertDialog>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Public Lessons */}
+                                        {publicLessons.length > 0 && (
+                                            <div>
+                                                 <h4 className="font-semibold mb-2 flex items-center gap-2"><Book className="h-4 w-4" /> الدروس العامة</h4>
+                                                 <div className="divide-y rounded-md border">
+                                                    {publicLessons.map(lesson => (
+                                                        <div key={lesson.id} className="flex items-center justify-between p-3 hover:bg-muted/50">
+                                                            <span className="font-medium">{lesson.title}</span>
+                                                            <Button asChild variant="outline" size="sm">
+                                                                <Link href={`/dashboard/teacher/lessons/${lesson.id}`}>
+                                                                    <Eye className="ml-2 h-4 w-4" /> عرض
+                                                                </Link>
+                                                            </Button>
+                                                        </div>
+                                                    ))}
+                                                 </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </AccordionContent>
+                        </AccordionItem>
+                    )
+                })}
+            </Accordion>
         </div>
     );
 }
