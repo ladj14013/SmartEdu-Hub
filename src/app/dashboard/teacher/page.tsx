@@ -11,6 +11,7 @@ import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@
 import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Lesson, Stage, Subject as SubjectType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { v4 as uuidv4 } from 'uuid';
 
 function TeacherDashboardSkeleton() {
     return (
@@ -21,7 +22,7 @@ function TeacherDashboardSkeleton() {
             />
              <div className="grid gap-6 md:grid-cols-2">
                 <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
-                <Card className="hover:bg-muted/50 transition-colors"><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
+                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
              </div>
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-28 w-full" />
@@ -80,7 +81,7 @@ export default function TeacherDashboard() {
     if (!firestore || !authUser) return;
     setIsGenerating(true);
     try {
-        const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const code = uuidv4().substring(0, 6).toUpperCase();
         const teacherDocRef = doc(firestore, 'users', authUser.uid);
         await updateDoc(teacherDocRef, { teacherCode: code });
         refetch(); // Refetch teacher data to get the new code
