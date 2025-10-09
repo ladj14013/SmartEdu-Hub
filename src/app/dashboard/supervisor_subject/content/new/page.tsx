@@ -33,6 +33,7 @@ const newLessonSchema = z.object({
     id: z.string(),
     question: z.string().min(1, "السؤال لا يمكن أن يكون فارغًا."),
     modelAnswer: z.string().min(1, "الإجابة النموذجية لا يمكن أن تكون فارغة."),
+    pdfUrl: z.string().url("الرجاء إدخال رابط PDF صالح.").optional().or(z.literal('')),
   })).optional(),
 });
 
@@ -91,7 +92,7 @@ export default function NewPublicLessonPage() {
             levelId: data.levelId,
             type: 'public', // Set lesson type to public
             isLocked: false,
-            exercises: data.exercises || [],
+            exercises: data.exercises?.map(ex => ({ ...ex, pdfUrl: ex.pdfUrl || null })) || [],
             createdAt: new Date(),
         });
         toast({ title: "تم إنشاء الدرس العام بنجاح!" });
@@ -213,7 +214,7 @@ export default function NewPublicLessonPage() {
                         name="pdfUrl"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>رابط ملف PDF</FormLabel>
+                            <FormLabel>رابط ملف PDF للدرس</FormLabel>
                              <div className='flex gap-2'>
                                 <FormControl>
                                   <Input type="url" placeholder="https://example.com/file.pdf" {...field} disabled={!isLevelSelected} />
@@ -241,7 +242,7 @@ export default function NewPublicLessonPage() {
                         type="button" 
                         variant="outline" 
                         size="sm" 
-                        onClick={() => append({ id: uuidv4(), question: '', modelAnswer: '' })}
+                        onClick={() => append({ id: uuidv4(), question: '', modelAnswer: '', pdfUrl: '' })}
                         disabled={!isLevelSelected}
                     >
                         <Plus className="ml-2 h-4 w-4" /> أضف تمرين
@@ -279,6 +280,24 @@ export default function NewPublicLessonPage() {
                                             <FormControl>
                                                 <Textarea placeholder="اكتب الإجابة المتوقعة من التلميذ..." {...field} />
                                             </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`exercises.${index}.pdfUrl`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>رابط PDF للتمرين (اختياري)</FormLabel>
+                                            <div className='flex gap-2'>
+                                                <FormControl>
+                                                    <Input type="url" placeholder="https://example.com/exercise.pdf" {...field} />
+                                                </FormControl>
+                                                <Button variant="outline" type="button" disabled>
+                                                    <FileUp className="ml-2 h-4 w-4" /> رفع ملف
+                                                </Button>
+                                            </div>
                                             <FormMessage />
                                         </FormItem>
                                     )}

@@ -16,8 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
-import { Loader2, Repeat, Trophy } from 'lucide-react';
+import { Loader2, Repeat, Trophy, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const schema = z.object({
   answers: z.array(z.object({ value: z.string().min(1, 'الرجاء إدخال إجابة.') })),
@@ -117,7 +118,7 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
 
   if (evaluationResult) {
     const totalScore = evaluationResult.detailedFeedback.reduce((sum, fb) => sum + fb.score, 0);
-    const averageScore = evaluationResult.detailedFeedback.length > 0 ? Math.round((totalScore / evaluationResult.detailedFeedback.length) * 10) : 0;
+    const averageScore = evaluationResult.detailedFeedback.length > 0 ? Math.round((totalScore / result.detailedFeedback.length) * 10) : 0;
     
     return (
       <Card>
@@ -146,6 +147,14 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
                 </AccordionTrigger>
                 <AccordionContent className="space-y-3 p-4">
                     <p className="text-sm"><span className="font-semibold">سؤال:</span> {fb.question}</p>
+                    {lesson.exercises[index].pdfUrl && (
+                        <Button asChild variant="secondary" size="sm" className='w-full'>
+                            <Link href={lesson.exercises[index].pdfUrl!} target="_blank" rel="noopener noreferrer">
+                                <FileText className="ml-2 h-4 w-4" />
+                                فتح ملف التمرين (PDF)
+                            </Link>
+                        </Button>
+                    )}
                     <div className="p-3 bg-blue-50 border-l-4 border-blue-400 rounded-md space-y-1">
                         <p className="font-semibold text-sm text-blue-800">إجابتك:</p>
                         <p className="text-sm text-blue-700">{fb.studentAnswer}</p>
@@ -190,6 +199,14 @@ export function ExerciseEvaluator({ lesson }: ExerciseEvaluatorProps) {
                       <span className="font-bold">السؤال {index + 1}: </span>
                       {lesson.exercises[index].question}
                     </Label>
+                    {lesson.exercises[index].pdfUrl && (
+                        <Button asChild variant="secondary" size="sm" className='w-full my-2'>
+                            <Link href={lesson.exercises[index].pdfUrl!} target="_blank" rel="noopener noreferrer">
+                                <FileText className="ml-2 h-4 w-4" />
+                                عرض ملف التمرين المرفق (PDF)
+                            </Link>
+                        </Button>
+                    )}
                     <FormControl>
                       <Textarea placeholder="اكتب إجابتك هنا..." {...field} />
                     </FormControl>

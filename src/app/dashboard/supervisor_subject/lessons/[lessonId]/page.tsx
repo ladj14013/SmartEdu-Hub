@@ -84,12 +84,15 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
   };
 
   const handleAddExercise = () => {
-    setExercises([...exercises, { id: uuidv4(), question: '', modelAnswer: '' }]);
+    setExercises([...exercises, { id: uuidv4(), question: '', modelAnswer: '', pdfUrl: '' }]);
   };
 
-  const handleExerciseChange = (index: number, field: 'question' | 'modelAnswer', value: string) => {
+  const handleExerciseChange = (index: number, field: 'question' | 'modelAnswer' | 'pdfUrl', value: string) => {
     const newExercises = [...exercises];
-    newExercises[index][field] = value;
+    newExercises[index][field as 'question' | 'modelAnswer'] = value; // Type assertion to satisfy TypeScript
+    if (field === 'pdfUrl') {
+        newExercises[index].pdfUrl = value;
+    }
     setExercises(newExercises);
   };
   
@@ -173,7 +176,7 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
                         <Input id="videoUrl" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} readOnly={!canEdit} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="pdfUrl">رابط ملف PDF</Label>
+                        <Label htmlFor="pdfUrl">رابط ملف PDF للدرس</Label>
                          <div className='flex gap-2'>
                            <Input id="pdfUrl" type="url" placeholder="https://example.com/file.pdf" value={pdfUrl} onChange={(e) => setPdfUrl(e.target.value)} readOnly={!canEdit} />
                            <Button variant="outline" type="button" disabled>
@@ -221,6 +224,22 @@ export default function EditPublicLessonPage({ params }: { params: { lessonId: s
                                       value={exercise.modelAnswer} 
                                       onChange={(e) => handleExerciseChange(index, 'modelAnswer', e.target.value)}
                                       readOnly={!canEdit} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor={`ex-pdf-${exercise.id}`}>رابط ملف PDF للتمرين (اختياري)</Label>
+                                    <div className='flex gap-2'>
+                                      <Input 
+                                        id={`ex-pdf-${exercise.id}`} 
+                                        type="url" 
+                                        placeholder="https://example.com/exercise.pdf" 
+                                        value={exercise.pdfUrl || ''} 
+                                        onChange={(e) => handleExerciseChange(index, 'pdfUrl', e.target.value)}
+                                        readOnly={!canEdit}
+                                      />
+                                       <Button variant="outline" type="button" disabled>
+                                          <FileUp className="ml-2 h-4 w-4" /> رفع ملف
+                                       </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

@@ -89,7 +89,7 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
                         <Input id="videoUrl" defaultValue={lesson.videoUrl} />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="pdfUrl">رابط ملف PDF</Label>
+                        <Label htmlFor="pdfUrl">رابط ملف PDF للدرس</Label>
                         <div className='flex gap-2'>
                           <Input id="pdfUrl" type="url" placeholder="https://example.com/file.pdf" defaultValue={lesson.pdfUrl} />
                            <Button variant="outline" type="button" disabled>
@@ -124,6 +124,15 @@ export default function EditLessonPage({ params }: { params: { stageId: string; 
                                 <div className="space-y-2">
                                     <Label htmlFor={`a-${exercise.id}`}>الإجابة النموذجية</Label>
                                     <Textarea id={`a-${exercise.id}`} defaultValue={exercise.modelAnswer} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor={`ex-pdf-${exercise.id}`}>رابط ملف PDF للتمرين (اختياري)</Label>
+                                    <div className='flex gap-2'>
+                                      <Input id={`ex-pdf-${exercise.id}`} type="url" placeholder="https://example.com/exercise.pdf" defaultValue={exercise.pdfUrl} />
+                                       <Button variant="outline" type="button" disabled>
+                                          <FileUp className="ml-2 h-4 w-4" /> رفع ملف
+                                       </Button>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

@@ -38,6 +38,7 @@ export interface Exercise {
   id: string;
   question: string;
   modelAnswer: string;
+  pdfUrl?: string;
 }
 
 export interface Lesson {
