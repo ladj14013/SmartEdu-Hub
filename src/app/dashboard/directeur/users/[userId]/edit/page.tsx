@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, arrayRemove, getDoc, deleteField } from 'firebase/firestore';
 import type { User as UserType, Role, Stage, Level, Subject } from '@/lib/types';
 
 import { PageHeader } from '@/components/common/page-header';
@@ -12,10 +12,81 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Save, Loader2 } from 'lucide-react';
+import { ArrowRight, Save, Loader2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+
+
+// A small component to manage unlinking
+function LinkedTeacherItem({ studentId, subjectId, teacherId, onUnlink }: { studentId: string, subjectId: string, teacherId: string, onUnlink: () => void }) {
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [teacher, setTeacher] = useState<UserType | null>(null);
+  const [subject, setSubject] = useState<Subject | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUnlinking, setIsUnlinking] = useState(false);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!firestore) return;
+      try {
+        const teacherDoc = await getDoc(doc(firestore, 'users', teacherId));
+        if (teacherDoc.exists()) setTeacher(teacherDoc.data() as UserType);
+
+        const subjectDoc = await getDoc(doc(firestore, 'subjects', subjectId));
+        if (subjectDoc.exists()) setSubject(subjectDoc.data() as Subject);
+      } catch (error) {
+        console.error("Error fetching linked data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchData();
+  }, [firestore, teacherId, subjectId]);
+  
+  const handleUnlink = async () => {
+    if (!firestore) return;
+    setIsUnlinking(true);
+    try {
+      // 1. Remove student from teacher's list
+      const teacherRef = doc(firestore, 'users', teacherId);
+      await updateDoc(teacherRef, {
+        linkedStudentIds: arrayRemove(studentId)
+      });
+      // 2. Remove teacher from student's map
+      const studentRef = doc(firestore, 'users', studentId);
+      await updateDoc(studentRef, {
+        [`linkedTeachers.${subjectId}`]: deleteField()
+      });
+      toast({ title: 'تم فك الارتباط', description: `تم فك ارتباط التلميذ من الأستاذ ${teacher?.name} لهذه المادة.` });
+      onUnlink(); // Trigger a refetch on the parent component
+    } catch (error) {
+      console.error("Error unlinking:", error);
+      toast({ title: "فشل فك الارتباط", variant: 'destructive' });
+    } finally {
+      setIsUnlinking(false);
+    }
+  };
+
+  if (isLoading) {
+    return <Skeleton className="h-10 w-full" />;
+  }
+  
+  return (
+     <div className="flex items-center justify-between p-2 rounded-md bg-muted">
+      <div>
+        <p className="font-semibold text-sm">{teacher?.name || 'أستاذ محذوف'}</p>
+        <p className="text-xs text-muted-foreground">مادة: {subject?.name || 'مادة محذوفة'}</p>
+      </div>
+      <Button size="sm" variant="ghost" className="text-red-500" onClick={handleUnlink} disabled={isUnlinking}>
+        {isUnlinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4 ml-2" />}
+        فك الارتباط
+      </Button>
+    </div>
+  )
+}
+
 
 export default function EditUserPage({ params }: { params: { userId: string } }) {
   const { userId } = params;
@@ -30,7 +101,7 @@ export default function EditUserPage({ params }: { params: { userId: string } })
   const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
   const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
 
-  const { data: user, isLoading: isLoadingUser } = useDoc<UserType>(userRef);
+  const { data: user, isLoading: isLoadingUser, refetch: refetchUser } = useDoc<UserType>(userRef);
   const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
   const { data: levels, isLoading: isLoadingLevels } = useCollection<Level>(levelsQuery);
   const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
@@ -128,110 +199,138 @@ export default function EditUserPage({ params }: { params: { userId: string } })
     );
   }
 
+  const linkedTeachersArray = user.role === 'student' && user.linkedTeachers ? Object.entries(user.linkedTeachers) : [];
+
   return (
     <div className="space-y-6">
       <PageHeader title="تعديل المستخدم" description={`أنت تقوم بتعديل بيانات ${user.name}`} />
 
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle>تفاصيل المستخدم</CardTitle>
-          <CardDescription>يمكنك تعديل بيانات المستخدم من هنا.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">الاسم الكامل</Label>
-            <Input id="name" value={userName} onChange={(e) => setUserName(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">البريد الإلكتروني</Label>
-            <Input id="email" value={user.email} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="role">الدور</Label>
-            <Select value={userRole} onValueChange={(value) => setUserRole(value as Role)}>
-              <SelectTrigger id="role">
-                <SelectValue placeholder="اختر الدور" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="student">تلميذ</SelectItem>
-                <SelectItem value="teacher">أستاذ</SelectItem>
-                <SelectItem value="supervisor_subject">مشرف مادة</SelectItem>
-                <SelectItem value="supervisor_general">مشرف عام</SelectItem>
-                <SelectItem value="directeur">مدير</SelectItem>
-                <SelectItem value="parent">ولي أمر</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {(userRole === 'student' || userRole === 'teacher' || userRole === 'supervisor_subject') && (
+      <div className="max-w-2xl mx-auto grid grid-cols-1 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>تفاصيل المستخدم</CardTitle>
+            <CardDescription>يمكنك تعديل بيانات المستخدم من هنا.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="stage">المرحلة الدراسية</Label>
-              <Select value={stageId} onValueChange={setStageId}>
-                <SelectTrigger id="stage">
-                  <SelectValue placeholder="اختر المرحلة" />
+              <Label htmlFor="name">الاسم الكامل</Label>
+              <Input id="name" value={userName} onChange={(e) => setUserName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">البريد الإلكتروني</Label>
+              <Input id="email" value={user.email} disabled />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">الدور</Label>
+              <Select value={userRole} onValueChange={(value) => setUserRole(value as Role)}>
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="اختر الدور" />
                 </SelectTrigger>
                 <SelectContent>
-                  {stages?.map(stage => <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>)}
+                  <SelectItem value="student">تلميذ</SelectItem>
+                  <SelectItem value="teacher">أستاذ</SelectItem>
+                  <SelectItem value="supervisor_subject">مشرف مادة</SelectItem>
+                  <SelectItem value="supervisor_general">مشرف عام</SelectItem>
+                  <SelectItem value="directeur">مدير</SelectItem>
+                  <SelectItem value="parent">ولي أمر</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-          )}
 
-          {userRole === 'student' && stageId && (
-            <div className="space-y-2">
-              <Label htmlFor="level">المستوى الدراسي</Label>
-              <Select value={levelId} onValueChange={setLevelId}>
-                <SelectTrigger id="level">
-                  <SelectValue placeholder="اختر المستوى" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredLevels.map(level => <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          {(userRole === 'teacher' || userRole === 'supervisor_subject') && stageId && (
-            <div className="space-y-2">
-              <Label htmlFor="subject">المادة</Label>
-              <Select value={subjectId} onValueChange={setSubjectId}>
-                <SelectTrigger id="subject">
-                  <SelectValue placeholder="اختر المادة" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredSubjects.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+            {(userRole === 'student' || userRole === 'teacher' || userRole === 'supervisor_subject') && (
+              <div className="space-y-2">
+                <Label htmlFor="stage">المرحلة الدراسية</Label>
+                <Select value={stageId} onValueChange={setStageId}>
+                  <SelectTrigger id="stage">
+                    <SelectValue placeholder="اختر المرحلة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stages?.map(stage => <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-          {userRole === 'teacher' && (
-             <div className="space-y-2">
-                <Label htmlFor="teacher-code">كود الأستاذ</Label>
-                <Input id="teacher-code" value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)} />
-            </div>
-          )}
+            {userRole === 'student' && stageId && (
+              <div className="space-y-2">
+                <Label htmlFor="level">المستوى الدراسي</Label>
+                <Select value={levelId} onValueChange={setLevelId}>
+                  <SelectTrigger id="level">
+                    <SelectValue placeholder="اختر المستوى" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredLevels.map(level => <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {(userRole === 'teacher' || userRole === 'supervisor_subject') && stageId && (
+              <div className="space-y-2">
+                <Label htmlFor="subject">المادة</Label>
+                <Select value={subjectId} onValueChange={setSubjectId}>
+                  <SelectTrigger id="subject">
+                    <SelectValue placeholder="اختر المادة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSubjects.map(subject => <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-        </CardContent>
-        <CardFooter className="flex justify-end gap-2">
-            <Button variant="outline" asChild>
-                <Link href="/dashboard/directeur/users">إلغاء</Link>
-            </Button>
-            <Button variant="accent" onClick={handleUpdate} disabled={isUpdating}>
-                 {isUpdating ? (
-                    <>
-                      <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                      جاري الحفظ...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="ml-2 h-4 w-4"/>
-                      حفظ التغييرات
-                    </>
-                  )}
-            </Button>
-        </CardFooter>
-      </Card>
+            {userRole === 'teacher' && (
+              <div className="space-y-2">
+                  <Label htmlFor="teacher-code">كود الأستاذ</Label>
+                  <Input id="teacher-code" value={teacherCode} onChange={(e) => setTeacherCode(e.target.value)} />
+              </div>
+            )}
+
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+              <Button variant="outline" asChild>
+                  <Link href="/dashboard/directeur/users">إلغاء</Link>
+              </Button>
+              <Button variant="accent" onClick={handleUpdate} disabled={isUpdating}>
+                  {isUpdating ? (
+                      <>
+                        <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                        جاري الحفظ...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="ml-2 h-4 w-4"/>
+                        حفظ التغييرات
+                      </>
+                    )}
+              </Button>
+          </CardFooter>
+        </Card>
+
+        {user.role === 'student' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>الأساتذة المرتبطون</CardTitle>
+              <CardDescription>إدارة ارتباط هذا التلميذ بالأساتذة.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {linkedTeachersArray.length > 0 ? (
+                linkedTeachersArray.map(([subjectId, teacherId]) => (
+                  <LinkedTeacherItem
+                    key={subjectId}
+                    studentId={user.id}
+                    subjectId={subjectId}
+                    teacherId={teacherId}
+                    onUnlink={refetchUser}
+                  />
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground text-sm p-4">هذا التلميذ غير مرتبط بأي أستاذ.</p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
