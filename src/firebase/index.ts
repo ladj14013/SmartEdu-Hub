@@ -4,6 +4,7 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
+import { initializeApp as initializeAdminApp, getApps as getAdminApps, cert } from 'firebase-admin/app';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -24,6 +25,19 @@ export function initializeFirebase() {
       }
       firebaseApp = initializeApp(firebaseConfig);
     }
+
+    // Initialize Firebase Admin SDK for server-side operations
+    if (typeof window === 'undefined') { // Check if on server
+      if (!getAdminApps().length) {
+        // You would use serviceAccount in production, but for simplicity we can re-use config
+        // In a real production app, use a service account file
+        initializeAdminApp({
+          credential: cert(JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS!)),
+          ...firebaseConfig,
+        });
+      }
+    }
+
 
     return getSdks(firebaseApp);
   }

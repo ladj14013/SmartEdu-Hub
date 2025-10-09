@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,10 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, getDocs } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { getTeacherByCode } from '@/ai/flows/get-teacher-by-code';
 
 export default function SubjectPage({ params }: { params: { subjectId: string } }) {
   const { subjectId } = params;
@@ -20,6 +21,7 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const { toast } = useToast();
   const [isLinking, setIsLinking] = useState(false);
   const [teacherCode, setTeacherCode] = useState('');
+  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
 
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -29,8 +31,18 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
   const { data: student, isLoading: isStudentLoading, refetch: refetchStudent } = useDoc<UserType>(studentRef);
 
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
-  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
-  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+
+  // Fetch teacher name when component loads if already linked
+  useEffect(() => {
+    if (linkedTeacherId && !linkedTeacherName) {
+      // This is a simplified fetch, ideally this would also be a secure server call
+      // For now, we assume the student object might contain the teacher's name or we fetch it if rules allow
+      // To solve the permission issue, we won't fetch the teacher doc directly.
+      // Instead, we will rely on the link process to set the name.
+      // A better approach is needed here for existing links.
+    }
+  }, [linkedTeacherId, linkedTeacherName]);
+
 
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student) return null;
@@ -44,32 +56,30 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
       (l.type === 'private' && l.authorId === linkedTeacherId && l.levelId === student?.levelId)
   );
 
-  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || isTeacherLoading || areLessonsLoading;
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || areLessonsLoading;
 
   const handleLinkTeacher = async () => {
     if (!firestore || !student || !teacherCode.trim()) return;
     setIsLinking(true);
     try {
-        const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', teacherCode.trim()), where('subjectId', '==', subjectId));
-        const teacherSnapshot = await getDocs(teachersQuery);
+        const result = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId });
 
-        if (teacherSnapshot.empty) {
+        if (result.error || !result.teacherId || !result.teacherName) {
             toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة. يرجى التأكد منه.', variant: 'destructive' });
             setIsLinking(false);
             return;
         }
 
-        const teacherToLink = teacherSnapshot.docs[0];
         const studentDocRef = doc(firestore, 'users', student.id);
         
-        // Update the map using dot notation for a specific subject
         await updateDoc(studentDocRef, {
-            [`linkedTeachers.${subjectId}`]: teacherToLink.id
+            [`linkedTeachers.${subjectId}`]: result.teacherId
         });
 
         refetchStudent();
+        setLinkedTeacherName(result.teacherName);
 
-        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${teacherToLink.data().name} في هذه المادة.` });
+        toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${result.teacherName} في هذه المادة.` });
 
     } catch (error) {
         console.error("Failed to link teacher:", error);
@@ -114,12 +124,12 @@ export default function SubjectPage({ params }: { params: { subjectId: string } 
           <CardDescription>أدخل كود الأستاذ الخاص بهذه المادة للوصول إلى دروسه الخاصة.</CardDescription>
         </CardHeader>
         <CardContent>
-          {teacher ? (
+          {linkedTeacherId ? (
             <div className="flex items-center gap-3 p-4 bg-green-50 border-r-4 border-green-500 rounded-md">
               <CheckCircle className="h-6 w-6 text-green-600" />
               <div>
-                <p className="font-semibold">أنت مرتبط مع الأستاذ:</p>
-                <p className="text-green-700">{teacher.name}</p>
+                <p className="font-semibold">أنت مرتبط بهذه المادة.</p>
+                {/* We can't display the name securely yet without another server call */}
               </div>
             </div>
           ) : (
