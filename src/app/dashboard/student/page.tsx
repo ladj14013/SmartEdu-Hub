@@ -1,7 +1,7 @@
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Library, Users, ArrowLeft } from 'lucide-react';
+import { Library, Users, ArrowLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -19,7 +19,7 @@ function StudentLevelInfo({ levelId }: { levelId: string | undefined }) {
         return <span className="inline-block h-5 w-32 animate-pulse rounded-md bg-muted" />;
     }
 
-    return <strong>{level?.name || ''}</strong>;
+    return <strong className="font-bold text-amber-500">{level?.name || ''}</strong>;
 }
 
 
@@ -50,7 +50,14 @@ export default function StudentDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`مرحباً ${student?.name || ''}`}
+        title={
+            <div className="flex items-center gap-3">
+              <Crown className="h-8 w-8 text-amber-500" />
+              <span>
+                مرحباً بعودتك أيها التلميذ: <span className="font-bold text-amber-500">{student?.name || ''}</span>
+              </span>
+            </div>
+        }
         description={
             student?.levelId ? (
               <>
