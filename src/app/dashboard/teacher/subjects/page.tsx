@@ -33,6 +33,9 @@ export default function TeacherSubjectsPage() {
     const { user: authUser, isLoading: isAuthLoading } = useUser();
     const [isDeleting, setIsDeleting] = useState(false);
     const { toast } = useToast();
+    
+    const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
+    const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
     // Query for lessons authored by the current teacher
     const privateLessonsQuery = useMemoFirebase(() => {
@@ -40,17 +43,21 @@ export default function TeacherSubjectsPage() {
         return query(collection(firestore, 'lessons'), where('authorId', '==', authUser.uid), where('type', '==', 'private'));
     }, [firestore, authUser]);
 
-    // Query for public lessons (available to everyone in the subject)
+    // Query for public lessons available for the teacher's subject and stage
     const publicLessonsQuery = useMemoFirebase(() => {
-        if (!firestore || !authUser) return null;
-        // In a real app, you'd likely filter public lessons by the teacher's subject/stage
-        return query(collection(firestore, 'lessons'), where('type', '==', 'public'));
-    }, [firestore, authUser]);
+        if (!firestore || !teacher?.subjectId || !teacher?.stageId) return null;
+        return query(
+            collection(firestore, 'lessons'), 
+            where('type', '==', 'public'),
+            where('subjectId', '==', teacher.subjectId),
+            where('stageId', '==', teacher.stageId) // Assuming public lessons might be stage-specific
+        );
+    }, [firestore, teacher]);
 
     const { data: privateLessons, isLoading: arePrivateLessonsLoading, refetch: refetchPrivate } = useCollection<Lesson>(privateLessonsQuery);
     const { data: publicLessons, isLoading: arePublicLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
     
-    const isLoading = isAuthLoading || arePrivateLessonsLoading || arePublicLessonsLoading;
+    const isLoading = isAuthLoading || isTeacherLoading || arePrivateLessonsLoading || arePublicLessonsLoading;
 
     const handleDelete = async (lessonId: string) => {
         if (!firestore) return;
