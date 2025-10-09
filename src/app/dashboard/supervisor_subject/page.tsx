@@ -43,16 +43,16 @@ export default function SupervisorSubjectDashboard() {
     const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
     const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
 
-    // Query for teachers in the same stage and subject
-    const teachersQuery = useMemoFirebase(() => {
-        if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
-        return query(
-            collection(firestore, 'users'),
-            where('role', '==', 'teacher'),
-            where('stageId', '==', supervisor.stageId),
-            where('subjectId', '==', supervisor.subjectId)
-        );
-    }, [firestore, supervisor]);
+    // Query for teachers in the same stage and subject - DISABLED
+    const teachersQuery = null; // useMemoFirebase(() => {
+    //     if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
+    //     return query(
+    //         collection(firestore, 'users'),
+    //         where('role', '==', 'teacher'),
+    //         where('stageId', '==', supervisor.stageId),
+    //         where('subjectId', '==', supervisor.subjectId)
+    //     );
+    // }, [firestore, supervisor]);
     const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
 
     const teacherIds = useMemo(() => teachers?.map(t => t.id) || [], [teachers]);
