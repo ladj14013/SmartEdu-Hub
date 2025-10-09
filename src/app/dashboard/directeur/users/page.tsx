@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { collection, doc as firestoreDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -54,8 +54,10 @@ export default function UsersPage() {
   const firestore = useFirestore();
   const { user: authUser } = useUser();
 
-  // Fetch current user's role to ensure only directors can query all users
-  const currentUserRef = useMemoFirebase(() => authUser ? firestore.doc(`users/${authUser.uid}`) : null, [firestore, authUser]);
+  const currentUserRef = useMemoFirebase(
+    () => (firestore && authUser ? firestoreDoc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
   const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<UserType>(currentUserRef);
   
   const isDirector = currentUserData?.role === 'directeur';
@@ -65,14 +67,15 @@ export default function UsersPage() {
     if (firestore && isDirector) {
       return collection(firestore, 'users');
     }
-    return null;
+    return null; // Return null if not a director, preventing the query from running
   }, [firestore, isDirector]);
+  
   const { data: users, isLoading: areUsersLoading } = useCollection<UserType>(usersQuery);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   
-  const isLoading = areUsersLoading || isCurrentUserLoading;
+  const isLoading = isCurrentUserLoading || (isDirector && areUsersLoading);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -151,7 +154,7 @@ export default function UsersPage() {
                   </TableRow>
                 ))
               )}
-              {!isLoading && filteredUsers.map(user => {
+              {!isLoading && isDirector && filteredUsers.map(user => {
                 const RoleIcon = roleMap[user.role]?.icon || User;
                 return (
                     <TableRow key={user.id}>
@@ -183,7 +186,7 @@ export default function UsersPage() {
                     </TableRow>
                 )
               })}
-               {!isLoading && filteredUsers.length === 0 && (
+               {!isLoading && (!isDirector || filteredUsers.length === 0) && (
                 <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
                         {isDirector ? 'لا توجد نتائج مطابقة لبحثك.' : 'غير مصرح لك بعرض المستخدمين.'}
