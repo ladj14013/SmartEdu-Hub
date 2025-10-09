@@ -71,7 +71,7 @@ export default function SubjectPage() {
     if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
-        const { teacherId, teacherName, errorCode, errorMessage } = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId });
+        const { teacherId, teacherName, errorCode, errorMessage } = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId as string });
 
         if (errorCode || !teacherId || !teacherName) {
             toast({ title: 'فشل الربط', description: errorMessage || 'حدث خطأ غير متوقع.', variant: 'destructive' });

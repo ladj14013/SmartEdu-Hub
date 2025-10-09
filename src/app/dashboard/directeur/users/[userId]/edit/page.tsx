@@ -446,5 +446,3 @@ export default function EditUserPage({ params }: { params: { userId: string } })
     </div>
   );
 }
-
-    
