@@ -15,7 +15,8 @@ function StudentLevelInfo({ levelId }: { levelId: string | undefined }) {
     const { data: level, isLoading } = useDoc<Level>(levelRef);
 
     if (isLoading) {
-        return <Skeleton className="h-5 w-32 inline-block" />;
+        // Return a span to avoid nesting a div inside a p, which causes hydration errors.
+        return <span className="inline-block h-5 w-32 animate-pulse rounded-md bg-muted" />;
     }
 
     return <span>{level?.name || ''}</span>;
