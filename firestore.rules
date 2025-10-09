@@ -1,10 +1,89 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Default deny all
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
+    
+    // Anyone can read general educational structure
+    match /stages/{stageId} {
+      allow read: if true;
+    }
+    match /levels/{levelId} {
+      allow read: if true;
+    }
+    match /subjects/{subjectId} {
+      allow read: if true;
+    }
+    
+    // Users can read their own profile
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      // Directors can edit any user
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
+    }
+    
+    // Students can read public lessons and lessons from their linked teachers
+    // Teachers and Supervisors can read any lesson in their subject
+    match /lessons/{lessonId} {
+       allow read: if request.auth != null && 
+                    (
+                      // Student access
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student' && 
+                        (resource.data.type == 'public' || resource.data.authorId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.linkedTeachers.values())
+                      ) ||
+                      // Teacher access for their own subject
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' &&
+                        resource.data.subjectId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subjectId
+                      ) ||
+                       // Supervisor access for their subject
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject' &&
+                        resource.data.subjectId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subjectId
+                      ) ||
+                      // Director/General Supervisor access
+                      (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['directeur', 'supervisor_general'])
+                    );
+
+      allow create: if request.auth != null &&
+                      (
+                        // Teachers can create private lessons
+                        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher' && request.resource.data.authorId == request.auth.uid && request.resource.data.type == 'private') ||
+                        // Supervisors can create public lessons
+                        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject' && request.resource.data.authorId == request.auth.uid && request.resource.data.type == 'public') ||
+                        // Directors can create anything
+                        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur')
+                      );
+
+      allow update: if request.auth != null &&
+                      (
+                        // Author can update their own lesson
+                        (resource.data.authorId == request.auth.uid) ||
+                        // Director can update any lesson
+                        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur')
+                      );
+    }
+    
+    // Students can manage their own lesson progress
+    match /users/{studentId}/lessonProgress/{lessonId} {
+      allow read, write: if request.auth != null && request.auth.uid == studentId;
+    }
+    
+    // Logged-in users can send messages
+    match /messages/{messageId} {
+      allow create: if request.auth != null;
+      // Director and General Supervisor can read/update messages
+      allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['directeur', 'supervisor_general'];
+    }
+
+    // Anyone can read the announcement banner settings
+    match /settings/announcement_banner {
+      allow read: if true;
+      // Only directors can write to it
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
+    }
+    
   }
 }

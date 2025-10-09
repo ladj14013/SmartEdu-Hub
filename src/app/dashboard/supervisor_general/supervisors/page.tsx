@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, where, doc as firestoreDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,12 +38,30 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function SupervisorsListPage() {
   const firestore = useFirestore();
+  const { user: authUser, isLoading: isAuthLoading } = useUser();
 
   const [stageFilter, setStageFilter] = useState('all');
   const [subjectFilter, setSubjectFilter] = useState('all');
 
+  // First, get the current user's data to check their role
+  const currentUserRef = useMemoFirebase(
+    () => (firestore && authUser ? firestoreDoc(firestore, 'users', authUser.uid) : null),
+    [firestore, authUser]
+  );
+  const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<UserType>(currentUserRef);
+  
+  // Check if the user is a director
+  const isDirector = currentUserData?.role === 'directeur';
+
   // Queries
-  const supervisorsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'supervisor_subject')) : null, [firestore]);
+  const supervisorsQuery = useMemoFirebase(() => {
+    // Only run this query if the user is a director
+    if (firestore && isDirector) {
+      return query(collection(firestore, 'users'), where('role', '==', 'supervisor_subject'))
+    }
+    return null; // Return null if not a director to prevent permission errors
+  }, [firestore, isDirector]);
+  
   const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
   const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
 
@@ -52,7 +70,7 @@ export default function SupervisorsListPage() {
   const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
   const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const isLoading = isLoadingSupervisors || isLoadingSubjects || isLoadingStages;
+  const isLoading = isAuthLoading || isCurrentUserLoading || (isDirector && (isLoadingSupervisors || isLoadingSubjects || isLoadingStages));
 
   // Memoized maps for efficient lookup
   const subjectsMap = useMemo(() => subjects?.reduce((acc, subject) => {
@@ -148,7 +166,7 @@ export default function SupervisorsListPage() {
                   </TableRow>
                 ))
               )}
-              {!isLoading && filteredSupervisors?.map(supervisor => {
+              {!isLoading && isDirector && filteredSupervisors?.map(supervisor => {
                 return (
                     <TableRow key={supervisor.id}>
                         <TableCell className="font-medium">
@@ -188,10 +206,10 @@ export default function SupervisorsListPage() {
                     </TableRow>
                 )
               })}
-               {!isLoading && filteredSupervisors?.length === 0 && (
+               {!isLoading && (!isDirector || filteredSupervisors?.length === 0) && (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        لا توجد نتائج مطابقة لبحثك.
+                        {isDirector ? 'لا توجد نتائج مطابقة لبحثك.' : 'غير مصرح لك بعرض هذه البيانات.'}
                     </TableCell>
                 </TableRow>
               )}
