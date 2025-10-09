@@ -9,8 +9,8 @@ export interface User {
   levelId?: string;
   subjectId?: string;
   teacherCode?: string;
-  linkedTeachers?: Record<string, string>; // Maps subjectId to teacherId
-  linkedStudentIds?: string[];
+  linkedTeachers?: Record<string, string>; // For Student: Maps subjectId to teacherId
+  linkedStudentIds?: string[]; // For Teacher: Array of student UIDs
   avatar: string;
 }
 

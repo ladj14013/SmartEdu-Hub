@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 import {
@@ -113,20 +113,32 @@ export default function SignupPage() {
       // Generate teacher code if role is teacher
       if(data.role === 'teacher') {
         userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      } else if (data.role === 'student' && data.teacherCode && data.subjectId) {
-         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()), where('subjectId', '==', data.subjectId));
-         const teacherSnapshot = await getDocs(teachersQuery);
-         if (!teacherSnapshot.empty) {
-            const teacherToLink = teacherSnapshot.docs[0];
-            userData.linkedTeachers = {
-              [data.subjectId]: teacherToLink.id
-            };
-         }
+        userData.linkedStudentIds = []; // Initialize empty array
       }
       
       // 3. Create user document in Firestore
       await setDoc(doc(firestore, "users", user.uid), userData);
 
+      // 4. If student provided a teacher code, link them
+      if (data.role === 'student' && data.teacherCode && data.subjectId) {
+         const teachersQuery = query(collection(firestore, 'users'), where('teacherCode', '==', data.teacherCode.trim()), where('subjectId', '==', data.subjectId));
+         const teacherSnapshot = await getDocs(teachersQuery);
+         if (!teacherSnapshot.empty) {
+            const teacherDoc = teacherSnapshot.docs[0];
+            const teacherRef = doc(firestore, 'users', teacherDoc.id);
+            const studentRef = doc(firestore, 'users', user.uid);
+            
+            // Add student to teacher's list
+            await updateDoc(teacherRef, {
+              linkedStudentIds: arrayUnion(user.uid)
+            });
+            // Add teacher to student's list
+            await updateDoc(studentRef, {
+              [`linkedTeachers.${data.subjectId}`]: teacherDoc.id
+            });
+         }
+      }
+      
       toast({
         title: "تم إنشاء الحساب بنجاح!",
         description: "سيتم توجيهك إلى لوحة التحكم.",
