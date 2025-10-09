@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
@@ -52,11 +52,27 @@ const roleMap: { [key in Role]?: { name: string; icon: React.ElementType } } = {
 
 export default function UsersPage() {
   const firestore = useFirestore();
-  const usersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
-  const { data: users, isLoading } = useCollection<UserType>(usersQuery);
+  const { user: authUser } = useUser();
+
+  // Fetch current user's role to ensure only directors can query all users
+  const currentUserRef = useMemoFirebase(() => authUser ? firestore.doc(`users/${authUser.uid}`) : null, [firestore, authUser]);
+  const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<UserType>(currentUserRef);
+  
+  const isDirector = currentUserData?.role === 'directeur';
+
+  const usersQuery = useMemoFirebase(() => {
+    // IMPORTANT: Only create the query if the user is a director
+    if (firestore && isDirector) {
+      return collection(firestore, 'users');
+    }
+    return null;
+  }, [firestore, isDirector]);
+  const { data: users, isLoading: areUsersLoading } = useCollection<UserType>(usersQuery);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  
+  const isLoading = areUsersLoading || isCurrentUserLoading;
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -170,7 +186,7 @@ export default function UsersPage() {
                {!isLoading && filteredUsers.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={4} className="h-24 text-center">
-                        لا توجد نتائج مطابقة لبحثك.
+                        {isDirector ? 'لا توجد نتائج مطابقة لبحثك.' : 'غير مصرح لك بعرض المستخدمين.'}
                     </TableCell>
                 </TableRow>
               )}
