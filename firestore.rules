@@ -1,10 +1,10 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Rules will be built page by page from here.
-    // WARNING: This allows anyone to read, write, and delete any data.
-    // This should not be used in production.
+    // قاعدة مؤقتة: اسمح بجميع عمليات القراءة والكتابة على جميع المستندات
+    // سيتم استبدال هذه القاعدة بقواعد أكثر تحديدًا
     match /{document=**} {
       allow read, write: if true;
     }
