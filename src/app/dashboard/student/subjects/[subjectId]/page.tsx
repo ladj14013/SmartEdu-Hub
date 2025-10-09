@@ -15,6 +15,23 @@ import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { useParams } from 'next/navigation';
 
+function LinkedTeacherInfo({ teacherId }: { teacherId: string }) {
+  const firestore = useFirestore();
+  const teacherRef = useMemoFirebase(() => (firestore && teacherId) ? doc(firestore, 'users', teacherId) : null, [firestore, teacherId]);
+  const { data: teacher, isLoading } = useDoc<UserType>(teacherRef);
+
+  if (isLoading) {
+    return <Skeleton className="h-5 w-32" />;
+  }
+
+  return (
+    <p className="font-semibold">
+      أنت مرتبط مع الأستاذ: <span className="text-primary">{teacher?.name || '...'}</span>
+    </p>
+  );
+}
+
+
 export default function SubjectPage() {
   const params = useParams();
   const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
@@ -23,8 +40,7 @@ export default function SubjectPage() {
   const { toast } = useToast();
   const [isLinking, setIsLinking] = useState(false);
   const [teacherCode, setTeacherCode] = useState('');
-  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
-
+  
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
   const studentRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
@@ -33,19 +49,7 @@ export default function SubjectPage() {
   const { data: student, isLoading: isStudentLoading, refetch: refetchStudent } = useDoc<UserType>(studentRef);
 
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
-
-  // Fetch teacher name when component loads if already linked
-  useEffect(() => {
-    if (linkedTeacherId && !linkedTeacherName) {
-      // This is a simplified fetch, ideally this would also be a secure server call
-      // For now, we assume the student object might contain the teacher's name or we fetch it if rules allow
-      // To solve the permission issue, we won't fetch the teacher doc directly.
-      // Instead, we will rely on the link process to set the name.
-      // A better approach is needed here for existing links.
-    }
-  }, [linkedTeacherId, linkedTeacherName]);
-
-
+  
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student || !subjectId) return null;
     return query(collection(firestore, 'lessons'), where('subjectId', '==', subjectId));
@@ -78,10 +82,8 @@ export default function SubjectPage() {
             [`linkedTeachers.${subjectId}`]: result.teacherId
         });
 
-        refetchStudent();
-        setLinkedTeacherName(result.teacherName);
-
         toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${result.teacherName} في هذه المادة.` });
+        refetchStudent();
 
     } catch (error) {
         console.error("Failed to link teacher:", error);
@@ -130,8 +132,8 @@ export default function SubjectPage() {
             <div className="flex items-center gap-3 p-4 bg-green-50 border-r-4 border-green-500 rounded-md">
               <CheckCircle className="h-6 w-6 text-green-600" />
               <div>
-                <p className="font-semibold">أنت مرتبط بهذه المادة.</p>
-                {/* We can't display the name securely yet without another server call */}
+                <LinkedTeacherInfo teacherId={linkedTeacherId} />
+                <p className="text-sm text-muted-foreground">يمكنك الآن الوصول إلى الدروس الخاصة بهذا الأستاذ.</p>
               </div>
             </div>
           ) : (
