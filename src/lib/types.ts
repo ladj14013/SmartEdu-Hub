@@ -71,6 +71,7 @@ export interface SupervisorNote {
   id: string;
   lessonId: string;
   authorId: string;
+  authorName: string; // Add authorName to avoid extra lookups
   content: string;
   timestamp: any;
 }

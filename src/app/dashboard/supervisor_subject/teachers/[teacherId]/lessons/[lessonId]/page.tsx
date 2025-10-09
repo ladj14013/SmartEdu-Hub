@@ -32,12 +32,8 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
   const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
   const { data: notes, isLoading: areNotesLoading } = useCollection<SupervisorNote>(notesQuery);
 
-  // We need to fetch the authors of the notes separately.
-  const authorIds = useMemo(() => notes ? [...new Set(notes.map(n => n.authorId))] : [], [notes]);
-  const authorsQuery = useMemoFirebase(() => (firestore && authorIds && authorIds.length > 0) ? query(collection(firestore, 'users'), where('id', 'in', authorIds)) : null, [firestore, authorIds]);
-  const { data: authors, isLoading: areAuthorsLoading } = useCollection<UserType>(authorsQuery);
-
-  const isLoading = isLessonLoading || isTeacherLoading || areNotesLoading || areAuthorsLoading;
+  // Removed the problematic authorsQuery. We'll handle author names differently.
+  const isLoading = isLessonLoading || isTeacherLoading || areNotesLoading;
 
   const handleSendNote = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +43,7 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
         await addDoc(collection(firestore, 'supervisor_notes'), {
             lessonId: lessonId,
             authorId: authUser.uid,
+            authorName: authUser.displayName || 'مشرف', // Save the author name directly
             content: noteContent,
             timestamp: serverTimestamp()
         });
@@ -156,13 +153,12 @@ export default function ReviewLessonPage({ params }: { params: { teacherId: stri
                 </CardHeader>
                 <CardContent className="space-y-4">
                     {notes?.map(note => {
-                        const author = authors?.find(a => a.id === note.authorId);
                         return (
                             <div key={note.id} className="flex gap-3">
                                 <UserCircle className="h-5 w-5 text-muted-foreground mt-1" />
                                 <div className='flex-1'>
                                     <div className="flex justify-between items-center">
-                                        <p className="font-semibold text-sm">{author?.name || 'مشرف'}</p>
+                                        <p className="font-semibold text-sm">{note.authorName || 'مشرف'}</p>
                                         <p className="text-xs text-muted-foreground">
                                           {note.timestamp ? new Date(note.timestamp.toDate()).toLocaleDateString('ar-EG') : ''}
                                         </p>
