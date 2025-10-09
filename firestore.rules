@@ -4,7 +4,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
+    // =================================
+    //  HELPER FUNCTIONS
+    // =================================
     function isUserAuthenticated() {
       return request.auth != null;
     }
@@ -13,28 +15,19 @@ service cloud.firestore {
       return isUserAuthenticated() && request.auth.uid == userId;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function getUserRole() {
-      if (!isUserAuthenticated()) {
-        return null;
-      }
-      return getUserData().role;
-    }
-
-    function isRole(role) {
-        return isUserAuthenticated() && getUserRole() == role;
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
 
     function isDirector() {
-      return isRole('directeur');
+      return isUserAuthenticated() && getUserData(request.auth.uid).role == 'directeur';
     }
+    
+    // =================================
+    //  RULES
+    // =================================
 
-    // --- Specific Collection Rules ---
-
-    // Anyone can read public data
+    // Public collections can be read by anyone.
     match /stages/{stageId} {
       allow read: if true;
       allow write: if isDirector();
@@ -52,38 +45,39 @@ service cloud.firestore {
       allow write: if isDirector();
     }
 
-    // Users can read/write their own data. Director has full access.
+    // Users can read/write their own data. Directors can read/write any user data.
     match /users/{userId} {
-      allow read, update: if isOwner(userId) || isDirector();
-      allow create, delete: if isDirector(); // Only director can create/delete users
+      allow read: if isOwner(userId) || isDirector();
+      allow write: if isOwner(userId) || isDirector();
+      
+      // Student progress can be read by the student, their teacher (TBD), and director.
+      match /lessonProgress/{progressId} {
+        allow read, write: if isOwner(userId) || isDirector();
+      }
     }
-    
+
     // Lessons can be read by any authenticated user.
-    // Write access is for the author or the director.
+    // Lessons can only be written by their author or a director.
     match /lessons/{lessonId} {
       allow read: if isUserAuthenticated();
       allow write: if isDirector() || (isUserAuthenticated() && request.resource.data.authorId == request.auth.uid);
+      
+      // Exercises subcollection follows lesson permissions.
+       match /exercises/{exerciseId} {
+        allow read: if isUserAuthenticated();
+        allow write: if isDirector() || (isUserAuthenticated() && get(/databases/$(database)/documents/lessons/$(lessonId)).data.authorId == request.auth.uid);
+      }
     }
-    
-    // Authenticated users can send messages. Director can forward/update them.
+
+    // Messages can be created by any authenticated user. Only directors can update (forward) them.
     match /messages/{messageId} {
         allow create: if isUserAuthenticated();
-        allow update: if isDirector();
+        allow update, read: if isDirector();
     }
-    
-    // Notes can be created by authenticated users.
+
+    // Supervisor notes can be created/read by authenticated users (supervisors/teachers).
     match /supervisor_notes/{noteId} {
-      allow read, create: if isUserAuthenticated();
-    }
-
-    // Users can manage their own lesson progress.
-    match /users/{userId}/lessonProgress/{lessonId} {
-        allow read, write: if isOwner(userId);
-    }
-
-    // Default deny all other access
-    match /{document=**} {
-      allow read, write: if false;
+        allow read, create: if isUserAuthenticated();
     }
   }
 }
