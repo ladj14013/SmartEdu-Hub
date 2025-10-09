@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import type { Message } from '@/lib/types';
-import { collection, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, doc, updateDoc, query } from 'firebase/firestore';
 import { Send, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -20,12 +20,15 @@ export default function MessagesPage() {
   const { toast } = useToast();
   const [forwardingId, setForwardingId] = useState<string | null>(null);
 
+  // Fetch all messages, filtering will happen on the client
   const messagesQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, 'messages'), where('forwardedTo', '!=', 'supervisor_general')) : null,
+    () => firestore ? query(collection(firestore, 'messages')) : null,
     [firestore]
   );
   const { data: messages, isLoading } = useCollection<Message>(messagesQuery);
-  const unforwardedMessages = messages?.filter(m => !m.forwardedTo);
+  
+  // Filter messages on the client side to show only those not forwarded to the supervisor_general
+  const unforwardedMessages = messages?.filter(m => m.forwardedTo !== 'supervisor_general');
 
   const handleForward = async (messageId: string) => {
     if (!firestore) return;
