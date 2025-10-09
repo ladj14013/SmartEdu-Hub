@@ -15,7 +15,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
-import type { User as UserType, Lesson } from '@/lib/types';
+import type { User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function TeachersListPage() {
@@ -38,15 +38,7 @@ export default function TeachersListPage() {
   }, [firestore, supervisor]);
   const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
 
-  // Get all lessons to count them for each teacher
-  const teacherIds = useMemo(() => teachers?.map(t => t.id) || [], [teachers]);
-  const lessonsQuery = useMemoFirebase(() => {
-    if (!firestore || teacherIds.length === 0) return null;
-    return query(collection(firestore, 'lessons'), where('authorId', 'in', teacherIds), where('type', '==', 'private'));
-  }, [firestore, teacherIds]);
-  const { data: lessons, isLoading: areLessonsLoading } = useCollection<Lesson>(lessonsQuery);
-
-  const isLoading = isAuthLoading || isSupervisorLoading || areTeachersLoading || (teacherIds.length > 0 && areLessonsLoading);
+  const isLoading = isAuthLoading || isSupervisorLoading || areTeachersLoading;
 
   return (
     <div className="space-y-6">
@@ -62,7 +54,6 @@ export default function TeachersListPage() {
               <TableRow>
                 <TableHead>الأستاذ</TableHead>
                 <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>عدد الدروس الخاصة</TableHead>
                 <TableHead>الإجراء</TableHead>
               </TableRow>
             </TableHeader>
@@ -71,12 +62,10 @@ export default function TeachersListPage() {
                 <TableRow key={i}>
                     <TableCell><div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-9 w-24" /></TableCell>
                 </TableRow>
               ))}
               {!isLoading && teachers?.map(teacher => {
-                const privateLessonsCount = lessons?.filter(l => l.authorId === teacher.id).length ?? 0;
                 return (
                     <TableRow key={teacher.id}>
                         <TableCell>
@@ -89,7 +78,6 @@ export default function TeachersListPage() {
                             </div>
                         </TableCell>
                         <TableCell>{teacher.email}</TableCell>
-                        <TableCell>{privateLessonsCount}</TableCell>
                         <TableCell>
                             <Button asChild variant="outline" size="sm">
                                 <Link href={`/dashboard/supervisor_subject/teachers/${teacher.id}`}>
@@ -102,7 +90,7 @@ export default function TeachersListPage() {
               })}
               {!isLoading && teachers?.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={3} className="h-24 text-center">
                         لا يوجد أساتذة مطابقون لمعايير الإشراف الخاصة بك.
                     </TableCell>
                 </TableRow>
