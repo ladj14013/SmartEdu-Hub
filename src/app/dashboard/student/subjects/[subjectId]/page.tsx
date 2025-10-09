@@ -6,15 +6,26 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, getDocs, arrayUnion } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc, arrayUnion, arrayRemove, deleteField } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useParams } from 'next/navigation';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 
 export default function SubjectPage() {
@@ -25,9 +36,10 @@ export default function SubjectPage() {
   const { toast } = useToast();
   
   const [isLinking, setIsLinking] = useState(false);
+  const [isUnlinking, setIsUnlinking] = useState(false);
   const [teacherCode, setTeacherCode] = useState('');
   const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
-  const [isFetchingTeacherName, setIsFetchingTeacherName] = useState(false);
+  const [isFetchingTeacherName, setIsFetchingTeacherName] = useState(true);
   
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -56,6 +68,9 @@ export default function SubjectPage() {
         } finally {
             setIsFetchingTeacherName(false);
         }
+      } else {
+        setIsFetchingTeacherName(false);
+        setLinkedTeacherName(null);
       }
     };
     fetchName();
@@ -113,6 +128,34 @@ export default function SubjectPage() {
     }
   }
 
+  const handleUnlinkTeacher = async () => {
+    if (!firestore || !student || !subjectId || !linkedTeacherId) return;
+    setIsUnlinking(true);
+
+    try {
+      // 1. Remove teacher from student's linkedTeachers map
+      const studentDocRef = doc(firestore, 'users', student.id);
+      await updateDoc(studentDocRef, {
+        [`linkedTeachers.${subjectId}`]: deleteField()
+      });
+
+      // 2. Remove student from teacher's linkedStudentIds array
+      const teacherDocRef = doc(firestore, 'users', linkedTeacherId);
+      await updateDoc(teacherDocRef, {
+        linkedStudentIds: arrayRemove(student.id)
+      });
+
+      toast({ title: 'تم إلغاء الارتباط بنجاح', description: `لم تعد مرتبطًا بالأستاذ في هذه المادة.` });
+      setLinkedTeacherName(null);
+      refetchStudent();
+    } catch (error) {
+      console.error("Failed to unlink teacher:", error);
+      toast({ title: 'فشل إلغاء الارتباط', description: 'حدث خطأ أثناء محاولة إلغاء الارتباط.', variant: 'destructive' });
+    } finally {
+      setIsUnlinking(false);
+    }
+  };
+
 
   if (isLoading) {
     return (
@@ -157,6 +200,26 @@ export default function SubjectPage() {
                     أنت مرتبط مع الأستاذ: {isFetchingTeacherName ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacherName}</span>}
                 </p>
               </div>
+               <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="sm" disabled={isUnlinking}>
+                        {isUnlinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <XCircle className="ml-2 h-4 w-4" />}
+                        إلغاء الارتباط
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>هل أنت متأكد من إلغاء الارتباط؟</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        لن تتمكن من الوصول إلى الدروس الخاصة بهذا الأستاذ بعد الآن. يمكنك الارتباط به مرة أخرى في أي وقت.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>تراجع</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleUnlinkTeacher}>نعم، قم بالإلغاء</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
             </div>
           ) : (
             <div className="flex items-center gap-2">
