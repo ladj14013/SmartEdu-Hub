@@ -1,4 +1,3 @@
-
 'use client';
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,7 +21,7 @@ function TeacherDashboardSkeleton() {
             />
              <div className="grid gap-6 md:grid-cols-2">
                 <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader><CardContent><Skeleton className="h-12 w-full" /></CardContent></Card>
-                <Card><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
+                <Card className="hover:bg-muted/50 transition-colors"><CardHeader><Skeleton className="h-6 w-32" /><Skeleton className="h-4 w-48 mt-2" /></CardHeader></Card>
              </div>
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <Skeleton className="h-28 w-full" />
@@ -34,12 +33,12 @@ function TeacherDashboardSkeleton() {
 }
 
 export default function TeacherDashboard() {
+  const [isClient, setIsClient] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
-  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -60,11 +59,12 @@ export default function TeacherDashboard() {
     return query(collection(firestore, 'lessons'), where('authorId', '==', authUser.uid), where('type', '==', 'private'));
   }, [firestore, authUser]);
   const { data: privateLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
-
+  
+  const teacherSubjectId = teacher?.subjectId;
   const linkedStudentsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser || !teacher?.subjectId) return null;
-    return query(collection(firestore, 'users'), where(`linkedTeachers.${teacher.subjectId}`, '==', authUser.uid));
-  }, [firestore, authUser, teacher?.subjectId]);
+    if (!firestore || !authUser || !teacherSubjectId) return null;
+    return query(collection(firestore, 'users'), where(`linkedTeachers.${teacherSubjectId}`, '==', authUser.uid));
+  }, [firestore, authUser?.uid, teacherSubjectId]);
   const { data: linkedStudents, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
 
   const isLoading = isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading || areStudentsLoading;
