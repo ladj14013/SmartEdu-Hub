@@ -117,10 +117,10 @@ function LinkTeacherDialog({ student, allSubjects, onLink }: { student: UserType
     if (!firestore || !selectedSubjectId || !teacherCode) return;
     setIsLinking(true);
     try {
-      const { teacherId, teacherName } = await getTeacherByCode({ teacherCode, subjectId: selectedSubjectId });
+      const { teacherId, teacherName, errorCode, errorMessage } = await getTeacherByCode({ teacherCode, subjectId: selectedSubjectId });
       
-      if (!teacherId || !teacherName) {
-        toast({ title: 'فشل الربط', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
+      if (errorCode || !teacherId || !teacherName) {
+        toast({ title: 'فشل الربط', description: errorMessage || 'حدث خطأ غير متوقع.', variant: 'destructive' });
         setIsLinking(false);
         return;
       }

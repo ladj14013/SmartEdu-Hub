@@ -20,6 +20,8 @@ export type GetTeacherByCodeInput = z.infer<typeof GetTeacherByCodeInputSchema>;
 const GetTeacherByCodeOutputSchema = z.object({
   teacherId: z.string().optional(),
   teacherName: z.string().optional(),
+  errorCode: z.enum(['NOT_FOUND', 'WRONG_SUBJECT']).optional(),
+  errorMessage: z.string().optional(),
 });
 
 export type GetTeacherByCodeOutput = z.infer<typeof GetTeacherByCodeOutputSchema>;
@@ -42,7 +44,7 @@ const getTeacherByCodeFlow = ai.defineFlow(
     // This flow runs on the server with admin privileges.
     const firestore = getFirestore();
     
-    // Query for the teacher using only the code and role. This is a simple query.
+    // Step 1: Query for the teacher using only the code and role. This is a simple query.
     const teachersCol = firestore.collection('users');
     const q = teachersCol
       .where('teacherCode', '==', teacherCode)
@@ -51,21 +53,26 @@ const getTeacherByCodeFlow = ai.defineFlow(
 
     const teacherSnapshot = await q.get();
 
-    // If no teacher is found with that code, return empty.
+    // Step 2: Handle case where no teacher is found with that code.
     if (teacherSnapshot.empty) {
-        return {};
+        return {
+            errorCode: 'NOT_FOUND',
+            errorMessage: 'لم يتم العثور على أستاذ بهذا الكود.'
+        };
     }
     
     const teacherDoc = teacherSnapshot.docs[0];
     const teacherData = teacherDoc.data();
     
-    // Manually verify if the found teacher's subjectId matches the required one.
+    // Step 3: Manually verify if the found teacher's subjectId matches the required one.
     if (teacherData.subjectId !== subjectId) {
-        // The code is correct, but for the wrong subject. Treat as not found.
-        return {};
+        return {
+            errorCode: 'WRONG_SUBJECT',
+            errorMessage: 'هذا الكود صحيح، لكنه مخصص لمادة أخرى.'
+        };
     }
     
-    // If everything matches, return the teacher's data.
+    // Step 4: If everything matches, return the teacher's data.
     return {
         teacherId: teacherDoc.id,
         teacherName: teacherData.name,

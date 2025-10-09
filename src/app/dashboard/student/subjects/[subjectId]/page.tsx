@@ -71,10 +71,10 @@ export default function SubjectPage() {
     if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
-        const { teacherId, teacherName } = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId });
+        const { teacherId, teacherName, errorCode, errorMessage } = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId });
 
-        if (!teacherId || !teacherName) {
-            toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة.', variant: 'destructive' });
+        if (errorCode || !teacherId || !teacherName) {
+            toast({ title: 'فشل الربط', description: errorMessage || 'حدث خطأ غير متوقع.', variant: 'destructive' });
             setIsLinking(false);
             return;
         }
