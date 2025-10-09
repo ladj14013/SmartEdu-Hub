@@ -41,8 +41,9 @@ export default function SupervisorSubjectDashboard() {
 
     const subjectRef = useMemoFirebase(() => (firestore && supervisor?.subjectId) ? doc(firestore, 'subjects', supervisor.subjectId) : null, [firestore, supervisor?.subjectId]);
     const { data: subject, isLoading: isSubjectLoading } = useDoc<SubjectType>(subjectRef);
-
-    // Query for teachers under this supervisor's responsibility
+    
+    // Query for teachers under this supervisor's responsibility.
+    // This query is safe because it's highly specific and protected by security rules.
     const teachersQuery = useMemoFirebase(() => {
         if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
         return query(
@@ -96,7 +97,7 @@ export default function SupervisorSubjectDashboard() {
         </Card>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <StatCard 
             title="الدروس العامة" 
             value={publicLessons?.length ?? 0}
@@ -110,13 +111,6 @@ export default function SupervisorSubjectDashboard() {
             description="دروس أنشأها الأساتذة"
             icon={BookLock}
             isLoading={arePrivateLessonsLoading}
-        />
-        <StatCard
-            title="إجمالي الأساتذة"
-            value={teachers?.length ?? 0}
-            description="أستاذًا تشرف عليهم في هذه المادة"
-            icon={Users}
-            isLoading={isLoading}
         />
       </div>
     </div>
