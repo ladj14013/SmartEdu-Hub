@@ -21,7 +21,7 @@ export default function TeacherDashboard() {
 
   // --- Data Fetching ---
   const teacherRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+  const { data: teacher, isLoading: isTeacherLoading, refetch } = useDoc<UserType>(teacherRef);
 
   const stageRef = useMemoFirebase(() => (firestore && teacher?.stageId) ? doc(firestore, 'stages', teacher.stageId) : null, [firestore, teacher?.stageId]);
   const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
@@ -36,9 +36,9 @@ export default function TeacherDashboard() {
   const { data: privateLessons, isLoading: areLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
 
   const linkedStudentsQuery = useMemoFirebase(() => {
-    if (!firestore || !authUser) return null;
-    return query(collection(firestore, 'users'), where('linkedTeacherId', '==', authUser.uid));
-  }, [firestore, authUser]);
+    if (!firestore || !authUser || !teacher?.subjectId) return null;
+    return query(collection(firestore, 'users'), where(`linkedTeachers.${teacher.subjectId}`, '==', authUser.uid));
+  }, [firestore, authUser, teacher?.subjectId]);
   const { data: linkedStudents, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
 
   const isLoading = isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading || areStudentsLoading;
@@ -58,8 +58,8 @@ export default function TeacherDashboard() {
         const code = Math.random().toString(36).substring(2, 8).toUpperCase();
         const teacherDocRef = doc(firestore, 'users', authUser.uid);
         await updateDoc(teacherDocRef, { teacherCode: code });
+        refetch(); // Refetch teacher data to get the new code
         toast({ title: "تم توليد الكود بنجاح", description: `الكود الجديد هو: ${code}` });
-        // No need to refetch, onSnapshot will update the UI
     } catch (error) {
         console.error("Error generating teacher code:", error);
         toast({ title: "فشل توليد الكود", variant: "destructive" });
