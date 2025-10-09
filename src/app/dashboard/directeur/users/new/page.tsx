@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword, type UserCredential } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { useAuth, useFirestore } from '@/firebase';
+import { doc, setDoc, collection } from 'firebase/firestore';
+import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,13 +18,45 @@ import { Loader2, Save } from 'lucide-react';
 import Link from 'next/link';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
+import type { Stage, Level, Subject } from '@/lib/types';
+
 
 const newUserSchema = z.object({
   name: z.string().min(1, { message: "الرجاء إدخال الاسم الكامل." }),
   email: z.string().email({ message: "الرجاء إدخال بريد إلكتروني صالح." }),
   password: z.string().min(6, { message: "يجب أن تكون كلمة المرور 6 أحرف على الأقل." }),
   role: z.enum(['student', 'teacher', 'parent', 'supervisor_subject', 'supervisor_general', 'directeur']),
-});
+  stageId: z.string().optional(),
+  levelId: z.string().optional(),
+  subjectId: z.string().optional(),
+}).refine((data) => {
+    // Stage is required for student, teacher, and subject supervisor
+    if (['student', 'teacher', 'supervisor_subject'].includes(data.role)) {
+      return !!data.stageId;
+    }
+    return true;
+  }, {
+    message: "الرجاء اختيار المرحلة الدراسية.",
+    path: ["stageId"],
+  }).refine((data) => {
+    // Level is required for student
+    if (data.role === 'student') {
+        return !!data.levelId;
+    }
+    return true;
+  }, {
+    message: "الرجاء اختيار المستوى الدراسي.",
+    path: ["levelId"],
+  }).refine((data) => {
+    // Subject is required for teacher and subject supervisor
+    if (['teacher', 'supervisor_subject'].includes(data.role)) {
+        return !!data.subjectId;
+    }
+    return true;
+  }, {
+    message: "الرجاء اختيار المادة.",
+    path: ["subjectId"],
+  });
 
 type NewUserFormValues = z.infer<typeof newUserSchema>;
 
@@ -35,6 +67,15 @@ export default function NewUserPage() {
   const auth = useAuth();
   const { toast } = useToast();
 
+  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
+  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
+  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
+
+  const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
+  const { data: levels, isLoading: isLoadingLevels } = useCollection<Level>(levelsQuery);
+  const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
+
+
   const form = useForm<NewUserFormValues>({
     resolver: zodResolver(newUserSchema),
     defaultValues: {
@@ -44,6 +85,13 @@ export default function NewUserPage() {
       role: 'student',
     },
   });
+
+  const role = form.watch('role');
+  const selectedStage = form.watch('stageId');
+  
+  const filteredLevels = levels?.filter(level => level.stageId === selectedStage) || [];
+  const filteredSubjects = subjects?.filter(subject => subject.stageId === selectedStage) || [];
+
 
   const onSubmit = async (data: NewUserFormValues) => {
     if (!firestore || !auth) {
@@ -87,11 +135,17 @@ export default function NewUserPage() {
             name: data.name,
             email: data.email,
             role: data.role,
+            stageId: data.stageId || null,
+            levelId: data.levelId || null,
+            subjectId: data.subjectId || null,
             avatar: `https://i.pravatar.cc/150?u=${user.uid}`
         };
 
         if (data.role === 'teacher') {
             userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        }
+        if (data.role === 'student') {
+            userData.linkedTeachers = {};
         }
 
         await setDoc(doc(firestore, "users", user.uid), userData);
@@ -191,12 +245,88 @@ export default function NewUserPage() {
                   </FormItem>
                 )}
               />
+
+                {(role === 'student' || role === 'teacher' || role === 'supervisor_subject') && (
+                   <FormField
+                      control={form.control}
+                      name="stageId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label>المرحلة الدراسية</Label>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر المرحلة" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {stages?.map(stage => (
+                                <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                )}
+                
+                {role === 'student' && selectedStage && (
+                   <FormField
+                      control={form.control}
+                      name="levelId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label>المستوى الدراسي</Label>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر المستوى" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {filteredLevels.map(level => (
+                                <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                )}
+
+                {(role === 'teacher' || role === 'supervisor_subject') && selectedStage && (
+                   <FormField
+                      control={form.control}
+                      name="subjectId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Label>المادة</Label>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="اختر المادة" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {filteredSubjects.map(subject => (
+                                <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                )}
+
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
                 <Button variant="outline" asChild type="button">
                     <Link href="/dashboard/directeur/users">إلغاء</Link>
                 </Button>
-                <Button type="submit" variant="accent" disabled={isLoading}>
+                <Button type="submit" variant="accent" disabled={isLoading || isLoadingStages || isLoadingLevels || isLoadingSubjects}>
                   {isLoading ? (
                     <>
                       <Loader2 className="ml-2 h-4 w-4 animate-spin" />
