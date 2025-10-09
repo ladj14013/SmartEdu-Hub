@@ -47,17 +47,6 @@ export default function SupervisorSubjectDashboard() {
     const mockPrivateLessonsCount = 12;
     const arePrivateLessonsLoading = false;
 
-    // Query for students in the same stage
-    const studentsQuery = useMemoFirebase(() => {
-        if (!firestore || !supervisor?.stageId) return null;
-        return query(
-            collection(firestore, 'users'),
-            where('role', '==', 'student'),
-            where('stageId', '==', supervisor.stageId)
-        );
-    }, [firestore, supervisor?.stageId]);
-    const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(studentsQuery);
-
     // Query for public lessons created by this supervisor
     const publicLessonsQuery = useMemoFirebase(() => {
         if (!firestore || !authUser || !supervisor?.subjectId) return null;
@@ -70,7 +59,7 @@ export default function SupervisorSubjectDashboard() {
     }, [firestore, authUser, supervisor]);
     const { data: publicLessons, isLoading: arePublicLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
     
-    const isLoading = isAuthLoading || isSupervisorLoading || isStageLoading || isSubjectLoading || areStudentsLoading || arePublicLessonsLoading;
+    const isLoading = isAuthLoading || isSupervisorLoading || isStageLoading || isSubjectLoading || arePublicLessonsLoading;
     
     const supervisorName = supervisor?.name || '...';
     const subjectName = subject?.name || '...';
@@ -98,13 +87,6 @@ export default function SupervisorSubjectDashboard() {
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <StatCard 
-            title="إجمالي التلاميذ" 
-            value={students?.length ?? 0}
-            description={`المسجلين في ${stageName}`}
-            icon={GraduationCap}
-            isLoading={isLoading}
-        />
         <StatCard 
             title="الدروس العامة" 
             value={publicLessons?.length ?? 0}
