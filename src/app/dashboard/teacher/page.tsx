@@ -116,7 +116,6 @@ export default function TeacherDashboard() {
     return <TeacherDashboardSkeleton />;
   }
 
-  const teacherCode = teacher?.teacherCode;
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
@@ -124,8 +123,16 @@ export default function TeacherDashboard() {
   return (
     <div className="space-y-6" suppressHydrationWarning>
       <PageHeader
-        title={`مرحباً بك أستاذ: ${teacherName}`}
-        description={`أنت تدرس مادة ${subjectName} لـ ${stageName}.`}
+        title={
+            <span>
+                مرحباً بك أستاذ: <span className="text-amber-500 font-bold">{teacherName}</span>
+            </span>
+        }
+        description={
+            <span>
+                أنت تدرس مادة <span className="text-amber-500 font-semibold">{subjectName}</span> لـ <span className="text-amber-500 font-semibold">{stageName}</span>.
+            </span>
+        }
       />
 
       <div className="grid gap-6 md:grid-cols-2">
