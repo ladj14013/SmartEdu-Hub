@@ -9,11 +9,13 @@ import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useParams } from 'next/navigation';
 
-export default function StudentLessonPage({ params }: { params: { lessonId: string } }) {
-  const { lessonId } = params;
+export default function StudentLessonPage() {
+  const params = useParams();
+  const lessonId = Array.isArray(params.lessonId) ? params.lessonId[0] : params.lessonId;
   const firestore = useFirestore();
-  const lessonRef = useMemoFirebase(() => firestore ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
+  const lessonRef = useMemoFirebase(() => firestore && lessonId ? doc(firestore, 'lessons', lessonId) : null, [firestore, lessonId]);
   const { data: lesson, isLoading } = useDoc<Lesson>(lessonRef);
 
   if (isLoading) {
