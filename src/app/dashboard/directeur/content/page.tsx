@@ -340,6 +340,10 @@ const stageColors = [
     { bg: 'bg-rose-50', trigger: 'hover:bg-rose-100', content: 'bg-rose-50/50' },
 ];
 
+const levelColors = [
+    'bg-teal-50', 'bg-cyan-50', 'bg-blue-50', 'bg-indigo-50', 'bg-purple-50', 'bg-pink-50', 'bg-stone-50'
+];
+
 
 export default function ContentManagementPage() {
   const firestore = useFirestore();
@@ -630,7 +634,10 @@ export default function ContentManagementPage() {
                              <CollapsibleContent className="space-y-2 py-2">
                                 <Dialog onOpenChange={(open) => !open && setEditingLevel(null)}>
                                 {levelsInStage.map((level, levelIndex) => (
-                                    <div key={level.id} className="flex items-center justify-between rounded-md border bg-white p-3">
+                                    <div key={level.id} className={cn(
+                                        "flex items-center justify-between rounded-md border p-3",
+                                        levelColors[levelIndex % levelColors.length]
+                                    )}>
                                         <span className="font-semibold">{level.name}</span>
                                         <div className="flex items-center gap-1">
                                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleMoveLevel(levelsInStage, levelIndex, 'up')} disabled={levelIndex === 0}>
