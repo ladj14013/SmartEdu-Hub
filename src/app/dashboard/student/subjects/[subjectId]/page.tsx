@@ -15,22 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { useParams } from 'next/navigation';
 
-function LinkedTeacherInfo({ teacherId }: { teacherId: string }) {
-  const firestore = useFirestore();
-  const teacherRef = useMemoFirebase(() => (firestore && teacherId) ? doc(firestore, 'users', teacherId) : null, [firestore, teacherId]);
-  const { data: teacher, isLoading } = useDoc<UserType>(teacherRef);
-
-  if (isLoading) {
-    return <Skeleton className="h-5 w-32" />;
-  }
-
-  return (
-    <p className="font-semibold">
-      أنت مرتبط مع الأستاذ: <span className="text-primary">{teacher?.name || '...'}</span>
-    </p>
-  );
-}
-
 
 export default function SubjectPage() {
   const params = useParams();
@@ -40,6 +24,7 @@ export default function SubjectPage() {
   const { toast } = useToast();
   const [isLinking, setIsLinking] = useState(false);
   const [teacherCode, setTeacherCode] = useState('');
+  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
   
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -48,7 +33,7 @@ export default function SubjectPage() {
   const { data: subject, isLoading: isSubjectLoading } = useDoc<Subject>(subjectRef);
   const { data: student, isLoading: isStudentLoading, refetch: refetchStudent } = useDoc<UserType>(studentRef);
 
-  const linkedTeacherId = student?.linkedTeachers?.[subjectId];
+  const linkedTeacherId = student?.linkedTeachers?.[subjectId as string];
   
   const lessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student || !subjectId) return null;
@@ -63,12 +48,27 @@ export default function SubjectPage() {
   );
 
   const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || areLessonsLoading;
+  
+  // Fetch linked teacher's name when component mounts or linkedTeacherId changes
+  useEffect(() => {
+    if (linkedTeacherId) {
+      const fetchTeacherName = async () => {
+        const result = await getTeacherByCode({ teacherId: linkedTeacherId });
+        if (result.teacherName) {
+          setLinkedTeacherName(result.teacherName);
+        }
+      };
+      fetchTeacherName();
+    } else {
+        setLinkedTeacherName(null);
+    }
+  }, [linkedTeacherId]);
 
   const handleLinkTeacher = async () => {
     if (!firestore || !student || !teacherCode.trim() || !subjectId) return;
     setIsLinking(true);
     try {
-        const result = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId });
+        const result = await getTeacherByCode({ teacherCode: teacherCode.trim(), subjectId: subjectId as string });
 
         if (result.error || !result.teacherId || !result.teacherName) {
             toast({ title: 'الكود غير صحيح', description: 'لم يتم العثور على أستاذ بهذا الكود لهذه المادة. يرجى التأكد منه.', variant: 'destructive' });
@@ -83,6 +83,7 @@ export default function SubjectPage() {
         });
 
         toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${result.teacherName} في هذه المادة.` });
+        setLinkedTeacherName(result.teacherName);
         refetchStudent();
 
     } catch (error) {
@@ -113,7 +114,7 @@ export default function SubjectPage() {
     <div className="space-y-6">
       <PageHeader
         title={`مادة: ${subject.name}`}
-        description={subject.description}
+        description={subject.description || 'وصف المادة'}
       >
         <Button variant="outline" asChild>
           <Link href="/dashboard/student/subjects">
@@ -132,7 +133,9 @@ export default function SubjectPage() {
             <div className="flex items-center gap-3 p-4 bg-green-50 border-r-4 border-green-500 rounded-md">
               <CheckCircle className="h-6 w-6 text-green-600" />
               <div>
-                <LinkedTeacherInfo teacherId={linkedTeacherId} />
+                <p className="font-semibold">
+                    أنت مرتبط مع الأستاذ: <span className="text-primary">{linkedTeacherName || <Loader2 className="inline-block h-4 w-4 animate-spin" />}</span>
+                </p>
                 <p className="text-sm text-muted-foreground">يمكنك الآن الوصول إلى الدروس الخاصة بهذا الأستاذ.</p>
               </div>
             </div>
