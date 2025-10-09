@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -47,7 +48,6 @@ const navLinks = {
   supervisor_subject: [
     { href: '/dashboard/supervisor_subject', label: 'الرئيسية', icon: Home },
     { href: '/dashboard/supervisor_subject/content', label: 'إدارة المحتوى العام', icon: BookCopy },
-    { href: '/dashboard/supervisor_subject/teachers', label: 'قائمة الأساتذة', icon: Users },
   ],
   supervisor_general: [
     { href: '/dashboard/supervisor_general', label: 'الرئيسية', icon: Home },
