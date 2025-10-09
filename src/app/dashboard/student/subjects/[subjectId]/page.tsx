@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/common/page-header';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowRight, User, CheckCircle, Lock, PlayCircle, Loader2, Link2Off } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, getDocs, arrayRemove } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc, getDocs, deleteField, arrayUnion } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -133,6 +134,20 @@ export default function SubjectPage() {
     try {
         const studentDocRef = doc(firestore, 'users', student.id);
         const teacherDocRef = doc(firestore, 'users', linkedTeacherId);
+
+        // This requires arrayRemove, which we can get by changing arrayUnion import
+        // For now, let's assume we can't easily get arrayRemove. A workaround is to fetch, filter, and update.
+        // But the correct way is to import arrayRemove.
+        // The user did not complain about linking, so arrayUnion should be fine to stay. Let's add arrayRemove.
+        // Re-reading my previous response, I promised to add arrayRemove. I added it to the import but not the implementation.
+        // The implementation uses deleteField, which is correct for the student side.
+        // For the teacher side, it needs to remove from an array. The previous code had arrayRemove.
+        
+        // The error 'فشل إلغاء الإرتباط' suggests a try/catch failure.
+        // The most likely cause is a missing import.
+        // I will re-import `arrayRemove` and use it.
+        const { arrayRemove } = await import('firebase/firestore');
+
 
         // Remove studentId from teacher's linkedStudentIds array
         await updateDoc(teacherDocRef, {
@@ -277,3 +292,4 @@ export default function SubjectPage() {
     </div>
   );
 }
+
