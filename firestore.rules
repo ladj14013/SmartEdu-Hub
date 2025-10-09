@@ -10,76 +10,80 @@ service cloud.firestore {
     }
 
     function isOwner(userId) {
-      return request.auth.uid == userId;
+      return isUserAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function getUserRole() {
-      // Safely access user data, returns null if user doc doesn't exist
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      if (!isUserAuthenticated()) {
+        return null;
+      }
+      return getUserData().role;
+    }
+
+    function isRole(role) {
+        return isUserAuthenticated() && getUserRole() == role;
     }
 
     function isDirector() {
-      return isUserAuthenticated() && getUserRole() == 'directeur';
+      return isRole('directeur');
     }
 
-    function isSupervisor() {
-      return isUserAuthenticated() && (getUserRole() == 'supervisor_general' || getUserRole() == 'supervisor_subject');
-    }
+    // --- Specific Collection Rules ---
 
-    function isTeacher() {
-      return isUserAuthenticated() && getUserRole() == 'teacher';
+    // Anyone can read public data
+    match /stages/{stageId} {
+      allow read: if true;
+      allow write: if isDirector();
     }
-
-    // --- Public Data Rules ---
-    // Anyone can read stages, levels, subjects, and general settings
-    match /(stages|levels|subjects|settings)/{docId} {
+    match /levels/{levelId} {
+      allow read: if true;
+      allow write: if isDirector();
+    }
+    match /subjects/{subjectId} {
+      allow read: if true;
+      allow write: if isDirector();
+    }
+     match /settings/{settingId} {
       allow read: if true;
       allow write: if isDirector();
     }
 
-    // --- User Data Rules ---
+    // Users can read/write their own data. Director has full access.
     match /users/{userId} {
-      // Anyone can create their own user document (on signup)
-      allow create: if isOwner(userId);
-      // Only the owner or a director can read user data
-      allow read: if isOwner(userId) || isDirector() || isSupervisor();
-      // Only the owner or a director can update user data
-      allow update: if isOwner(userId) || isDirector();
-      // Only a director can delete a user
-      allow delete: if isDirector();
+      allow read, update: if isOwner(userId) || isDirector();
+      allow create, delete: if isDirector(); // Only director can create/delete users
     }
-
-    // --- Lessons Rules ---
+    
+    // Lessons can be read by any authenticated user.
+    // Write access is for the author or the director.
     match /lessons/{lessonId} {
-      // Authenticated users can read lessons
       allow read: if isUserAuthenticated();
-      // Owner of the lesson or a director can create/update/delete
-      allow create, update, delete: if isDirector() || (isUserAuthenticated() && request.resource.data.authorId == request.auth.uid);
+      allow write: if isDirector() || (isUserAuthenticated() && request.resource.data.authorId == request.auth.uid);
     }
     
-    // --- Student Progress Rules ---
-    match /users/{studentId}/lessonProgress/{progressId} {
-        // A student can read/write their own progress
-        allow read, write: if isOwner(studentId);
-        // A teacher or supervisor can read student progress
-        allow read: if isTeacher() || isSupervisor() || isDirector();
-    }
-    
-    // --- Messages Rules ---
+    // Authenticated users can send messages. Director can forward/update them.
     match /messages/{messageId} {
-        // Anyone can send a message
-        allow create: if true;
-        // Only directors and supervisors can read/update messages
-        allow read, update: if isDirector() || isSupervisorGeneral();
+        allow create: if isUserAuthenticated();
+        allow update: if isDirector();
     }
     
-    // --- Supervisor Notes ---
+    // Notes can be created by authenticated users.
     match /supervisor_notes/{noteId} {
-      // Supervisors and teachers can create notes
-      allow create: if isSupervisor() || isTeacher();
-      // The involved supervisor and teacher can read them
-      allow read: if isUserAuthenticated();
+      allow read, create: if isUserAuthenticated();
     }
 
+    // Users can manage their own lesson progress.
+    match /users/{userId}/lessonProgress/{lessonId} {
+        allow read, write: if isOwner(userId);
+    }
+
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
   }
 }
