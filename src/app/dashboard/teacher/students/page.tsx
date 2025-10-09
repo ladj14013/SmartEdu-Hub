@@ -37,7 +37,11 @@ export default function TeacherStudentsPage() {
   const { data: students, isLoading: areStudentsLoading } = useCollection<UserType>(linkedStudentsQuery);
   
   // Get all levels to display student's level name
-  const levelsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'levels') : null, [firestore]);
+  const levelsQuery = useMemoFirebase(() => {
+    if (!firestore || !teacher?.stageId) return null;
+    return query(collection(firestore, 'levels'), where('stageId', '==', teacher.stageId));
+  }, [firestore, teacher?.stageId]);
+
   const { data: levels, isLoading: areLevelsLoading } = useCollection<Level>(levelsQuery);
   
   const levelsMap = useMemo(() => {
