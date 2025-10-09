@@ -49,7 +49,7 @@ export default function SubjectPage() {
   const linkedTeacherId = student?.linkedTeachers?.[subjectId as string];
   
   // Fetch linked teacher's data directly using useDoc, enabled by new security rules
-  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', teacherId) : null, [firestore, linkedTeacherId]);
+  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
   const { data: linkedTeacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
 
@@ -247,5 +247,3 @@ export default function SubjectPage() {
     </div>
   );
 }
-
-    
