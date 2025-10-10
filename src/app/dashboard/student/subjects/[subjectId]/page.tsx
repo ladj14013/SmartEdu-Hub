@@ -16,7 +16,7 @@ import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { linkStudentToTeacher } from '@/app/actions/student-actions';
 import { Badge } from '@/components/ui/badge';
 
-function TeacherLinkCard({ student, onLinkSuccess, setTeacherName }: { student: UserType | null, onLinkSuccess: () => void, setTeacherName: (name: string) => void }) {
+function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
     const [teacherCode, setTeacherCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
@@ -38,7 +38,6 @@ function TeacherLinkCard({ student, onLinkSuccess, setTeacherName }: { student: 
 
             if (result.success && result.teacherName && result.teacherId) {
                 setVerificationResult({ teacherName: result.teacherName, teacherId: result.teacherId });
-                setTeacherName(result.teacherName); // Set teacher name in parent component
             } else {
                 setVerificationError(result.error || 'فشل التحقق من الكود.');
             }
@@ -161,7 +160,6 @@ export default function SubjectPage() {
   const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
-  const [teacherName, setTeacherName] = useState<string | null>(null);
   
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -181,12 +179,6 @@ export default function SubjectPage() {
   // Fetch teacher name if already linked
   const linkedTeacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
   const { data: linkedTeacher, isLoading: isLinkedTeacherLoading } = useDoc<UserType>(linkedTeacherRef);
-
-  useEffect(() => {
-    if (linkedTeacher?.name) {
-      setTeacherName(linkedTeacher.name);
-    }
-  }, [linkedTeacher]);
 
   const publicLessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student?.levelId || !subjectId) return null;
@@ -237,6 +229,7 @@ export default function SubjectPage() {
   
   const pageTitle = `مادة: ${subject.name || ''}`;
   const pageDescription = `${level?.name || ''} - ${stage?.name || ''}`;
+  const teacherName = linkedTeacher?.name || 'فلان';
 
 
   return (
@@ -264,12 +257,12 @@ export default function SubjectPage() {
             {linkedTeacherId ? (
                  <LessonListCard 
                     title={`الدروس الخاصة بالأستاذ`}
-                    description={teacherName ? `محتوى خاص مقدم من الأستاذ: ${teacherName}` : 'جاري تحميل دروس الأستاذ...'}
+                    description={`محتوى خاص مقدم من الأستاذ: ${teacherName}`}
                     lessons={privateLessons}
                     isLoading={arePrivateLessonsLoading || isLinkedTeacherLoading}
                 />
             ) : (
-                 <TeacherLinkCard student={student} onLinkSuccess={handleLinkSuccess} setTeacherName={setTeacherName} />
+                 <TeacherLinkCard student={student} onLinkSuccess={handleLinkSuccess} />
             )}
         </div>
       </div>
