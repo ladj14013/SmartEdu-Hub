@@ -7,22 +7,25 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowRight, Wand2, Loader2, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType, Level, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
+import { linkStudentToTeacher } from '@/app/actions/student-actions';
 
 
 function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
     const [teacherCode, setTeacherCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
+    const [isLinking, setIsLinking] = useState(false);
     const [verificationResult, setVerificationResult] = useState<{ teacherName: string; teacherId: string } | null>(null);
     const [verificationError, setVerificationError] = useState<string | null>(null);
     const params = useParams();
     const subjectId = params.subjectId as string;
+    const { toast } = useToast();
 
     const handleVerifyCode = async () => {
         if (!teacherCode.trim() || !subjectId) return;
@@ -46,6 +49,36 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
             setIsVerifying(false);
         }
     };
+    
+    const handleLinkStudent = async () => {
+        if (!student || !verificationResult) return;
+        setIsLinking(true);
+        try {
+            const result = await linkStudentToTeacher(student.id, subjectId, verificationResult.teacherId);
+            if (result.success) {
+                toast({
+                    title: 'تم الارتباط بنجاح',
+                    description: `أصبحت الآن مرتبطاً بالأستاذ ${verificationResult.teacherName}`,
+                });
+                onLinkSuccess();
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error: any) {
+            toast({
+                title: 'فشل الارتباط',
+                description: error.message || 'حدث خطأ غير متوقع.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsLinking(false);
+        }
+    };
+
+    const isAlreadyLinked = student?.linkedTeachers && student.linkedTeachers[subjectId];
+    if (isAlreadyLinked) {
+        return null;
+    }
     
     return (
         <Card>
@@ -78,6 +111,10 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
                  {verificationResult && (
                      <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-800 rounded-md space-y-3">
                         <p className="font-semibold">تم العثور على الأستاذ: {verificationResult.teacherName}</p>
+                        <Button onClick={handleLinkStudent} disabled={isLinking} size="sm" className="w-full sm:w-auto">
+                           {isLinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Link2 className="ml-2 h-4 w-4" />}
+                           {isLinking ? 'جاري الارتباط...' : 'تأكيد الارتباط'}
+                        </Button>
                      </div>
                  )}
             </CardContent>
@@ -175,6 +212,38 @@ export default function SubjectPage() {
       </PageHeader>
 
       <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
+
+      <Card>
+        <CardHeader>
+          <CardTitle>قائمة الدروس</CardTitle>
+          <CardDescription>
+            تصفح الدروس المتاحة في هذه المادة. الدروس الخاصة تظهر بعد الارتباط مع الأستاذ.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y rounded-md border">
+            {allLessons?.length > 0 ? (
+              allLessons.map(lesson => (
+                <Link
+                  key={lesson.id}
+                  href={`/dashboard/student/lessons/${lesson.id}`}
+                  className="flex items-center justify-between p-4 hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{lesson.title}</span>
+                    {lesson.type === 'private' && <Badge>خاص</Badge>}
+                  </div>
+                  <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              ))
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                لا توجد دروس متاحة في هذه المادة حتى الآن.
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
       
     </div>
   );
