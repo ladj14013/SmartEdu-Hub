@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -87,6 +88,7 @@ export default function NewLessonPage() {
             videoUrl: data.videoUrl || null,
             pdfUrl: data.pdfUrl || null,
             authorId: authUser.uid,
+            authorName: teacher.name, // Add teacher's name
             subjectId: teacher.subjectId,
             levelId: data.levelId,
             type: 'private',

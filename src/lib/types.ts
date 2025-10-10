@@ -48,6 +48,7 @@ export interface Lesson {
   subjectId: string;
   levelId: string;
   authorId: string;
+  authorName?: string; // Add authorName to store the teacher's name
   type: 'public' | 'private';
   isLocked: boolean;
   exercises: Exercise[];

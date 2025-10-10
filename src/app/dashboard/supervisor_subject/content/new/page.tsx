@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -88,6 +89,7 @@ export default function NewPublicLessonPage() {
             videoUrl: data.videoUrl || null,
             pdfUrl: data.pdfUrl || null,
             authorId: authUser.uid,
+            authorName: supervisor.name, // Add supervisor's name
             subjectId: supervisor.subjectId,
             levelId: data.levelId,
             type: 'public', // Set lesson type to public
