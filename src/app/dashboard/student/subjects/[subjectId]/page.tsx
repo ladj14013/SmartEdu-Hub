@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowRight, Wand2, Loader2, Link2, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, Wand2, Loader2, Link2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
@@ -16,7 +16,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { linkStudentToTeacher } from '@/app/actions/student-actions';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
@@ -119,32 +118,6 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
     );
 }
 
-// Component to fetch and display teacher name, shown after linking
-function LinkedTeacherInfo({ teacherId }: { teacherId: string }) {
-    const firestore = useFirestore();
-    const teacherRef = useMemoFirebase(() => (firestore && teacherId) ? doc(firestore, 'users', teacherId) : null, [firestore, teacherId]);
-    const { data: teacher, isLoading } = useDoc<UserType>(teacherRef);
-
-    if (isLoading) {
-        return <Skeleton className="h-6 w-40" />;
-    }
-
-    if (!teacher) {
-        return null;
-    }
-
-    return (
-        <Alert className="border-green-600 bg-green-50 text-green-900">
-          <CheckCircle2 className="h-4 w-4 !text-green-600" />
-          <AlertTitle className="font-bold">تم الارتباط بنجاح!</AlertTitle>
-          <AlertDescription>
-            يمكنك الآن متابعة الأستاذ <strong>{teacher.name}</strong> وحل التمارين التي يقترحها.
-          </AlertDescription>
-        </Alert>
-    );
-}
-
-
 export default function SubjectPage() {
   const params = useParams();
   const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
@@ -233,12 +206,9 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      {linkedTeacherId ? (
-         <LinkedTeacherInfo teacherId={linkedTeacherId} />
-      ) : (
-         <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
+      {!linkedTeacherId && (
+        <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
       )}
-
 
       <Card>
         <CardHeader>
