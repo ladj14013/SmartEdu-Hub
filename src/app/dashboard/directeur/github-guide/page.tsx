@@ -1,11 +1,13 @@
+
 'use client';
 
 import { PageHeader } from '@/components/common/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Clipboard, Download, Github } from 'lucide-react';
+import { Check, Clipboard, Download, Github, AlertTriangle } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const CodeBlock = ({ command }: { command: string }) => {
     const [copied, setCopied] = useState(false);
@@ -40,6 +42,15 @@ export default function GitHubGuidePage() {
                 title="دليل GitHub"
                 description="اتبع هذه الخطوات لتهيئة مستودع Git ورفع مشروعك أو سحبه من GitHub."
             />
+
+             <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>مشكلة المصادقة (Authentication Failed)</AlertTitle>
+                <AlertDescription>
+                    إذا واجهت خطأ `Authentication failed` عند محاولة الرفع، فهذا يعني أنك بحاجة إلى استخدام Personal Access Token (PAT) بدلاً من كلمة المرور. اتبع الخطوات في **الخطوة 5** أدناه لإنشاء واحد.
+                </AlertDescription>
+            </Alert>
+
 
             <Card>
                 <CardHeader>
@@ -82,7 +93,7 @@ export default function GitHubGuidePage() {
                     <CardTitle>الخطوة 4: إنشاء مستودع جديد على GitHub</CardTitle>
                     <CardDescription>
                         اذهب إلى <a href="https://github.com/new" target="_blank" rel="noopener noreferrer" className="text-primary underline">صفحة إنشاء مستودع جديد على GitHub</a>.
-                         أدخل اسمًا للمستودع (يفضل أن يكون نفس اسم مجلد المشروع)، وتأكد من أنه "Public" أو "Private" حسب رغبتك، ثم اضغط على "Create repository".
+                         أدخل اسمًا للمستودع، وتأكد من أنه "Public" أو "Private" حسب رغبتك، ثم اضغط على "Create repository".
                          <span className='font-bold'> لا تقم بتهيئة المستودع بملف README أو .gitignore أو license.</span>
                     </CardDescription>
                 </CardHeader>
@@ -93,13 +104,23 @@ export default function GitHubGuidePage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>الخطوة 5: ربط المستودع المحلي بالمستودع البعيد</CardTitle>
+                    <CardTitle>الخطوة 5: ربط المستودع وحل مشكلة المصادقة</CardTitle>
                     <CardDescription>
-                        بعد إنشاء المستودع على GitHub، سيعطيك الأوامر اللازمة لربط مشروعك. انسخ الأمر الذي يبدأ بـ `git remote add origin`.
+                        بعد إنشاء المستودع على GitHub، انسخ الأمر الذي يبدأ بـ `git remote add origin`. لحل مشكلة المصادقة، ستحتاج لإنشاء Personal Access Token (PAT).
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    <p className='font-bold'>أولاً: ربط المستودع</p>
                     <CodeBlock command="git remote add origin https://github.com/YourUsername/YourRepositoryName.git" />
+                    <p className='font-bold pt-4'>ثانياً: إنشاء Personal Access Token (PAT)</p>
+                     <ol className="list-decimal list-inside space-y-2 pr-4 text-sm text-muted-foreground">
+                        <li>اذهب إلى <a href="https://github.com/settings/tokens/new" target="_blank" rel="noopener noreferrer" className="text-primary underline">صفحة إنشاء Token جديد</a>.</li>
+                        <li>أعطِ الـ Token اسمًا وصفيًا (مثلاً: "Firebase Studio Dev").</li>
+                        <li>حدد تاريخ انتهاء صلاحية (موصى به).</li>
+                        <li>في قسم "Repository access"، اختر الصلاحيات التي يحتاجها الـ Token. كحد أدنى، ستحتاج إلى تحديد صلاحية `repo` بالكامل.</li>
+                        <li>انزل إلى الأسفل واضغط على "Generate token".</li>
+                        <li>**مهم جداً:** انسخ الـ Token الذي سيظهر لك واحفظه في مكان آمن. لن تتمكن من رؤيته مرة أخرى!</li>
+                    </ol>
                 </CardContent>
             </Card>
             
@@ -119,7 +140,7 @@ export default function GitHubGuidePage() {
                 <CardHeader>
                     <CardTitle>الخطوة 7: رفع الكود إلى GitHub</CardTitle>
                     <CardDescription>
-                        أخيرًا، قم برفع الكود من فرع `main` المحلي إلى المستودع البعيد على GitHub.
+                        أخيرًا، قم برفع الكود. سيطلب منك Git إدخال اسم المستخدم الخاص بك، ثم سيطلب كلمة المرور. **استخدم الـ Personal Access Token الذي أنشأته ككلمة مرور**.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -144,3 +165,5 @@ export default function GitHubGuidePage() {
         </div>
     );
 }
+
+    
