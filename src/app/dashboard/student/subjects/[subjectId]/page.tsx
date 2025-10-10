@@ -59,7 +59,7 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
                     title: 'تم الارتباط بنجاح',
                     description: `أصبحت الآن مرتبطاً بالأستاذ ${verificationResult.teacherName}`,
                 });
-                onLinkSuccess();
+                onLinkSuccess(); // This will trigger a refetch of student data
             } else {
                 throw new Error(result.error);
             }
@@ -160,7 +160,7 @@ export default function SubjectPage() {
   const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
-  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
+  const [teacherName, setTeacherName] = useState<string | null>(null);
   
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -176,23 +176,6 @@ export default function SubjectPage() {
   const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
 
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
-
-  // We fetch the teacher name ONCE if the student is already linked.
-  // This is safer than a continuous listener.
-  React.useEffect(() => {
-    if (linkedTeacherId && !linkedTeacherName) {
-      const fetchTeacherName = async () => {
-        // This is a one-off action, not a hook, to get the name from the server.
-        // For simplicity, we'll just show 'الأستاذ' if we can't get the name easily
-        // without creating another server action. A more robust solution might
-        // involve a dedicated 'getPublicUserData' server action.
-        // For now, let's just use the fact that they are linked.
-        setLinkedTeacherName("الأستاذ الخاص"); // Placeholder name
-      };
-      fetchTeacherName();
-    }
-  }, [linkedTeacherId, linkedTeacherName]);
-
 
   const publicLessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student?.levelId || !subjectId) return null;
