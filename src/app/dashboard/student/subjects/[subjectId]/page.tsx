@@ -42,6 +42,9 @@ export default function SubjectPage() {
   const [verificationResult, setVerificationResult] = useState<{ teacherId: string, teacherName: string } | null>(null);
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
+  // State to hold teacher name after linking, to avoid re-fetching
+  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
+
   // State for unlinking
   const [isUnlinking, setIsUnlinking] = useState(false);
   
@@ -56,6 +59,13 @@ export default function SubjectPage() {
   
   const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
   const { data: linkedTeacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
+
+  // Set the teacher's name from the document if it's already linked on page load
+  useEffect(() => {
+    if (linkedTeacher) {
+      setLinkedTeacherName(linkedTeacher.name);
+    }
+  }, [linkedTeacher]);
 
 
   const lessonsQuery = useMemoFirebase(() => {
@@ -110,6 +120,10 @@ export default function SubjectPage() {
         });
 
         toast({ title: 'تم الربط بنجاح', description: `لقد تم ربطك مع الأستاذ ${verificationResult.teacherName} في هذه المادة.` });
+        
+        // Use the verified name directly instead of re-fetching
+        setLinkedTeacherName(verificationResult.teacherName);
+
         setTeacherCode('');
         resetVerification();
         refetchStudent();
@@ -140,6 +154,7 @@ export default function SubjectPage() {
       });
 
       toast({ title: 'تم إلغاء الارتباط بنجاح', description: `لم تعد مرتبطًا بالأستاذ في هذه المادة.` });
+      setLinkedTeacherName(null); // Clear the stored name
       refetchStudent();
     } catch (error) {
       console.error("Failed to unlink teacher:", error);
@@ -150,7 +165,7 @@ export default function SubjectPage() {
   };
 
 
-  if (isLoading) {
+  if (isLoading && !linkedTeacherName) { // Also check for linkedTeacherName
     return (
         <div className="space-y-6">
             <PageHeader title={<Skeleton className="h-8 w-48" />} description="جاري تحميل تفاصيل المادة...">
@@ -190,7 +205,7 @@ export default function SubjectPage() {
               <div className="flex items-center gap-3">
                 <CheckCircle className="h-6 w-6 text-green-600" />
                 <p className="font-semibold">
-                    أنت مرتبط مع الأستاذ: {isTeacherLoading ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacher?.name || 'أستاذ غير معروف'}</span>}
+                    أنت مرتبط مع الأستاذ: {isTeacherLoading && !linkedTeacherName ? <Loader2 className="inline-block h-4 w-4 animate-spin" /> : <span className="text-primary">{linkedTeacherName || 'أستاذ غير معروف'}</span>}
                 </p>
               </div>
                <AlertDialog>
@@ -273,11 +288,14 @@ export default function SubjectPage() {
                 </Badge>
               </Wrapper>
             )})}
-             {lessons?.length === 0 && (
-                <div className="p-8 text-center text-muted-foreground">
-                    لا توجد دروس في هذه المادة لمستواك الدراسي حتى الآن.
-                </div>
-            )}
+             {(areLessonsLoading || isStudentLoading) ? 
+                <div className="p-8 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div> :
+                lessons?.length === 0 && (
+                  <div className="p-8 text-center text-muted-foreground">
+                      لا توجد دروس في هذه المادة لمستواك الدراسي حتى الآن.
+                  </div>
+              )
+            }
           </div>
         </CardContent>
       </Card>
