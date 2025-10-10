@@ -13,19 +13,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
 
 function TeacherLinkCard({ student }: { student: UserType | null }) {
     const [teacherCode, setTeacherCode] = useState('');
 
     // The logic is removed, so the card is for display purposes only.
-    const isAlreadyLinked = student?.linkedTeachers && student.linkedTeachers[student.subjectId];
     
-    if (isAlreadyLinked) {
-        return null; // Don't show the card if already linked
-    }
-
     return (
         <Card>
             <CardHeader>
@@ -47,7 +41,7 @@ function TeacherLinkCard({ student }: { student: UserType | null }) {
                         disabled={true}
                     />
                     <Button disabled={true} className="w-full sm:w-auto">
-                        <Wand2 />
+                        <Wand2 className="ml-2 h-4 w-4" />
                         تحقق
                     </Button>
                 </div>
