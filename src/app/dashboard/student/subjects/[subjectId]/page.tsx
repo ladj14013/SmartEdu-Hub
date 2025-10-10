@@ -1,13 +1,13 @@
 
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowRight, Wand2, Loader2, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, doc, query, where, arrayUnion, updateDoc } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType, Level, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
@@ -20,7 +20,7 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
     const [teacherCode, setTeacherCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
-    const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string; teacherId?: string } | null>(null);
+    const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string; teacherId?: string, teacherName?: string } | null>(null);
     const { toast } = useToast();
     const firestore = useFirestore();
 
@@ -32,7 +32,7 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
         try {
             const result = await getTeacherByCode({ teacherCode, subjectId: student.subjectId });
             if (result.success) {
-                setVerificationResult({ success: true, message: `تم العثور على الأستاذ: ${result.teacherName}`, teacherId: result.teacherId });
+                setVerificationResult({ success: true, message: `تم العثور على الأستاذ: ${result.teacherName}`, teacherId: result.teacherId, teacherName: result.teacherName });
             } else {
                 setVerificationResult({ success: false, message: result.error || 'فشل التحقق.' });
             }
@@ -50,13 +50,17 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
 
         try {
             const studentRef = doc(firestore, 'users', student.id);
-            await updateDoc(studentRef, {
-                linkedTeachers: arrayUnion(verificationResult.teacherId)
-            });
+            // Use a specific field for linked teachers to avoid overwriting the whole map
+            // The key is the subjectId and the value is the teacherId
+            const updatePayload = {
+              [`linkedTeachers.${student.subjectId}`]: verificationResult.teacherId
+            };
+
+            await updateDoc(studentRef, updatePayload);
 
             toast({
                 title: "تم الربط بنجاح!",
-                description: `لقد تم ربطك بالأستاذ. يمكنك الآن الوصول لدروسه الخاصة.`,
+                description: `لقد تم ربطك بالأستاذ ${verificationResult.teacherName} في هذه المادة.`,
             });
             onLinkSuccess(); // Trigger refetch in parent component
             setVerificationResult(null); // Reset the card
@@ -72,6 +76,12 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
             setIsLinking(false);
         }
     };
+
+    // Check if the student is already linked for this specific subject
+    if (student?.linkedTeachers && student.linkedTeachers[student.subjectId]) {
+        return null; // Don't show the card if already linked
+    }
+
 
     return (
         <Card>
@@ -141,28 +151,32 @@ export default function SubjectPage() {
   const stageRef = useMemoFirebase(() => (firestore && student?.stageId) ? doc(firestore, 'stages', student.stageId) : null, [firestore, student?.stageId]);
   const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
 
-  // Fetch public lessons
+  // Fetch public lessons for the student's level in this subject
   const publicLessonsQuery = useMemoFirebase(() => {
-    if (!firestore || !student || !subjectId) return null;
+    if (!firestore || !student?.levelId || !subjectId) return null;
     return query(
         collection(firestore, 'lessons'), 
         where('subjectId', '==', subjectId),
         where('levelId', '==', student.levelId),
         where('type', '==', 'public')
     );
-  }, [firestore, subjectId, student]);
+  }, [firestore, subjectId, student?.levelId]);
   const { data: publicLessons, isLoading: arePublicLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
   
-  // Fetch private lessons from linked teachers
+  // Determine the teacher ID for this subject from the student's linked teachers
+  const linkedTeacherId = student?.linkedTeachers?.[subjectId];
+
+  // Fetch private lessons from the linked teacher for this subject
   const privateLessonsQuery = useMemoFirebase(() => {
-    if (!firestore || !student?.linkedTeachers || student.linkedTeachers.length === 0) return null;
+    if (!firestore || !linkedTeacherId || !student?.levelId) return null;
     return query(
         collection(firestore, 'lessons'),
         where('subjectId', '==', subjectId),
         where('levelId', '==', student.levelId),
-        where('authorId', 'in', student.linkedTeachers)
+        where('authorId', '==', linkedTeacherId),
+        where('type', '==', 'private')
     );
-  }, [firestore, subjectId, student]);
+  }, [firestore, subjectId, student?.levelId, linkedTeacherId]);
   const { data: privateLessons, isLoading: arePrivateLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
 
   const allLessons = useMemo(() => {
@@ -206,7 +220,7 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
+      <TeacherLinkCard student={{...student, subjectId}} onLinkSuccess={refetchStudent} />
       
     </div>
   );
