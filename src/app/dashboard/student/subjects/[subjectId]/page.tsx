@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -16,7 +16,7 @@ import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { linkStudentToTeacher } from '@/app/actions/student-actions';
 import { Badge } from '@/components/ui/badge';
 
-function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
+function TeacherLinkCard({ student, onLinkSuccess, setTeacherName }: { student: UserType | null, onLinkSuccess: () => void, setTeacherName: (name: string) => void }) {
     const [teacherCode, setTeacherCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
@@ -38,6 +38,7 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
 
             if (result.success && result.teacherName && result.teacherId) {
                 setVerificationResult({ teacherName: result.teacherName, teacherId: result.teacherId });
+                setTeacherName(result.teacherName); // Set teacher name in parent component
             } else {
                 setVerificationError(result.error || 'فشل التحقق من الكود.');
             }
@@ -177,6 +178,16 @@ export default function SubjectPage() {
 
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
 
+  // Fetch teacher name if already linked
+  const linkedTeacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
+  const { data: linkedTeacher, isLoading: isLinkedTeacherLoading } = useDoc<UserType>(linkedTeacherRef);
+
+  useEffect(() => {
+    if (linkedTeacher?.name) {
+      setTeacherName(linkedTeacher.name);
+    }
+  }, [linkedTeacher]);
+
   const publicLessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student?.levelId || !subjectId) return null;
     return query(
@@ -204,7 +215,7 @@ export default function SubjectPage() {
     refetchStudent();
   };
 
-  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading;
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading || isLinkedTeacherLoading;
 
   if (isLoading && !subject) {
     return (
@@ -224,15 +235,15 @@ export default function SubjectPage() {
     return <div>المادة غير موجودة.</div>;
   }
   
-  const title = `مادة: ${subject.name || ''}`;
-  const description = `${level?.name || ''} - ${stage?.name || ''}`;
+  const pageTitle = `مادة: ${subject.name || ''}`;
+  const pageDescription = `${level?.name || ''} - ${stage?.name || ''}`;
 
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title={title}
-        description={description}
+        title={pageTitle}
+        description={pageDescription}
       >
         <Button variant="outline" asChild>
           <Link href="/dashboard/student/subjects">
@@ -253,12 +264,12 @@ export default function SubjectPage() {
             {linkedTeacherId ? (
                  <LessonListCard 
                     title={`الدروس الخاصة بالأستاذ`}
-                    description="محتوى خاص مقدم من الأستاذ المرتبط بك."
+                    description={teacherName ? `محتوى خاص مقدم من الأستاذ: ${teacherName}` : 'جاري تحميل دروس الأستاذ...'}
                     lessons={privateLessons}
-                    isLoading={arePrivateLessonsLoading}
+                    isLoading={arePrivateLessonsLoading || isLinkedTeacherLoading}
                 />
             ) : (
-                 <TeacherLinkCard student={student} onLinkSuccess={handleLinkSuccess} />
+                 <TeacherLinkCard student={student} onLinkSuccess={handleLinkSuccess} setTeacherName={setTeacherName} />
             )}
         </div>
       </div>
