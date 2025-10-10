@@ -2,67 +2,12 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if the user is authenticated
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Rules for the 'users' collection
-    match /users/{userId} {
-      // Any signed-in user can read any user's profile.
-      // This is useful for displaying names/avatars without complex lookups.
-      // Write access is restricted to the user themselves.
-      allow read: if isSignedIn();
-      allow write: if isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Rules for 'stages', 'levels', 'subjects'
-    // Any authenticated user can read this structural data.
-    match /{collectionName}/{docId} where collectionName in ['stages', 'levels', 'subjects'] {
-      allow read: if isSignedIn();
-      // Write access should be restricted to admin/director roles, but for now we'll allow any signed-in user
-      // A more secure rule would be: `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur'`
-      allow write: if isSignedIn();
-    }
-
-    // Rules for the 'lessons' collection
-    match /lessons/{lessonId} {
-      // Any authenticated user can read lessons.
-      allow read: if isSignedIn();
-      // Only the author (teacher/supervisor) can create/update their own lessons.
-      // Admins should also have write access.
-      allow create, update: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
-      // Only the author can delete their own lesson.
-      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
-    }
-    
-    // Sub-collection for student progress
-    match /users/{studentId}/lessonProgress/{lessonProgressId} {
-        // A student can only write to their own progress records.
-        allow write: if isSignedIn() && request.auth.uid == studentId;
-        // A student can read their own progress. A teacher or supervisor might also need read access.
-        allow read: if isSignedIn() && request.auth.uid == studentId;
-    }
-
-    // Rules for 'messages' sent to admin
-    match /messages/{messageId} {
-      // Any user (even unauthenticated) can create a message (e.g., from a contact form).
-      allow create: if true;
-      // Only an admin/director can read or update messages.
-      // A more secure rule: `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur'`
-      allow read, update: if isSignedIn();
-    }
-    
-    // Rules for supervisor notes on lessons
-    match /supervisor_notes/{noteId} {
-      // Reading notes: The teacher who owns the lesson, and the supervisor who wrote the note.
-      allow read: if isSignedIn() && 
-                    (request.auth.uid == resource.data.authorId || 
-                     request.auth.uid == get(/databases/$(database)/documents/lessons/$(resource.data.lessonId)).data.authorId);
-      // Writing notes: Only supervisors can write notes.
-      // A more secure rule: `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject'`
-      allow create: if isSignedIn();
+    // This rule allows anyone with access to your Project ID to read, write, and delete
+    // all data in your Firestore database. It is not secure.
+    // Make sure to restrict access before deploying to production.
+    // For more information, see https://firebase.google.com/docs/firestore/security/get-started
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
