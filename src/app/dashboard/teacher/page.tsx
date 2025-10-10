@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/common/page-header';
@@ -102,19 +101,40 @@ export default function TeacherDashboard() {
     isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading;
 
   const handleCopy = async () => {
-    if (!teacher?.teacherCode) return;
+    const codeToCopy = teacher?.teacherCode;
+    if (!codeToCopy) return;
+
     try {
-      await navigator.clipboard.writeText(teacher.teacherCode);
-      setCopied(true);
-      toast({ title: 'تم نسخ الكود بنجاح!' });
-      setTimeout(() => setCopied(false), 2000);
+        // Modern method: Clipboard API
+        await navigator.clipboard.writeText(codeToCopy);
+        setCopied(true);
+        toast({ title: 'تم نسخ الكود بنجاح!' });
+        setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy text: ', err);
-      toast({
-        title: 'فشل النسخ',
-        description: 'لم يتمكن المتصفح من نسخ الكود تلقائياً. الرجاء نسخه يدوياً.',
-        variant: 'destructive',
-      });
+        // Fallback method: execCommand
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = codeToCopy;
+            // Make the textarea out of sight
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            setCopied(true);
+            toast({ title: 'تم نسخ الكود بنجاح!' });
+            setTimeout(() => setCopied(false), 2000);
+        } catch (fallbackErr) {
+            console.error('Failed to copy text with both methods: ', err, fallbackErr);
+            toast({
+                title: 'فشل النسخ',
+                description: 'لم يتمكن المتصفح من نسخ الكود تلقائياً. الرجاء نسخه يدوياً.',
+                variant: 'destructive',
+            });
+        }
     }
   };
 
