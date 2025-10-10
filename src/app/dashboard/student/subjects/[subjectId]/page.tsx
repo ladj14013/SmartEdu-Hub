@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowRight, Wand2, Loader2, Link2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc, getApps, initializeApp } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType, Level, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
@@ -17,8 +17,7 @@ import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { linkStudentToTeacher } from '@/app/actions/student-actions';
 import { Badge } from '@/components/ui/badge';
 
-
-function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
+function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: (teacherData: {teacherId: string, teacherName: string}) => void }) {
     const [teacherCode, setTeacherCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
     const [isLinking, setIsLinking] = useState(false);
@@ -61,7 +60,7 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
                     title: 'تم الارتباط بنجاح',
                     description: `أصبحت الآن مرتبطاً بالأستاذ ${verificationResult.teacherName}`,
                 });
-                onLinkSuccess();
+                onLinkSuccess({ teacherId: verificationResult.teacherId, teacherName: verificationResult.teacherName });
             } else {
                 throw new Error(result.error);
             }
@@ -162,6 +161,7 @@ export default function SubjectPage() {
   const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
+  const [linkedTeacherName, setLinkedTeacherName] = useState<string | null>(null);
   
   // --- Data Fetching ---
   const subjectRef = useMemoFirebase(() => firestore && subjectId ? doc(firestore, 'subjects', subjectId) : null, [firestore, subjectId]);
@@ -178,10 +178,6 @@ export default function SubjectPage() {
 
   // Determine the teacher ID for this subject from the student's linked teachers
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
-
-  // Fetch teacher's name if linked
-  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
-  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   // Fetch public lessons for the student's level in this subject
   const publicLessonsQuery = useMemoFirebase(() => {
@@ -208,7 +204,12 @@ export default function SubjectPage() {
   }, [firestore, subjectId, student?.levelId, linkedTeacherId]);
   const { data: privateLessons, isLoading: arePrivateLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
 
-  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading || isTeacherLoading;
+  const handleLinkSuccess = (teacherData: { teacherId: string, teacherName: string }) => {
+    setLinkedTeacherName(teacherData.teacherName);
+    refetchStudent();
+  };
+
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading;
 
   if (isLoading && !subject) {
     return (
@@ -258,13 +259,13 @@ export default function SubjectPage() {
         <div>
             {linkedTeacherId ? (
                  <LessonListCard 
-                    title={`الدروس الخاصة بالأستاذ: ${teacher?.name || '...'}`}
+                    title={`الدروس الخاصة بالأستاذ: ${linkedTeacherName || '...'}`}
                     description="محتوى خاص مقدم من الأستاذ المرتبط بك."
                     lessons={privateLessons}
-                    isLoading={arePrivateLessonsLoading || isTeacherLoading}
+                    isLoading={arePrivateLessonsLoading}
                 />
             ) : (
-                 <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
+                 <TeacherLinkCard student={student} onLinkSuccess={handleLinkSuccess} />
             )}
         </div>
       </div>
