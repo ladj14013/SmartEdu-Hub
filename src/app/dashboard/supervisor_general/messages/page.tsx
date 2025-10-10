@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/common/page-header';
@@ -7,25 +8,38 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
-import type { Message } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
+
+// Mock data to replace Firestore query
+const mockMessages = [
+  {
+    id: 'msg1',
+    subject: 'استفسار بخصوص مستوى التلميذ أحمد',
+    content: 'السيد المدير،\n\nأود الاستفسار عن مستوى التلميذ أحمد في مادة الرياضيات. لقد لاحظت تراجعًا في درجاته الأخيرة.\n\nشكرًا لكم.',
+    senderName: 'أ. خالد العامري',
+    senderEmail: 'k.amri@example.com',
+    timestamp: new Date(2024, 6, 20).toISOString(),
+    isRead: true,
+    forwardedTo: 'supervisor_general'
+  },
+  {
+    id: 'msg2',
+    subject: 'اقتراح لتفعيل ورش عمل إضافية',
+    content: 'إلى من يهمه الأمر،\n\nنقترح إقامة ورش عمل إضافية للطلاب لتقوية مهاراتهم في البرمجة. يمكننا تخصيص يوم الخميس لذلك.\n\nمع خالص التقدير.',
+    senderName: 'أ. سارة القحطاني',
+    senderEmail: 's.qahtani@example.com',
+    timestamp: new Date(2024, 6, 22).toISOString(),
+    isRead: true,
+    forwardedTo: 'supervisor_general'
+  },
+];
+
 
 export default function GeneralSupervisorMessagesPage() {
-  const firestore = useFirestore();
-
-  // Fetch ALL messages, then filter on the client.
-  // This is a workaround for the persistent "insufficient permissions" error,
-  // which might be caused by an emulator/indexing issue.
-  const messagesQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, 'messages')) : null,
-    [firestore]
-  );
-  const { data: allMessages, isLoading } = useCollection<Message>(messagesQuery);
-  
-  // Client-side filtering
-  const forwardedMessages = allMessages?.filter(m => m.forwardedTo === 'supervisor_general');
+  // Using mock data, so isLoading is always false.
+  const [isLoading, setIsLoading] = useState(false);
+  const forwardedMessages = mockMessages;
 
   return (
     <div className="space-y-6">
@@ -45,7 +59,7 @@ export default function GeneralSupervisorMessagesPage() {
                   <span className="font-medium flex-1 text-right">{message.subject}</span>
                   <span className="text-sm text-muted-foreground hidden md:block">{message.senderName}</span>
                   <span className="text-sm text-muted-foreground text-left min-w-max">
-                    {message.timestamp ? new Date(message.timestamp.toDate()).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' }) : ''}
+                    {new Date(message.timestamp).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
                   </span>
                 </div>
               </AccordionTrigger>
