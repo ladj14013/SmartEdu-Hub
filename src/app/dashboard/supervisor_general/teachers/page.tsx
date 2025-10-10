@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -37,7 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
-export default function TeachersListPage() {
+export default function SupervisorsListPage() {
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
 
@@ -51,13 +52,13 @@ export default function TeachersListPage() {
   );
   const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<UserType>(currentUserRef);
   
-  const isSupervisorGeneral = currentUserData?.role === 'supervisor_general' || currentUserData?.role === 'directeur';
+  const isSupervisorGeneral = currentUserData?.role === 'supervisor_general';
 
-  // Queries for teachers
-  const teachersQuery = useMemoFirebase(() => {
-    // Only run this query if the user is a general supervisor or director
+  // Queries for supervisors
+  const supervisorsQuery = useMemoFirebase(() => {
+    // Only run this query if the user is a general supervisor
     if (firestore && isSupervisorGeneral) {
-      return query(collection(firestore, 'users'), where('role', '==', 'teacher'))
+      return query(collection(firestore, 'users'), where('role', '==', 'supervisor_subject'))
     }
     return null; 
   }, [firestore, isSupervisorGeneral]);
@@ -66,11 +67,11 @@ export default function TeachersListPage() {
   const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
 
   // Data fetching
-  const { data: teachers, isLoading: isLoadingTeachers } = useCollection<UserType>(teachersQuery);
+  const { data: supervisors, isLoading: isLoadingSupervisors } = useCollection<UserType>(supervisorsQuery);
   const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
   const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
 
-  const isLoading = isAuthLoading || isCurrentUserLoading || (isSupervisorGeneral && (isLoadingTeachers || isLoadingSubjects || isLoadingStages));
+  const isLoading = isAuthLoading || isCurrentUserLoading || (isSupervisorGeneral && (isLoadingSupervisors || isLoadingSubjects || isLoadingStages));
 
   // Memoized maps for efficient lookup
   const subjectsMap = useMemo(() => subjects?.reduce((acc, subject) => {
@@ -83,14 +84,14 @@ export default function TeachersListPage() {
     return acc;
   }, {} as Record<string, string>) || {}, [stages]);
 
-  const filteredTeachers = useMemo(() => {
-    if (!teachers) return [];
-    return teachers.filter(teacher => {
-      const matchesStage = stageFilter === 'all' || teacher.stageId === stageFilter;
-      const matchesSubject = subjectFilter === 'all' || teacher.subjectId === subjectFilter;
+  const filteredSupervisors = useMemo(() => {
+    if (!supervisors) return [];
+    return supervisors.filter(supervisor => {
+      const matchesStage = stageFilter === 'all' || supervisor.stageId === stageFilter;
+      const matchesSubject = subjectFilter === 'all' || supervisor.subjectId === subjectFilter;
       return matchesStage && matchesSubject;
     });
-  }, [teachers, stageFilter, subjectFilter]);
+  }, [supervisors, stageFilter, subjectFilter]);
 
   const availableSubjects = useMemo(() => {
     if (stageFilter === 'all') return subjects || [];
@@ -107,14 +108,14 @@ export default function TeachersListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="قائمة الأساتذة"
-        description="عرض وتعديل بيانات الأساتذة في المنصة."
+        title="قائمة مشرفي المواد"
+        description="عرض وتعديل بيانات مشرفي المواد في المنصة."
       />
 
       <Card>
         <CardHeader>
             <div className='flex flex-col md:flex-row gap-4 justify-between'>
-                <CardTitle>الأساتذة</CardTitle>
+                <CardTitle>مشرفو المواد</CardTitle>
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
                     <Select value={stageFilter} onValueChange={setStageFilter}>
                         <SelectTrigger className="w-full sm:w-[180px]">
@@ -147,7 +148,7 @@ export default function TeachersListPage() {
               <TableRow>
                 <TableHead>الاسم</TableHead>
                 <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>المادة</TableHead>
+                <TableHead>المادة المشرف عليها</TableHead>
                 <TableHead>المرحلة</TableHead>
                 <TableHead>
                   <span className="sr-only">إجراءات</span>
@@ -166,24 +167,24 @@ export default function TeachersListPage() {
                   </TableRow>
                 ))
               )}
-              {!isLoading && isSupervisorGeneral && filteredTeachers?.map(teacher => {
+              {!isLoading && isSupervisorGeneral && filteredSupervisors?.map(supervisor => {
                 return (
-                    <TableRow key={teacher.id}>
+                    <TableRow key={supervisor.id}>
                         <TableCell className="font-medium">
                            <div className="flex items-center gap-3">
                                 <Avatar className="h-9 w-9">
-                                    <AvatarImage src={teacher.avatar} alt={`@${teacher.name}`} />
-                                    <AvatarFallback>{teacher.name.charAt(0)}</AvatarFallback>
+                                    <AvatarImage src={supervisor.avatar} alt={`@${supervisor.name}`} />
+                                    <AvatarFallback>{supervisor.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                {teacher.name}
+                                {supervisor.name}
                             </div>
                         </TableCell>
-                        <TableCell>{teacher.email}</TableCell>
+                        <TableCell>{supervisor.email}</TableCell>
                         <TableCell>
-                            <Badge variant="secondary">{teacher.subjectId ? subjectsMap[teacher.subjectId] : 'غير محدد'}</Badge>
+                            <Badge variant="secondary">{supervisor.subjectId ? subjectsMap[supervisor.subjectId] : 'غير محدد'}</Badge>
                         </TableCell>
                         <TableCell>
-                             <Badge variant="outline">{teacher.stageId ? stagesMap[teacher.stageId] : 'غير محدد'}</Badge>
+                             <Badge variant="outline">{supervisor.stageId ? stagesMap[supervisor.stageId] : 'غير محدد'}</Badge>
                         </TableCell>
                         <TableCell>
                         <DropdownMenu>
@@ -196,7 +197,7 @@ export default function TeachersListPage() {
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/directeur/users/${teacher.id}/edit`}>تعديل</Link>
+                                <Link href={`/dashboard/directeur/users/${supervisor.id}/edit`}>تعديل</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-500" disabled>حذف</DropdownMenuItem>
@@ -206,7 +207,7 @@ export default function TeachersListPage() {
                     </TableRow>
                 )
               })}
-               {!isLoading && (!isSupervisorGeneral || filteredTeachers?.length === 0) && (
+               {!isLoading && (!isSupervisorGeneral || filteredSupervisors?.length === 0) && (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
                         {isSupervisorGeneral ? 'لا توجد نتائج مطابقة لبحثك.' : 'غير مصرح لك بعرض هذه البيانات.'}
@@ -220,3 +221,4 @@ export default function TeachersListPage() {
     </div>
   );
 }
+
