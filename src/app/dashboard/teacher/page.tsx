@@ -160,6 +160,36 @@ export default function TeacherDashboard() {
             </span>
         }
       />
+      
+      <Card>
+          <CardHeader>
+             <div className="flex items-center justify-between">
+                <CardTitle>كود الأستاذ</CardTitle>
+                <Wand2 className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <CardDescription>شارك هذا الكود مع تلاميذك ليرتبطوا بك.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {teacherCode ? (
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md border border-dashed">
+                    <span className="font-mono text-lg tracking-widest text-primary font-bold">{teacherCode}</span>
+                    <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
+                            {copied ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleGenerateCode} disabled={isGenerating}>
+                            {isGenerating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                        </Button>
+                    </div>
+                </div>
+            ) : (
+                <Button onClick={handleGenerateCode} className="w-full" disabled={isGenerating}>
+                    {isGenerating ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Wand2 className="ml-2 h-4 w-4" />}
+                    توليد كود
+                </Button>
+            )}
+          </CardContent>
+        </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
          <Card>
@@ -189,7 +219,7 @@ export default function TeacherDashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <StatCard
             title="الطلاب"
             value={'N/A'}
@@ -204,35 +234,6 @@ export default function TeacherDashboard() {
             icon={Presentation}
             isLoading={isLoading}
         />
-        <Card>
-          <CardHeader>
-             <div className="flex items-center justify-between">
-                <CardTitle>كود الأستاذ</CardTitle>
-                <Wand2 className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <CardDescription>شارك هذا الكود مع تلاميذك ليرتبطوا بك.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {teacherCode ? (
-                <div className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md border border-dashed">
-                    <span className="font-mono text-lg tracking-widest text-primary font-bold">{teacherCode}</span>
-                    <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
-                            {copied ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleGenerateCode} disabled={isGenerating}>
-                            {isGenerating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-                        </Button>
-                    </div>
-                </div>
-            ) : (
-                <Button onClick={handleGenerateCode} className="w-full" disabled={isGenerating}>
-                    {isGenerating ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Wand2 className="ml-2 h-4 w-4" />}
-                    توليد كود
-                </Button>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
