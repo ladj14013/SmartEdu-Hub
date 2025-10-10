@@ -2,8 +2,6 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, doc as firestoreDoc } from 'firebase/firestore';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,114 +27,66 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { User as UserType, Subject, Stage } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-
-export default function TeachersListPage() {
-  const firestore = useFirestore();
-  const { user: authUser, isLoading: isAuthLoading } = useUser();
-
-  const [stageFilter, setStageFilter] = useState('all');
-  const [subjectFilter, setSubjectFilter] = useState('all');
-
-  // First, get the current user's data to check their role
-  const currentUserRef = useMemoFirebase(
-    () => (firestore && authUser ? firestoreDoc(firestore, 'users', authUser.uid) : null),
-    [firestore, authUser]
-  );
-  const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<UserType>(currentUserRef);
-  
-  const isSupervisorGeneral = currentUserData?.role === 'supervisor_general';
-
-  // Queries for teachers
-  const teachersQuery = useMemoFirebase(() => {
-    // Only run this query if the user is a general supervisor
-    if (firestore && isSupervisorGeneral) {
-      return query(collection(firestore, 'users'), where('role', '==', 'teacher'))
+// Mock Data
+const mockSupervisors = [
+    {
+        id: 'supervisor-1',
+        name: 'أ. خالد العامري',
+        email: 'k.amri@example.com',
+        avatar: 'https://i.pravatar.cc/150?u=supervisor-1',
+        subjectName: 'الرياضيات',
+        stageName: 'المرحلة الثانوية'
+    },
+    {
+        id: 'supervisor-2',
+        name: 'أ. سارة القحطاني',
+        email: 's.qahtani@example.com',
+        avatar: 'https://i.pravatar.cc/150?u=supervisor-2',
+        subjectName: 'اللغة العربية',
+        stageName: 'المرحلة الإعدادية'
+    },
+    {
+        id: 'supervisor-3',
+        name: 'أ. محمد الغامدي',
+        email: 'm.ghamdi@example.com',
+        avatar: 'https://i.pravatar.cc/150?u=supervisor-3',
+        subjectName: 'العلوم',
+        stageName: 'المرحلة الابتدائية'
     }
-    return null; 
-  }, [firestore, isSupervisorGeneral]);
+];
+
+
+export default function SupervisorsListPage() {
+  const [isLoading, setIsLoading] = useState(false); // Kept for UI consistency, can be removed.
   
-  const subjectsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'subjects') : null, [firestore]);
-  const stagesQuery = useMemoFirebase(() => firestore ? collection(firestore, 'stages') : null, [firestore]);
-
-  // Data fetching
-  const { data: teachers, isLoading: isLoadingTeachers } = useCollection<UserType>(teachersQuery);
-  const { data: subjects, isLoading: isLoadingSubjects } = useCollection<Subject>(subjectsQuery);
-  const { data: stages, isLoading: isLoadingStages } = useCollection<Stage>(stagesQuery);
-
-  const isLoading = isAuthLoading || isCurrentUserLoading || (isSupervisorGeneral && (isLoadingTeachers || isLoadingSubjects || isLoadingStages));
-
-  // Memoized maps for efficient lookup
-  const subjectsMap = useMemo(() => subjects?.reduce((acc, subject) => {
-    acc[subject.id] = subject.name;
-    return acc;
-  }, {} as Record<string, string>) || {}, [subjects]);
-
-  const stagesMap = useMemo(() => stages?.reduce((acc, stage) => {
-    acc[stage.id] = stage.name;
-    return acc;
-  }, {} as Record<string, string>) || {}, [stages]);
-
-  const filteredTeachers = useMemo(() => {
-    if (!teachers) return [];
-    return teachers.filter(teacher => {
-      const matchesStage = stageFilter === 'all' || teacher.stageId === stageFilter;
-      const matchesSubject = subjectFilter === 'all' || teacher.subjectId === subjectFilter;
-      return matchesStage && matchesSubject;
-    });
-  }, [teachers, stageFilter, subjectFilter]);
-
-  const availableSubjects = useMemo(() => {
-    if (stageFilter === 'all') return subjects || [];
-    return subjects?.filter(s => s.stageId === stageFilter) || [];
-  }, [subjects, stageFilter]);
-  
-  // Reset subject filter if it's not in the available subjects
-  React.useEffect(() => {
-    if (subjectFilter !== 'all' && !availableSubjects.some(s => s.id === subjectFilter)) {
-      setSubjectFilter('all');
-    }
-  }, [availableSubjects, subjectFilter]);
-
   return (
     <div className="space-y-6">
       <PageHeader
-        title="قائمة الأساتذة"
-        description="عرض وتعديل بيانات الأساتذة في المنصة."
+        title="قائمة مشرفي المواد"
+        description="عرض بيانات مشرفي المواد في المنصة."
       />
 
       <Card>
         <CardHeader>
             <div className='flex flex-col md:flex-row gap-4 justify-between'>
-                <CardTitle>الأساتذة</CardTitle>
+                <CardTitle>مشرفو المواد</CardTitle>
+                 {/* Filters are disabled as we are using mock data */}
                 <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                    <Select value={stageFilter} onValueChange={setStageFilter}>
+                    <Select disabled>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="فلترة حسب المرحلة" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">كل المراحل</SelectItem>
-                            {stages?.map(stage => (
-                                <SelectItem key={stage.id} value={stage.id}>{stage.name}</SelectItem>
-                            ))}
-                        </SelectContent>
                     </Select>
-                    <Select value={subjectFilter} onValueChange={setSubjectFilter}>
+                    <Select disabled>
                         <SelectTrigger className="w-full sm:w-[180px]">
                             <SelectValue placeholder="فلترة حسب المادة" />
                         </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">كل المواد</SelectItem>
-                            {availableSubjects.map(subject => (
-                                <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
-                            ))}
-                        </SelectContent>
                     </Select>
                 </div>
             </div>
@@ -147,7 +97,7 @@ export default function TeachersListPage() {
               <TableRow>
                 <TableHead>الاسم</TableHead>
                 <TableHead>البريد الإلكتروني</TableHead>
-                <TableHead>المادة</TableHead>
+                <TableHead>المادة المشرف عليها</TableHead>
                 <TableHead>المرحلة</TableHead>
                 <TableHead>
                   <span className="sr-only">إجراءات</span>
@@ -166,24 +116,24 @@ export default function TeachersListPage() {
                   </TableRow>
                 ))
               )}
-              {!isLoading && isSupervisorGeneral && filteredTeachers?.map(teacher => {
+              {!isLoading && mockSupervisors.map(supervisor => {
                 return (
-                    <TableRow key={teacher.id}>
+                    <TableRow key={supervisor.id}>
                         <TableCell className="font-medium">
                            <div className="flex items-center gap-3">
                                 <Avatar className="h-9 w-9">
-                                    <AvatarImage src={teacher.avatar} alt={`@${teacher.name}`} />
-                                    <AvatarFallback>{teacher.name.charAt(0)}</AvatarFallback>
+                                    <AvatarImage src={supervisor.avatar} alt={`@${supervisor.name}`} />
+                                    <AvatarFallback>{supervisor.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
-                                {teacher.name}
+                                {supervisor.name}
                             </div>
                         </TableCell>
-                        <TableCell>{teacher.email}</TableCell>
+                        <TableCell>{supervisor.email}</TableCell>
                         <TableCell>
-                            <Badge variant="secondary">{teacher.subjectId ? subjectsMap[teacher.subjectId] : 'غير محدد'}</Badge>
+                            <Badge variant="secondary">{supervisor.subjectName}</Badge>
                         </TableCell>
                         <TableCell>
-                             <Badge variant="outline">{teacher.stageId ? stagesMap[teacher.stageId] : 'غير محدد'}</Badge>
+                             <Badge variant="outline">{supervisor.stageName}</Badge>
                         </TableCell>
                         <TableCell>
                         <DropdownMenu>
@@ -196,7 +146,7 @@ export default function TeachersListPage() {
                             <DropdownMenuContent align="end">
                             <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                             <DropdownMenuItem asChild>
-                                <Link href={`/dashboard/directeur/users/${teacher.id}/edit`}>تعديل</Link>
+                                <Link href={`/dashboard/directeur/users/${supervisor.id}/edit`}>تعديل</Link>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-500" disabled>حذف</DropdownMenuItem>
@@ -206,10 +156,10 @@ export default function TeachersListPage() {
                     </TableRow>
                 )
               })}
-               {!isLoading && (!isSupervisorGeneral || filteredTeachers?.length === 0) && (
+               {!isLoading && mockSupervisors.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={5} className="h-24 text-center">
-                        {isSupervisorGeneral ? 'لا توجد نتائج مطابقة لبحثك.' : 'غير مصرح لك بعرض هذه البيانات.'}
+                        لا يوجد مشرفو مواد لعرضهم.
                     </TableCell>
                 </TableRow>
               )}
