@@ -12,7 +12,7 @@ export function PageHeader({ title, description, children }: PageHeaderProps) {
             <div className="space-y-1">
                 <h1 className="text-2xl font-bold tracking-tight md:text-3xl font-headline">{title}</h1>
                 {description && (
-                    <p className="text-muted-foreground">{description}</p>
+                    <div className="text-muted-foreground">{description}</div>
                 )}
             </div>
             {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
