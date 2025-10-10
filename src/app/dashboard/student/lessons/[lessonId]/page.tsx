@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { ExerciseEvaluator } from '../../components/exercise-evaluator';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { Lesson, User as UserType } from '@/lib/types';
+import type { Lesson } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
 import React from 'react';
