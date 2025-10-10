@@ -1,13 +1,10 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // This rule allows anyone with access to your Project ID to read, write, and delete
-    // all data in your Firestore database. It is not secure.
-    // Make sure to restrict access before deploying to production.
-    // For more information, see https://firebase.google.com/docs/firestore/security/get-started
+    // This rule allows any authenticated user to read and write to the database.
+    // This is useful for development but should be secured before production.
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null;
     }
   }
 }
