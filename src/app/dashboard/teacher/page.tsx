@@ -22,6 +22,7 @@ function TeacherDashboardSkeleton() {
         title={<Skeleton className="h-8 w-48" />}
         description={<Skeleton className="h-4 w-72 mt-2" />}
       />
+       <Skeleton className="h-40 w-full" />
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -40,7 +41,6 @@ function TeacherDashboardSkeleton() {
         </Card>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Skeleton className="h-28 w-full" />
         <Skeleton className="h-28 w-full" />
         <Skeleton className="h-28 w-full" />
       </div>
@@ -107,12 +107,21 @@ export default function TeacherDashboard() {
   const isLoading =
     isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading;
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!teacher?.teacherCode) return;
-    navigator.clipboard.writeText(teacher.teacherCode);
-    setCopied(true);
-    toast({ title: 'تم نسخ الكود بنجاح!' });
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(teacher.teacherCode);
+      setCopied(true);
+      toast({ title: 'تم نسخ الكود بنجاح!' });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      toast({
+        title: 'فشل النسخ',
+        description: 'لم يتمكن المتصفح من نسخ الكود تلقائياً. الرجاء نسخه يدوياً.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleGenerateCode = async () => {
