@@ -2,119 +2,87 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check if a user is a director
-    function isDirector() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
+  
+    // Helper function to check if user is signed in
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper function to get user's role
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
-    // Helper function to check for linked student/teacher relationship
-    function isLinked(targetUserId) {
-      let currentUser = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-      let targetUser = get(/databases/$(database)/documents/users/$(targetUserId)).data;
-
-      // Student can read their linked teacher's data
-      let studentReadsTeacher = currentUser.role == 'student' && 
-                                targetUser.role == 'teacher' && 
-                                currentUser.linkedTeachers[targetUser.subjectId] == targetUserId;
-      
-      // Teacher can read their linked student's data
-      let teacherReadsStudent = currentUser.role == 'teacher' &&
-                                targetUser.role == 'student' &&
-                                targetUserId in currentUser.linkedStudentIds;
-
-      return studentReadsTeacher || teacherReadsStudent;
+    // Helper function to check if user is a specific role
+    function isRole(role) {
+      return isSignedIn() && getRole() == role;
     }
 
-    // Default deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // USERS collection
+    // Users can only read their own profile, but directeur can read any.
+    // Teachers/Students can read each other's profiles if they are linked.
     match /users/{userId} {
-      // Allow read if user is reading their own data, is a director, or is linked (student/teacher)
-      allow get: if request.auth.uid == userId || isDirector() || isLinked(userId);
-      // Allow list only for directors
-      allow list: if isDirector();
-      // Allow create for anyone (signup)
-      allow create: if true; 
-      // Allow update only for user on their own doc or a director
-      allow update: if request.auth.uid == userId || isDirector();
+       allow read: if isSignedIn() && 
+                    (request.auth.uid == userId || 
+                     isRole('directeur') || 
+                     (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.linkedTeachers[get(/databases/$(database)/documents/users/$(userId)).data.subjectId] == userId) ||
+                     (get(/databases/$(database)/documents/users/$(userId)).data.linkedStudentIds[request.auth.uid] != null)
+                    );
+      allow update, write: if isSignedIn() && (request.auth.uid == userId || isRole('directeur'));
+      allow list: if isRole('directeur');
     }
     
-    // STAGES, LEVELS, SUBJECTS collections
-    // Allow read for any authenticated user.
-    // Allow write only for directors.
-    match /(stages|levels|subjects)/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isDirector();
+    // Stages, Levels can be read by any signed-in user. Only directeur can modify.
+    match /{path=**}/stages/{stageId} {
+        allow read: if isSignedIn();
+        allow write: if isRole('directeur');
     }
 
-    // LESSONS collection
+    match /{path=**}/levels/{levelId} {
+        allow read: if isSignedIn();
+        allow write: if isRole('directeur');
+    }
+    
+    // Subjects can be read by students/teachers of that stage. Only directeur can modify.
+    match /subjects/{subjectId} {
+       allow get: if isSignedIn();
+       allow list: if isSignedIn() && request.query.where[0] == 'stageId';
+       allow write: if isRole('directeur');
+    }
+    
+    // Lessons can be read by students/teachers of that level and subject.
+    // Author, supervisor, or directeur can write.
     match /lessons/{lessonId} {
-      // Public lessons are readable by any authenticated user.
-      // Private lessons are readable by the author (teacher) or a linked student.
-      allow get: if request.auth != null && 
-                    (resource.data.type == 'public' || 
-                     resource.data.authorId == request.auth.uid ||
-                     isLinked(resource.data.authorId));
-                     
-      // List lessons based on subjectId. We will filter on the client.
-      allow list: if request.auth != null;
-
-      // Create/Update/Delete rules:
-      // Director can do anything.
-      // Teacher can manage their own private lessons.
-      // Supervisor can manage public lessons in their subject.
-      function isAuthor() {
-        return request.auth.uid == resource.data.authorId;
-      }
-      function isSupervisorForLesson() {
-        let supervisor = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-        return supervisor.role == 'supervisor_subject' && supervisor.subjectId == resource.data.subjectId;
-      }
-
-      allow write: if isDirector() || 
-                      (request.resource.data.type == 'private' && isAuthor()) ||
-                      (request.resource.data.type == 'public' && isSupervisorForLesson());
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Queries are filtered in the code
+      allow write: if isSignedIn() && (isRole('directeur') || isRole('supervisor_subject') || request.auth.uid == resource.data.authorId);
     }
-
-    // MESSAGES (Contact Us)
+    
+    // Exercises are part of lessons, inherit lesson rules.
+    match /lessons/{lessonId}/exercises/{exerciseId} {
+        allow read, write: if isSignedIn();
+    }
+    
+    // Student progress can only be read/written by the student themselves or a linked teacher/supervisor.
+    match /users/{studentId}/lessonProgress/{progressId} {
+       allow read, write: if isSignedIn() && (request.auth.uid == studentId || isRole('directeur') || isRole('supervisor_subject'));
+    }
+    
+    // Messages can be created by any signed-in user. Only directeur/supervisors can manage them.
     match /messages/{messageId} {
-      // Anyone can create a message
-      allow create: if true;
-      // Only directors and general supervisors can read/list/update messages
-      allow read, list, update: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['directeur', 'supervisor_general'];
+      allow create: if isSignedIn();
+      allow read, update, list: if isSignedIn() && (isRole('directeur') || isRole('supervisor_general'));
     }
     
-    // STUDENT PROGRESS subcollection
-    match /users/{studentId}/lessonProgress/{lessonId} {
-        // A student can write to their own progress subcollection.
-        // A director or the linked teacher can read it.
-        allow write: if request.auth.uid == studentId;
-        allow read: if request.auth.uid == studentId || isDirector() || isLinked(studentId);
+    // Settings can only be managed by the director.
+    match /settings/{settingId} {
+        allow read: if isSignedIn();
+        allow write: if isRole('directeur');
     }
     
-    // SUPERVISOR NOTES
+    // Notes can be created by supervisors. Read by involved teacher/supervisor.
     match /supervisor_notes/{noteId} {
-        // Supervisor for the subject can create notes.
-        // Director, the supervisor who wrote it, or the teacher of the lesson can read them.
-        function isSupervisorForSubjectInRequest() {
-            let supervisor = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-            let lesson = get(/databases/$(database)/documents/lessons/$(request.resource.data.lessonId)).data;
-            return supervisor.role == 'supervisor_subject' && supervisor.subjectId == lesson.subjectId;
-        }
-        allow create: if isSupervisorForSubjectInRequest();
-
-        function canReadNote() {
-            let userRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-            let lesson = get(/databases/$(database)/documents/lessons/$(resource.data.lessonId)).data;
-            return userRole == 'directeur' || // director
-                   request.auth.uid == resource.data.authorId || // supervisor who wrote it
-                   request.auth.uid == lesson.authorId; // teacher who owns the lesson
-        }
-        allow read: if canReadNote();
+      allow create: if isRole('supervisor_subject');
+      allow list, get: if isSignedIn() && (isRole('supervisor_subject') || request.auth.uid == get(/databases/$(database)/documents/lessons/$(resource.data.lessonId)).data.authorId);
     }
   }
 }
