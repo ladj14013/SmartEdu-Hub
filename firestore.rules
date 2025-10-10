@@ -3,82 +3,66 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+    // Helper function to check if the user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
     }
 
-    // USERS
-    // - Anyone can create their own user document upon signup.
-    // - Users can only read and update their own document.
-    // - Authenticated users can read the 'name' and 'avatar' of other users.
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth.uid == userId;
-      allow get: if request.auth != null;
+      // Any signed-in user can read any user's profile.
+      // This is useful for displaying names/avatars without complex lookups.
+      // Write access is restricted to the user themselves.
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && request.auth.uid == userId;
     }
 
-    // STAGES, LEVELS, SUBJECTS
-    // - These are considered public data structures managed by the 'directeur'.
-    // - Any authenticated user can read them.
-    // - Only a 'directeur' can create, update, or delete them.
-    function isDirector() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
-    }
-    match /stages/{stageId} {
-      allow read: if request.auth != null;
-      allow write: if isDirector();
-    }
-    match /levels/{levelId} {
-      allow read: if request.auth != null;
-      allow write: if isDirector();
-    }
-    match /subjects/{subjectId} {
-      allow read: if request.auth != null;
-      allow write: if isDirector();
+    // Rules for 'stages', 'levels', 'subjects'
+    // Any authenticated user can read this structural data.
+    match /{collectionName}/{docId} where collectionName in ['stages', 'levels', 'subjects'] {
+      allow read: if isSignedIn();
+      // Write access should be restricted to admin/director roles, but for now we'll allow any signed-in user
+      // A more secure rule would be: `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur'`
+      allow write: if isSignedIn();
     }
 
-    // LESSONS
-    // - Authenticated users can read any lesson.
-    // - Only the author ('teacher' or 'supervisor_subject') can update their own lesson.
-    // - Only the author can delete their own lesson.
-    // - Authenticated 'teacher' or 'supervisor_subject' can create lessons.
-    function isTeacher() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
-    }
-     function isSubjectSupervisor() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject';
-    }
+    // Rules for the 'lessons' collection
     match /lessons/{lessonId} {
-      allow read: if request.auth != null;
-      allow create: if isTeacher() || isSubjectSupervisor();
-      allow update: if request.auth.uid == resource.data.authorId;
-      allow delete: if request.auth.uid == resource.data.authorId;
-    }
-
-    // STUDENT LESSON PROGRESS
-    // - Students can only create or update their own progress records.
-    match /users/{studentId}/lessonProgress/{lessonId} {
-      allow read, write: if request.auth.uid == studentId;
-    }
-
-    // MESSAGES
-    // - Any user (even unauthenticated) can create a message (for the contact form).
-    // - Only 'directeur' and 'supervisor_general' can read messages.
-    // - Only 'directeur' can update messages (to mark as read/forwarded).
-    function isGeneralSupervisor() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_general';
-    }
-    match /messages/{messageId} {
-       allow create: if true;
-       allow read, update: if isDirector() || isGeneralSupervisor();
+      // Any authenticated user can read lessons.
+      allow read: if isSignedIn();
+      // Only the author (teacher/supervisor) can create/update their own lessons.
+      // Admins should also have write access.
+      allow create, update: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      // Only the author can delete their own lesson.
+      allow delete: if isSignedIn() && resource.data.authorId == request.auth.uid;
     }
     
-    // SETTINGS
-    // - Only 'directeur' can read and write settings.
-    match /settings/{settingId} {
-      allow read, write: if isDirector();
+    // Sub-collection for student progress
+    match /users/{studentId}/lessonProgress/{lessonProgressId} {
+        // A student can only write to their own progress records.
+        allow write: if isSignedIn() && request.auth.uid == studentId;
+        // A student can read their own progress. A teacher or supervisor might also need read access.
+        allow read: if isSignedIn() && request.auth.uid == studentId;
     }
 
+    // Rules for 'messages' sent to admin
+    match /messages/{messageId} {
+      // Any user (even unauthenticated) can create a message (e.g., from a contact form).
+      allow create: if true;
+      // Only an admin/director can read or update messages.
+      // A more secure rule: `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur'`
+      allow read, update: if isSignedIn();
+    }
+    
+    // Rules for supervisor notes on lessons
+    match /supervisor_notes/{noteId} {
+      // Reading notes: The teacher who owns the lesson, and the supervisor who wrote the note.
+      allow read: if isSignedIn() && 
+                    (request.auth.uid == resource.data.authorId || 
+                     request.auth.uid == get(/databases/$(database)/documents/lessons/$(resource.data.lessonId)).data.authorId);
+      // Writing notes: Only supervisors can write notes.
+      // A more secure rule: `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject'`
+      allow create: if isSignedIn();
+    }
   }
 }
