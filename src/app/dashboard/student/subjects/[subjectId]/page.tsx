@@ -14,16 +14,13 @@ import { useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
-import { linkStudentToTeacher } from '@/app/actions/student-actions';
 
 
 function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
     const [teacherCode, setTeacherCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
-    const [isLinking, setIsLinking] = useState(false);
     const [verificationResult, setVerificationResult] = useState<{ teacherName: string; teacherId: string } | null>(null);
     const [verificationError, setVerificationError] = useState<string | null>(null);
-    const { toast } = useToast();
     const params = useParams();
     const subjectId = params.subjectId as string;
 
@@ -50,36 +47,6 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
         }
     };
     
-    const handleLinkStudent = async () => {
-        if (!student?.id || !verificationResult?.teacherId || !subjectId) {
-            toast({ title: "خطأ", description: "المعلومات اللازمة للربط غير مكتملة.", variant: "destructive" });
-            return;
-        }
-
-        setIsLinking(true);
-        try {
-            const result = await linkStudentToTeacher(student.id, subjectId, verificationResult.teacherId);
-            if (result.success) {
-                toast({
-                    title: "تم الارتباط بنجاح!",
-                    description: `لقد تم ربطك بالأستاذ: ${verificationResult.teacherName}.`,
-                });
-                onLinkSuccess(); // Refetch student data to update the UI
-                setVerificationResult(null); // Hide confirmation card
-            } else {
-                throw new Error(result.error);
-            }
-        } catch (error: any) {
-             toast({
-                title: "فشل الارتباط",
-                description: error.message || 'حدث خطأ أثناء محاولة الارتباط.',
-                variant: "destructive",
-            });
-        } finally {
-            setIsLinking(false);
-        }
-    };
-
     const isAlreadyLinked = student?.linkedTeachers?.[subjectId];
 
     if (isAlreadyLinked) {
@@ -114,19 +81,12 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
                 {verificationError && (
                     <p className="text-sm font-medium text-destructive">{verificationError}</p>
                 )}
-            </CardContent>
-            {verificationResult && (
-                 <CardContent>
-                    <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-800 rounded-md space-y-3">
+                 {verificationResult && (
+                     <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-800 rounded-md space-y-3">
                         <p className="font-semibold">تم العثور على الأستاذ: {verificationResult.teacherName}</p>
-                        <p className="text-sm">اضغط على زر "تأكيد الارتباط" للوصول إلى دروسه.</p>
-                        <Button onClick={handleLinkStudent} disabled={isLinking} className="mt-2 w-full" variant="accent" size="sm">
-                            {isLinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}
-                            {isLinking ? 'جاري الارتباط...' : 'تأكيد الارتباط'}
-                        </Button>
-                    </div>
-                </CardContent>
-            )}
+                     </div>
+                 )}
+            </CardContent>
         </Card>
     );
 }
@@ -194,7 +154,6 @@ export default function SubjectPage() {
             <PageHeader title={<Skeleton className="h-8 w-48" />} description={<Skeleton className="h-4 w-72 mt-1" />}>
                  <Skeleton className="h-10 w-32" />
             </PageHeader>
-            <Skeleton className="h-48 w-full" />
             <Skeleton className="h-48 w-full" />
         </div>
     )
