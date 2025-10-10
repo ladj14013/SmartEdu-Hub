@@ -1,74 +1,9 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Allow logged-in users to read their own user document
-    match /users/{userId} {
-      allow get: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Allow directors and general supervisors to read and list all users.
-    // This is necessary for the user management pages.
-    match /users/{userId} {
-      allow get, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['directeur', 'supervisor_general'];
-    }
-    
-    // Director can edit any user.
-    match /users/{userId} {
-        allow update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
-    }
-    
-    // Allow any authenticated user to create messages
-    match /messages/{messageId} {
-      allow create: if request.auth != null;
-    }
-
-    // Director can read/update all messages
-    match /messages/{messageId} {
-      allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
-    }
-
-    // General supervisor can read messages forwarded to them
-    match /messages/{messageId} {
-      allow read: if request.auth != null 
-                    && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_general'
-                    && resource.data.forwardedTo == 'supervisor_general';
-    }
-    
-    // Allow any authenticated user to read public content
-    match /stages/{stageId} {
-      allow read: if request.auth != null;
-    }
-    match /levels/{levelId} {
-      allow read: if request.auth != null;
-    }
-    match /subjects/{subjectId} {
-      allow read: if request.auth != null;
-    }
-    match /lessons/{lessonId} {
-      allow read: if request.auth != null;
-    }
-    
-    // Allow director to manage content structure (stages, levels, subjects)
-    match /stages/{stageId} {
-        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
-    }
-    match /levels/{levelId} {
-        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
-    }
-    match /subjects/{subjectId} {
-        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
-    }
-    
-    // Allow director, subject supervisor, and teachers to write to lessons
-    match /lessons/{lessonId} {
-       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['directeur', 'supervisor_subject', 'teacher'];
-    }
-    
-    // Allow students to write their own progress
-    match /users/{studentId}/lessonProgress/{lessonId} {
-        allow write: if request.auth != null && request.auth.uid == studentId;
+    match /{document=**} {
+      allow read, write: if true;
     }
   }
 }
