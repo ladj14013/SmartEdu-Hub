@@ -176,10 +176,6 @@ export default function SubjectPage() {
 
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
 
-  // Fetch teacher name if already linked
-  const linkedTeacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
-  const { data: linkedTeacher, isLoading: isLinkedTeacherLoading } = useDoc<UserType>(linkedTeacherRef);
-
   const publicLessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student?.levelId || !subjectId) return null;
     return query(
@@ -207,7 +203,7 @@ export default function SubjectPage() {
     refetchStudent();
   };
 
-  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading || isLinkedTeacherLoading;
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading;
 
   if (isLoading && !subject) {
     return (
@@ -229,7 +225,7 @@ export default function SubjectPage() {
   
   const pageTitle = `مادة: ${subject.name || ''}`;
   const pageDescription = `${level?.name || ''} - ${stage?.name || ''}`;
-  const teacherName = linkedTeacher?.name || 'فلان';
+  const teacherName = privateLessons && privateLessons.length > 0 ? privateLessons[0].authorName : 'فلان';
 
 
   return (
@@ -259,7 +255,7 @@ export default function SubjectPage() {
                     title={`الدروس الخاصة بالأستاذ`}
                     description={`محتوى خاص مقدم من الأستاذ: ${teacherName}`}
                     lessons={privateLessons}
-                    isLoading={arePrivateLessonsLoading || isLinkedTeacherLoading}
+                    isLoading={arePrivateLessonsLoading}
                 />
             ) : (
                  <TeacherLinkCard student={student} onLinkSuccess={handleLinkSuccess} />
