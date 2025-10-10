@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowRight, Wand2, Loader2, Link2, ArrowLeft } from 'lucide-react';
+import { ArrowRight, Wand2, Loader2, Link2, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
 import { linkStudentToTeacher } from '@/app/actions/student-actions';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
@@ -75,11 +76,6 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
             setIsLinking(false);
         }
     };
-
-    const isAlreadyLinked = student?.linkedTeachers && student.linkedTeachers[subjectId];
-    if (isAlreadyLinked) {
-        return null;
-    }
     
     return (
         <Card>
@@ -123,6 +119,31 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
     );
 }
 
+// Component to fetch and display teacher name, shown after linking
+function LinkedTeacherInfo({ teacherId }: { teacherId: string }) {
+    const firestore = useFirestore();
+    const teacherRef = useMemoFirebase(() => (firestore && teacherId) ? doc(firestore, 'users', teacherId) : null, [firestore, teacherId]);
+    const { data: teacher, isLoading } = useDoc<UserType>(teacherRef);
+
+    if (isLoading) {
+        return <Skeleton className="h-6 w-40" />;
+    }
+
+    if (!teacher) {
+        return null;
+    }
+
+    return (
+        <Alert className="border-green-600 bg-green-50 text-green-900">
+          <CheckCircle2 className="h-4 w-4 !text-green-600" />
+          <AlertTitle className="font-bold">تم الارتباط بنجاح!</AlertTitle>
+          <AlertDescription>
+            يمكنك الآن متابعة الأستاذ <strong>{teacher.name}</strong> وحل التمارين التي يقترحها.
+          </AlertDescription>
+        </Alert>
+    );
+}
+
 
 export default function SubjectPage() {
   const params = useParams();
@@ -143,6 +164,9 @@ export default function SubjectPage() {
   const stageRef = useMemoFirebase(() => (firestore && student?.stageId) ? doc(firestore, 'stages', student.stageId) : null, [firestore, student?.stageId]);
   const { data: stage, isLoading: isStageLoading } = useDoc<Stage>(stageRef);
 
+  // Determine the teacher ID for this subject from the student's linked teachers
+  const linkedTeacherId = student?.linkedTeachers?.[subjectId];
+
   // Fetch public lessons for the student's level in this subject
   const publicLessonsQuery = useMemoFirebase(() => {
     if (!firestore || !student?.levelId || !subjectId) return null;
@@ -154,9 +178,6 @@ export default function SubjectPage() {
     );
   }, [firestore, subjectId, student?.levelId]);
   const { data: publicLessons, isLoading: arePublicLessonsLoading } = useCollection<Lesson>(publicLessonsQuery);
-  
-  // Determine the teacher ID for this subject from the student's linked teachers
-  const linkedTeacherId = student?.linkedTeachers?.[subjectId];
 
   // Fetch private lessons from the linked teacher for this subject
   const privateLessonsQuery = useMemoFirebase(() => {
@@ -212,7 +233,12 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
+      {linkedTeacherId ? (
+         <LinkedTeacherInfo teacherId={linkedTeacherId} />
+      ) : (
+         <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
+      )}
+
 
       <Card>
         <CardHeader>
