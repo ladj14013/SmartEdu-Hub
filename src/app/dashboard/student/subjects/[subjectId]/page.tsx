@@ -1,13 +1,13 @@
 
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowRight, Wand2, Loader2, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, arrayUnion, updateDoc } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType, Level, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
@@ -15,30 +15,47 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
+async function linkStudentToTeacher(studentId: string, subjectId: string, teacherId: string) {
+    'use server';
+    try {
+        const firestore = (await import('firebase-admin/firestore')).getFirestore();
+        const studentRef = firestore.collection('users').doc(studentId);
+        
+        // Use dot notation to update a specific field in the map
+        await studentRef.update({
+            [`linkedTeachers.${subjectId}`]: teacherId
+        });
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Server Action: Failed to link student to teacher", error);
+        return { success: false, error: 'فشل تحديث قاعدة البيانات.' };
+    }
+}
+
 
 function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
     const [teacherCode, setTeacherCode] = useState('');
     const [isVerifying, setIsVerifying] = useState(false);
+    const [isLinking, setIsLinking] = useState(false);
     const [verificationResult, setVerificationResult] = useState<{ teacherName: string; teacherId: string } | null>(null);
     const [verificationError, setVerificationError] = useState<string | null>(null);
     const { toast } = useToast();
+    const params = useParams();
+    const subjectId = params.subjectId as string;
 
     const handleVerifyCode = async () => {
-        if (!teacherCode.trim() || !student?.subjectId) return;
+        if (!teacherCode.trim() || !subjectId) return;
 
         setIsVerifying(true);
         setVerificationError(null);
         setVerificationResult(null);
 
         try {
-            const result = await getTeacherByCode({ teacherCode, subjectId: student.subjectId });
+            const result = await getTeacherByCode({ teacherCode, subjectId });
 
             if (result.success && result.teacherName && result.teacherId) {
                 setVerificationResult({ teacherName: result.teacherName, teacherId: result.teacherId });
-                toast({
-                    title: "تم العثور على الأستاذ",
-                    description: `هل تريد الارتباط بالأستاذ: ${result.teacherName}؟`,
-                });
             } else {
                 setVerificationError(result.error || 'فشل التحقق من الكود.');
             }
@@ -49,6 +66,42 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
             setIsVerifying(false);
         }
     };
+    
+    const handleLinkStudent = async () => {
+        if (!student?.id || !verificationResult?.teacherId || !subjectId) {
+            toast({ title: "خطأ", description: "المعلومات اللازمة للربط غير مكتملة.", variant: "destructive" });
+            return;
+        }
+
+        setIsLinking(true);
+        try {
+            const result = await linkStudentToTeacher(student.id, subjectId, verificationResult.teacherId);
+            if (result.success) {
+                toast({
+                    title: "تم الارتباط بنجاح!",
+                    description: `لقد تم ربطك بالأستاذ: ${verificationResult.teacherName}.`,
+                });
+                onLinkSuccess(); // Refetch student data to update the UI
+                setVerificationResult(null); // Hide confirmation card
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error: any) {
+             toast({
+                title: "فشل الارتباط",
+                description: error.message || 'حدث خطأ أثناء محاولة الارتباط.',
+                variant: "destructive",
+            });
+        } finally {
+            setIsLinking(false);
+        }
+    };
+
+    const isAlreadyLinked = student?.linkedTeachers?.[subjectId];
+
+    if (isAlreadyLinked) {
+        return null;
+    }
     
     return (
         <Card>
@@ -68,9 +121,9 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
                         value={teacherCode}
                         onChange={(e) => setTeacherCode(e.target.value)}
                         className="font-mono text-center tracking-widest"
-                        disabled={isVerifying}
+                        disabled={isVerifying || !!verificationResult}
                     />
-                    <Button onClick={handleVerifyCode} disabled={isVerifying || !teacherCode.trim()} className="w-full sm:w-auto">
+                    <Button onClick={handleVerifyCode} disabled={isVerifying || !teacherCode.trim() || !!verificationResult} className="w-full sm:w-auto">
                         {isVerifying ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Wand2 className="ml-2 h-4 w-4" />}
                         {isVerifying ? 'جاري التحقق...' : 'تحقق'}
                     </Button>
@@ -81,11 +134,12 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
             </CardContent>
             {verificationResult && (
                  <CardContent>
-                    <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-800 rounded-md">
+                    <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-800 rounded-md space-y-3">
                         <p className="font-semibold">تم العثور على الأستاذ: {verificationResult.teacherName}</p>
                         <p className="text-sm">اضغط على زر "تأكيد الارتباط" للوصول إلى دروسه.</p>
-                        <Button className="mt-2 w-full" variant="accent" size="sm">
-                            تأكيد الارتباط
+                        <Button onClick={handleLinkStudent} disabled={isLinking} className="mt-2 w-full" variant="accent" size="sm">
+                            {isLinking ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : null}
+                            {isLinking ? 'جاري الارتباط...' : 'تأكيد الارتباط'}
                         </Button>
                     </div>
                 </CardContent>
@@ -154,9 +208,10 @@ export default function SubjectPage() {
   if (isLoading) {
     return (
         <div className="space-y-6">
-            <PageHeader title={<Skeleton className="h-8 w-48" />} description="جاري تحميل تفاصيل المادة...">
+            <PageHeader title={<Skeleton className="h-8 w-48" />} description={<Skeleton className="h-4 w-72 mt-1" />}>
                  <Skeleton className="h-10 w-32" />
             </PageHeader>
+            <Skeleton className="h-48 w-full" />
             <Skeleton className="h-48 w-full" />
         </div>
     )
@@ -183,7 +238,7 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      <TeacherLinkCard student={{...student, subjectId}} onLinkSuccess={refetchStudent} />
+      <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
       
     </div>
   );
