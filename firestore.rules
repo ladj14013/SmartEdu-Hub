@@ -1,9 +1,62 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read/write access to all users for all collections
+    // Helper function to check the user's role from the 'users' collection
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    // Default deny all access
     match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow any authenticated user to read Stages, Levels, and Subjects
+    match /stages/{stageId} {
+      allow read: if request.auth != null;
+    }
+    match /levels/{levelId} {
+      allow read: if request.auth != null;
+    }
+    match /subjects/{subjectId} {
+      allow read: if request.auth != null;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // Allow a user to read their own document
+      allow get: if request.auth != null && request.auth.uid == userId;
+
+      // Allow a general supervisor or director to list and get any user
+      allow read: if request.auth != null && (getUserRole(request.auth.uid) == 'supervisor_general' || getUserRole(request.auth.uid) == 'directeur');
+
+      // Allow a user to update their own document
+      allow update: if request.auth != null && request.auth.uid == userId;
+
+      // Allow creation of a user document (e.g., during signup)
+      allow create: if request.auth != null;
+    }
+    
+    // Rules for the 'lessons' collection
+    match /lessons/{lessonId} {
+      allow read: if request.auth != null;
+      // Allow update/delete only by the original author
+      allow write: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+    }
+
+    // Rules for other collections like messages, notes, etc.
+    // This provides a baseline for authenticated users.
+    match /messages/{messageId} {
+       allow read, write: if request.auth != null;
+    }
+    match /supervisor_notes/{noteId} {
+       allow read, write: if request.auth != null;
+    }
+    match /settings/{settingId} {
       allow read, write: if request.auth != null;
+    }
+    match /users/{userId}/lessonProgress/{progressId} {
+       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }
 }
