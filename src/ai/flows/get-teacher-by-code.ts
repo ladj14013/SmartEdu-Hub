@@ -9,6 +9,13 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import {getFirestore} from 'firebase-admin/firestore';
+import {initializeApp, getApps, getApp} from 'firebase-admin/app';
+
+// Initialize Firebase Admin SDK if not already initialized
+if (!getApps().length) {
+  initializeApp();
+}
+
 
 const GetTeacherByCodeInputSchema = z.object({
   teacherCode: z.string().describe('The unique code of the teacher.'),
