@@ -47,12 +47,6 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
         }
     };
     
-    const isAlreadyLinked = student?.linkedTeachers?.[subjectId];
-
-    if (isAlreadyLinked) {
-        return null;
-    }
-    
     return (
         <Card>
             <CardHeader>
