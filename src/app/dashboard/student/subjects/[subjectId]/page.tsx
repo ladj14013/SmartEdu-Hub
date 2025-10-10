@@ -16,72 +16,15 @@ import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
 
-function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
+function TeacherLinkCard({ student }: { student: UserType | null }) {
     const [teacherCode, setTeacherCode] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [isLinking, setIsLinking] = useState(false);
-    const [verificationResult, setVerificationResult] = useState<{ success: boolean; message: string; teacherId?: string, teacherName?: string } | null>(null);
-    const { toast } = useToast();
-    const firestore = useFirestore();
 
-    const handleVerify = async () => {
-        if (!teacherCode || !student?.subjectId) return;
-        setIsLoading(true);
-        setVerificationResult(null);
-
-        try {
-            const result = await getTeacherByCode({ teacherCode, subjectId: student.subjectId });
-            if (result.success) {
-                setVerificationResult({ success: true, message: `تم العثور على الأستاذ: ${result.teacherName}`, teacherId: result.teacherId, teacherName: result.teacherName });
-            } else {
-                setVerificationResult({ success: false, message: result.error || 'فشل التحقق.' });
-            }
-        } catch (error) {
-            console.error(error);
-            setVerificationResult({ success: false, message: 'حدث خطأ أثناء التحقق. الرجاء المحاولة مرة أخرى.' });
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    // The logic is removed, so the card is for display purposes only.
+    const isAlreadyLinked = student?.linkedTeachers && student.linkedTeachers[student.subjectId];
     
-    const handleLink = async () => {
-        if (!firestore || !student?.id || !verificationResult?.teacherId) return;
-        setIsLinking(true);
-
-        try {
-            const studentRef = doc(firestore, 'users', student.id);
-            // Use a specific field for linked teachers to avoid overwriting the whole map
-            // The key is the subjectId and the value is the teacherId
-            const updatePayload = {
-              [`linkedTeachers.${student.subjectId}`]: verificationResult.teacherId
-            };
-
-            await updateDoc(studentRef, updatePayload);
-
-            toast({
-                title: "تم الربط بنجاح!",
-                description: `لقد تم ربطك بالأستاذ ${verificationResult.teacherName} في هذه المادة.`,
-            });
-            onLinkSuccess(); // Trigger refetch in parent component
-            setVerificationResult(null); // Reset the card
-            setTeacherCode('');
-        } catch (error) {
-            console.error("Linking failed:", error);
-            toast({
-                title: "فشل الربط",
-                description: "حدث خطأ أثناء محاولة الربط. الرجاء المحاولة لاحقاً.",
-                variant: "destructive"
-            });
-        } finally {
-            setIsLinking(false);
-        }
-    };
-
-    // Check if the student is already linked for this specific subject
-    if (student?.linkedTeachers && student.linkedTeachers[student.subjectId]) {
+    if (isAlreadyLinked) {
         return null; // Don't show the card if already linked
     }
-
 
     return (
         <Card>
@@ -101,32 +44,16 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
                         value={teacherCode}
                         onChange={(e) => setTeacherCode(e.target.value)}
                         className="font-mono text-center tracking-widest"
-                        disabled={!!(verificationResult?.success) || isLinking}
+                        disabled={true}
                     />
-                    <Button onClick={handleVerify} disabled={isLoading || !teacherCode || !!(verificationResult?.success)} className="w-full sm:w-auto">
-                        {isLoading ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                    <Button disabled={true} className="w-full sm:w-auto">
+                        <Wand2 />
                         تحقق
                     </Button>
                 </div>
-                {verificationResult && !verificationResult.success && (
-                    <div className={`text-sm font-medium p-2 rounded-md text-center bg-red-100 text-red-800`}>
-                        {verificationResult.message}
-                    </div>
-                )}
-                 {verificationResult && verificationResult.success && (
-                    <div className={`text-sm font-medium p-2 rounded-md text-center bg-green-100 text-green-800`}>
-                       {verificationResult.message}
-                    </div>
-                )}
+                {/* Verification result messages can be added here for UI design if needed */}
             </CardContent>
-            {verificationResult?.success && (
-                 <CardContent>
-                    <Button onClick={handleLink} className="w-full" variant="accent" disabled={isLinking}>
-                        {isLinking ? <Loader2 className="animate-spin ml-2" /> : null}
-                        تأكيد الربط مع الأستاذ
-                    </Button>
-                 </CardContent>
-            )}
+            {/* Conditional footer with confirm button can be added here for UI design */}
         </Card>
     );
 }
@@ -220,7 +147,7 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      <TeacherLinkCard student={{...student, subjectId}} onLinkSuccess={refetchStudent} />
+      <TeacherLinkCard student={{...student, subjectId}} />
       
     </div>
   );
