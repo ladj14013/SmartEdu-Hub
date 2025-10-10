@@ -11,12 +11,6 @@ export function Footer() {
         </p>
         <div className="flex items-center gap-4">
           <Link
-            href="/preview-links"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            معاينة الصفحات
-          </Link>
-          <Link
             href="#"
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
