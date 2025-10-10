@@ -12,32 +12,16 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import type { User as UserType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// MOCK DATA
+const mockTeachers = [
+    { id: 'user-4', name: 'أ. أحمد محمود', email: 'ahmed.mahmoud@example.com', avatar: 'https://i.pravatar.cc/150?u=user-4' },
+    { id: 'user-5', name: 'أ. فاطمة الزهراء', email: 'fatima.zahra@example.com', avatar: 'https://i.pravatar.cc/150?u=user-5' },
+];
+
 export default function TeachersListPage() {
-  const firestore = useFirestore();
-  const { user: authUser, isLoading: isAuthLoading } = useUser();
-
-  // Get supervisor data
-  const supervisorRef = useMemoFirebase(() => (firestore && authUser) ? doc(firestore, 'users', authUser.uid) : null, [firestore, authUser]);
-  const { data: supervisor, isLoading: isSupervisorLoading } = useDoc<UserType>(supervisorRef);
-
-  // Get teachers in the same stage and subject
-  const teachersQuery = useMemoFirebase(() => {
-    if (!firestore || !supervisor?.stageId || !supervisor?.subjectId) return null;
-    return query(
-      collection(firestore, 'users'),
-      where('role', '==', 'teacher'),
-      where('stageId', '==', supervisor.stageId),
-      where('subjectId', '==', supervisor.subjectId)
-    );
-  }, [firestore, supervisor]);
-  const { data: teachers, isLoading: areTeachersLoading } = useCollection<UserType>(teachersQuery);
-
-  const isLoading = isAuthLoading || isSupervisorLoading || areTeachersLoading;
+  const isLoading = false; // Mock loading state
 
   return (
     <div className="space-y-6">
@@ -64,7 +48,7 @@ export default function TeachersListPage() {
                     <TableCell><Skeleton className="h-9 w-24" /></TableCell>
                 </TableRow>
               ))}
-              {!isLoading && teachers?.map(teacher => {
+              {!isLoading && mockTeachers.map(teacher => {
                 return (
                     <TableRow key={teacher.id}>
                         <TableCell>
@@ -87,7 +71,7 @@ export default function TeachersListPage() {
                     </TableRow>
                 )
               })}
-              {!isLoading && teachers?.length === 0 && (
+              {!isLoading && mockTeachers.length === 0 && (
                 <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
                         لا يوجد أساتذة مطابقون لمعايير الإشراف الخاصة بك.
