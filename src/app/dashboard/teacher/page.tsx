@@ -6,13 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Presentation, Users, Clipboard, ClipboardCheck, ArrowLeft, Loader2, Wand2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
 import type { User as UserType, Lesson, Stage, Subject as SubjectType } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { v4 as uuidv4 } from 'uuid';
 
 
 function TeacherDashboardSkeleton() {
@@ -68,16 +67,11 @@ const StatCard = ({ title, value, description, icon: Icon, isLoading }: { title:
 );
 
 export default function TeacherDashboard() {
-  const [isClient, setIsClient] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user: authUser, isLoading: isAuthLoading } = useUser();
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // --- Data Fetching ---
   const teacherRef = useMemoFirebase(
@@ -145,7 +139,7 @@ export default function TeacherDashboard() {
   };
 
 
-  if (!isClient || isLoading) {
+  if (isLoading) {
     return <TeacherDashboardSkeleton />;
   }
 
@@ -156,7 +150,7 @@ export default function TeacherDashboard() {
 
 
   return (
-    <div className="space-y-6" suppressHydrationWarning>
+    <div className="space-y-6">
       <PageHeader
         title={
             <span>
