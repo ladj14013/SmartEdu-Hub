@@ -190,7 +190,7 @@ export default function TeacherDashboard() {
                 <CardTitle>كود الأستاذ</CardTitle>
                 <Wand2 className="h-5 w-5 text-muted-foreground" />
             </div>
-            <CardDescription>شارك هذا الكود مع تلاميذك ليرتبطوا بك.</CardDescription>
+            <CardDescription>شارك هذا الكود مع تلاميذك ليتمكنوا من متابعتك.</CardDescription>
           </CardHeader>
           <CardContent>
             {teacherCode ? (
