@@ -48,7 +48,6 @@ export default function SubjectPage() {
             <PageHeader title={<Skeleton className="h-8 w-48" />} description="جاري تحميل تفاصيل المادة...">
                  <Skeleton className="h-10 w-32" />
             </PageHeader>
-            <Card><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
         </div>
     )
   }
@@ -69,47 +68,6 @@ export default function SubjectPage() {
           </Link>
         </Button>
       </PageHeader>
-
-      <Card>
-        <CardHeader><CardTitle>قائمة الدروس</CardTitle></CardHeader>
-        <CardContent className="p-0">
-          <div className="divide-y">
-            {lessons?.map((lesson) => {
-              const isCompleted = false; // Mock status
-              const isAvailable = !lesson.isLocked;
-              const lessonStatus = isCompleted ? 'completed' : (isAvailable ? 'available' : 'locked');
-              
-              const statusMap = {
-                  completed: { icon: CheckCircle, text: 'مكتمل', color: 'text-green-500' },
-                  available: { icon: PlayCircle, text: 'متاح', color: 'text-primary' },
-                  locked: { icon: Lock, text: 'مقفل', color: 'text-muted-foreground' }
-              }
-              const { icon: Icon, text, color } = statusMap[lessonStatus];
-              
-              const Wrapper = isAvailable ? Link : 'div';
-
-              return (
-              <Wrapper key={lesson.id} href={isAvailable ? `/dashboard/student/lessons/${lesson.id}` : '#'} className={`flex items-center justify-between p-4 ${isAvailable ? 'hover:bg-muted/50 cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}>
-                <div className="flex items-center gap-4">
-                    <span className="font-medium">{lesson.title}</span>
-                </div>
-                <Badge variant="outline" className={`gap-2 ${color}`}>
-                    <Icon className="h-4 w-4" />
-                    {text}
-                </Badge>
-              </Wrapper>
-            )})}
-             {(areLessonsLoading || isStudentLoading) ? 
-                <div className="p-8 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></div> :
-                lessons?.length === 0 && (
-                  <div className="p-8 text-center text-muted-foreground">
-                      لا توجد دروس في هذه المادة لمستواك الدراسي حتى الآن.
-                  </div>
-              )
-            }
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
