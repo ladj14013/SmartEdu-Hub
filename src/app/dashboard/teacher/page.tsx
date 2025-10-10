@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/common/page-header';
@@ -106,6 +107,34 @@ export default function TeacherDashboard() {
   const isLoading =
     isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading;
 
+  const handleCopy = () => {
+    if (!teacher?.teacherCode) return;
+    navigator.clipboard.writeText(teacher.teacherCode);
+    setCopied(true);
+    toast({ title: 'تم نسخ الكود بنجاح!' });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateCode = async () => {
+    if (!teacherRef) return;
+    setIsGenerating(true);
+    const newCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    try {
+      await updateDoc(teacherRef, { teacherCode: newCode });
+      toast({ title: 'تم توليد كود جديد بنجاح!' });
+      refetch(); // Refetch teacher data to display the new code
+    } catch (error) {
+      console.error('Error generating code:', error);
+      toast({
+        title: 'فشل توليد الكود',
+        description: 'حدث خطأ أثناء محاولة تحديث الكود.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
 
   if (!isClient || isLoading) {
     return <TeacherDashboardSkeleton />;
@@ -114,6 +143,7 @@ export default function TeacherDashboard() {
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
+  const teacherCode = teacher?.teacherCode;
 
 
   return (
@@ -175,13 +205,32 @@ export default function TeacherDashboard() {
             isLoading={isLoading}
         />
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">متوسط الأداء</CardTitle>
-            <div className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+             <div className="flex items-center justify-between">
+                <CardTitle>كود الأستاذ</CardTitle>
+                <Wand2 className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <CardDescription>شارك هذا الكود مع تلاميذك ليرتبطوا بك.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">82%</div>
-            <p className="text-xs text-muted-foreground">(عنصر نائب)</p>
+            {teacherCode ? (
+                <div className="flex items-center justify-between gap-2 p-2 bg-muted rounded-md border border-dashed">
+                    <span className="font-mono text-lg tracking-widest text-primary font-bold">{teacherCode}</span>
+                    <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopy}>
+                            {copied ? <ClipboardCheck className="text-green-500" /> : <Clipboard />}
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleGenerateCode} disabled={isGenerating}>
+                            {isGenerating ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+                        </Button>
+                    </div>
+                </div>
+            ) : (
+                <Button onClick={handleGenerateCode} className="w-full" disabled={isGenerating}>
+                    {isGenerating ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Wand2 className="ml-2 h-4 w-4" />}
+                    توليد كود
+                </Button>
+            )}
           </CardContent>
         </Card>
       </div>
