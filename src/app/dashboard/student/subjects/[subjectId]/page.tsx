@@ -13,12 +13,42 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { getTeacherByCode } from '@/app/actions/teacher-actions';
 
 
-function TeacherLinkCard({ student }: { student: UserType | null }) {
+function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
     const [teacherCode, setTeacherCode] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verificationResult, setVerificationResult] = useState<{ teacherName: string; teacherId: string } | null>(null);
+    const [verificationError, setVerificationError] = useState<string | null>(null);
+    const { toast } = useToast();
 
-    // The logic is removed, so the card is for display purposes only.
+    const handleVerifyCode = async () => {
+        if (!teacherCode.trim() || !student?.subjectId) return;
+
+        setIsVerifying(true);
+        setVerificationError(null);
+        setVerificationResult(null);
+
+        try {
+            const result = await getTeacherByCode({ teacherCode, subjectId: student.subjectId });
+
+            if (result.success && result.teacherName && result.teacherId) {
+                setVerificationResult({ teacherName: result.teacherName, teacherId: result.teacherId });
+                toast({
+                    title: "تم العثور على الأستاذ",
+                    description: `هل تريد الارتباط بالأستاذ: ${result.teacherName}؟`,
+                });
+            } else {
+                setVerificationError(result.error || 'فشل التحقق من الكود.');
+            }
+        } catch (error) {
+            console.error("Verification failed:", error);
+            setVerificationError('حدث خطأ غير متوقع أثناء التحقق.');
+        } finally {
+            setIsVerifying(false);
+        }
+    };
     
     return (
         <Card>
@@ -38,16 +68,28 @@ function TeacherLinkCard({ student }: { student: UserType | null }) {
                         value={teacherCode}
                         onChange={(e) => setTeacherCode(e.target.value)}
                         className="font-mono text-center tracking-widest"
-                        disabled={true}
+                        disabled={isVerifying}
                     />
-                    <Button disabled={true} className="w-full sm:w-auto">
-                        <Wand2 className="ml-2 h-4 w-4" />
-                        تحقق
+                    <Button onClick={handleVerifyCode} disabled={isVerifying || !teacherCode.trim()} className="w-full sm:w-auto">
+                        {isVerifying ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Wand2 className="ml-2 h-4 w-4" />}
+                        {isVerifying ? 'جاري التحقق...' : 'تحقق'}
                     </Button>
                 </div>
-                {/* Verification result messages can be added here for UI design if needed */}
+                {verificationError && (
+                    <p className="text-sm font-medium text-destructive">{verificationError}</p>
+                )}
             </CardContent>
-            {/* Conditional footer with confirm button can be added here for UI design */}
+            {verificationResult && (
+                 <CardContent>
+                    <div className="p-4 bg-green-50 border-l-4 border-green-500 text-green-800 rounded-md">
+                        <p className="font-semibold">تم العثور على الأستاذ: {verificationResult.teacherName}</p>
+                        <p className="text-sm">اضغط على زر "تأكيد الارتباط" للوصول إلى دروسه.</p>
+                        <Button className="mt-2 w-full" variant="accent" size="sm">
+                            تأكيد الارتباط
+                        </Button>
+                    </div>
+                </CardContent>
+            )}
         </Card>
     );
 }
@@ -141,7 +183,7 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      <TeacherLinkCard student={{...student, subjectId}} />
+      <TeacherLinkCard student={{...student, subjectId}} onLinkSuccess={refetchStudent} />
       
     </div>
   );
