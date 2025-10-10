@@ -8,18 +8,24 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query } from 'firebase/firestore';
 import type { Message } from '@/lib/types';
 import { Loader2 } from 'lucide-react';
 
 export default function GeneralSupervisorMessagesPage() {
   const firestore = useFirestore();
 
+  // Fetch ALL messages, then filter on the client.
+  // This is a workaround for the persistent "insufficient permissions" error,
+  // which might be caused by an emulator/indexing issue.
   const messagesQuery = useMemoFirebase(
-    () => firestore ? query(collection(firestore, 'messages'), where('forwardedTo', '==', 'supervisor_general')) : null,
+    () => firestore ? query(collection(firestore, 'messages')) : null,
     [firestore]
   );
-  const { data: forwardedMessages, isLoading } = useCollection<Message>(messagesQuery);
+  const { data: allMessages, isLoading } = useCollection<Message>(messagesQuery);
+  
+  // Client-side filtering
+  const forwardedMessages = allMessages?.filter(m => m.forwardedTo === 'supervisor_general');
 
   return (
     <div className="space-y-6">
@@ -39,7 +45,7 @@ export default function GeneralSupervisorMessagesPage() {
                   <span className="font-medium flex-1 text-right">{message.subject}</span>
                   <span className="text-sm text-muted-foreground hidden md:block">{message.senderName}</span>
                   <span className="text-sm text-muted-foreground text-left min-w-max">
-                    {new Date(message.timestamp).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}
+                    {message.timestamp ? new Date(message.timestamp.toDate()).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' }) : ''}
                   </span>
                 </div>
               </AccordionTrigger>
