@@ -1,3 +1,4 @@
+
 'use client';
 import { useMemo } from 'react';
 import { PageHeader } from '@/components/common/page-header';
@@ -74,18 +75,7 @@ export default function SupervisorSubjectDashboard() {
         description={isLoading ? 'جاري تحميل البيانات...' : `مرحباً ${supervisorName}، أنت تشرف على مادة ${subjectName} ل${stageName}.`}
       />
 
-      <div className="grid gap-6 md:grid-cols-2">
-         {/* <Card className="hover:bg-muted/50 transition-colors">
-            <Link href="/dashboard/supervisor_subject/teachers">
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <CardTitle>متابعة الأساتذة</CardTitle>
-                        <ArrowLeft className="h-5 w-5 text-primary" />
-                    </div>
-                    <CardDescription>عرض الدروس الخاصة بالأساتذة الذين تشرف عليهم وتقديم ملاحظات.</CardDescription>
-                </CardHeader>
-            </Link>
-        </Card> */}
+      <div className="grid gap-6 md:grid-cols-1">
         <Card className="hover:bg-muted/50 transition-colors">
             <Link href="/dashboard/supervisor_subject/content">
                 <CardHeader>
