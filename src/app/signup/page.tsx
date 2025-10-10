@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, collection } from 'firebase/firestore';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 
 import {
@@ -34,7 +34,6 @@ import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { Stage, Level, Subject } from '@/lib/types';
-import { getTeacherByCode } from '@/ai/flows/get-teacher-by-code';
 
 
 const signupSchema = z.object({
@@ -45,7 +44,6 @@ const signupSchema = z.object({
   stageId: z.string().optional(),
   levelId: z.string().optional(),
   subjectId: z.string().optional(),
-  teacherCode: z.string().optional(),
 }).refine((data) => {
   if (data.role === 'student' || data.role === 'teacher') {
     return !!data.stageId;
@@ -109,31 +107,14 @@ export default function SignupPage() {
         levelId: data.levelId || null,
         subjectId: data.subjectId || null,
         avatar: `https://i.pravatar.cc/150?u=${user.uid}`,
-        linkedTeachers: {}
       };
       
       // Generate teacher code if role is teacher
       if(data.role === 'teacher') {
         userData.teacherCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-        userData.linkedStudentIds = []; // Initialize empty array
-      }
-      
-      // 3. If student provided a teacher code, link them before creating the doc
-      if (data.role === 'student' && data.teacherCode && data.subjectId) {
-         const { teacherId } = await getTeacherByCode({ teacherCode: data.teacherCode.trim(), subjectId: data.subjectId });
-         if (teacherId) {
-            const teacherRef = doc(firestore, 'users', teacherId);
-            
-            // Add student to teacher's list
-            await updateDoc(teacherRef, {
-              linkedStudentIds: arrayUnion(user.uid)
-            });
-            // Add teacher to student's map
-            userData.linkedTeachers[data.subjectId] = teacherId;
-         }
       }
 
-      // 4. Create user document in Firestore
+      // 3. Create user document in Firestore
       await setDoc(doc(firestore, "users", user.uid), userData);
       
       toast({
@@ -323,13 +304,13 @@ export default function SignupPage() {
                     />
                 )}
 
-                {(role === 'student' || role === 'teacher') && selectedStage && (
+                {role === 'teacher' && selectedStage && (
                    <FormField
                       control={form.control}
                       name="subjectId"
                       render={({ field }) => (
                         <FormItem>
-                          <Label>المادة {role === 'student' ? '(للربط مع أستاذ)' : ''}</Label>
+                          <Label>المادة</Label>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
                               <SelectTrigger>
@@ -346,22 +327,6 @@ export default function SignupPage() {
                         </FormItem>
                       )}
                     />
-                )}
-
-                {role === 'student' && (
-                  <FormField
-                    control={form.control}
-                    name="teacherCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <Label htmlFor="teacher-code">رمز الأستاذ (اختياري)</Label>
-                        <FormControl>
-                          <Input id="teacher-code" placeholder="أدخل رمز الأستاذ للربط" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 )}
 
                 <Button type="submit" className="w-full" variant="accent" disabled={isLoading || isLoadingStages || isLoadingLevels || isLoadingSubjects}>

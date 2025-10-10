@@ -106,30 +106,6 @@ export default function TeacherDashboard() {
   const isLoading =
     isAuthLoading || isTeacherLoading || isStageLoading || isSubjectLoading || areLessonsLoading;
 
-  const handleCopy = () => {
-    if (!teacher?.teacherCode) return;
-    navigator.clipboard.writeText(teacher.teacherCode);
-    setCopied(true);
-    toast({ title: "تم نسخ الكود بنجاح!" });
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const generateTeacherCode = async () => {
-    if (!firestore || !authUser) return;
-    setIsGenerating(true);
-    try {
-      const code = uuidv4().substring(0, 6).toUpperCase();
-      const teacherDocRef = doc(firestore, 'users', authUser.uid);
-      await updateDoc(teacherDocRef, { teacherCode: code });
-      refetch(); // Refetch teacher data to get the new code
-      toast({ title: "تم توليد الكود بنجاح", description: `الكود الجديد هو: ${code}` });
-    } catch (error) {
-      console.error("Error generating teacher code:", error);
-      toast({ title: "فشل توليد الكود", variant: "destructive" });
-    } finally {
-      setIsGenerating(false);
-    }
-  };
 
   if (!isClient || isLoading) {
     return <TeacherDashboardSkeleton />;
@@ -138,7 +114,6 @@ export default function TeacherDashboard() {
   const teacherName = teacher?.name || 'أستاذ';
   const subjectName = subject?.name || 'مادة';
   const stageName = stage?.name || 'مرحلة';
-  const studentCount = teacher?.linkedStudentIds?.length ?? 0;
 
 
   return (
@@ -157,40 +132,28 @@ export default function TeacherDashboard() {
       />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
+         <Card>
           <CardHeader>
-            <CardTitle>كود الربط مع التلاميذ</CardTitle>
-            <CardDescription>شارك هذا الكود مع تلاميذك لربطهم بحسابك.</CardDescription>
+            <CardTitle>إدارة المحتوى</CardTitle>
+            <CardDescription>إضافة وتعديل دروسك الخاصة والاطلاع على الدروس العامة.</CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-between gap-4 p-4 bg-muted rounded-b-lg">
-            {teacher?.teacherCode ? (
-              <>
-                <Button onClick={generateTeacherCode} variant="ghost" size="icon" disabled={isGenerating}>
-                  {isGenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}
-                  <span className="sr-only">توليد كود جديد</span>
-                </Button>
-                <p className="text-2xl font-mono font-bold text-primary flex-1 text-center">{teacher.teacherCode}</p>
-                <Button onClick={handleCopy} variant="ghost" size="icon" disabled={!teacher.teacherCode}>
-                  {copied ? <ClipboardCheck className="h-5 w-5 text-green-500" /> : <Clipboard className="h-5 w-5" />}
-                  <span className="sr-only">نسخ الكود</span>
-                </Button>
-              </>
-            ) : (
-              <Button onClick={generateTeacherCode} disabled={isGenerating} className="w-full">
-                {isGenerating ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Wand2 className="h-4 w-4 ml-2" />}
-                توليد كود
-              </Button>
-            )}
+          <CardContent>
+             <Button asChild className='w-full' variant="accent">
+               <Link href="/dashboard/teacher/subjects">
+                 الانتقال لإدارة الدروس
+                 <ArrowLeft className="mr-2 h-4 w-4" />
+               </Link>
+             </Button>
           </CardContent>
         </Card>
         <Card className="hover:bg-muted/50 transition-colors">
-          <Link href="/dashboard/teacher/subjects" className="flex flex-col justify-center h-full">
+          <Link href="/dashboard/teacher/students" className="flex flex-col justify-center h-full">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle>إدارة المحتوى</CardTitle>
+                <CardTitle>قائمة الطلاب</CardTitle>
                 <ArrowLeft className="h-5 w-5 text-primary" />
               </div>
-              <CardDescription>إضافة وتعديل دروسك الخاصة والاطلاع على الدروس العامة.</CardDescription>
+              <CardDescription>عرض الطلاب المرتبطين بك ومتابعة أدائهم.</CardDescription>
             </CardHeader>
           </Link>
         </Card>
@@ -198,11 +161,11 @@ export default function TeacherDashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <StatCard
-            title="الطلاب المرتبطون"
-            value={studentCount}
-            description="إجمالي الطلاب المرتبطين بك حالياً"
+            title="الطلاب"
+            value={'N/A'}
+            description="ميزة الارتباط معطلة حالياً"
             icon={Users}
-            isLoading={isLoading}
+            isLoading={false}
         />
         <StatCard
             title="الدروس الخاصة"
