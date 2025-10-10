@@ -7,31 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowRight, Wand2, Loader2, Link2 } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType, Level, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { getTeacherByCode } from '@/app/actions/teacher-actions';
-
-async function linkStudentToTeacher(studentId: string, subjectId: string, teacherId: string) {
-    'use server';
-    try {
-        const firestore = (await import('firebase-admin/firestore')).getFirestore();
-        const studentRef = firestore.collection('users').doc(studentId);
-        
-        // Use dot notation to update a specific field in the map
-        await studentRef.update({
-            [`linkedTeachers.${subjectId}`]: teacherId
-        });
-        
-        return { success: true };
-    } catch (error) {
-        console.error("Server Action: Failed to link student to teacher", error);
-        return { success: false, error: 'فشل تحديث قاعدة البيانات.' };
-    }
-}
+import { linkStudentToTeacher } from '@/app/actions/student-actions';
 
 
 function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null, onLinkSuccess: () => void }) {
