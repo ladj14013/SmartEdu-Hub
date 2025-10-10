@@ -51,11 +51,11 @@ export default function TeachersListPage() {
   );
   const { data: currentUserData, isLoading: isCurrentUserLoading } = useDoc<UserType>(currentUserRef);
   
-  const isSupervisorGeneral = currentUserData?.role === 'supervisor_general';
+  const isSupervisorGeneral = currentUserData?.role === 'supervisor_general' || currentUserData?.role === 'directeur';
 
   // Queries for teachers
   const teachersQuery = useMemoFirebase(() => {
-    // Only run this query if the user is a general supervisor
+    // Only run this query if the user is a general supervisor or director
     if (firestore && isSupervisorGeneral) {
       return query(collection(firestore, 'users'), where('role', '==', 'teacher'))
     }
