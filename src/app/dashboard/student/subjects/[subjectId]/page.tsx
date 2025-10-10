@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ArrowRight, Wand2, Loader2, Link2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, updateDoc, getApps, initializeApp } from 'firebase/firestore';
 import type { Subject, Lesson, User as UserType, Level, Stage } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useParams } from 'next/navigation';
@@ -118,6 +118,45 @@ function TeacherLinkCard({ student, onLinkSuccess }: { student: UserType | null,
     );
 }
 
+const LessonListCard = ({ title, description, lessons, isLoading }: { title: string, description: string, lessons: Lesson[] | null, isLoading: boolean }) => (
+    <Card>
+        <CardHeader>
+            <CardTitle>{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <CardContent>
+            {isLoading ? (
+                <div className="space-y-2">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </div>
+            ) : (
+                <div className="divide-y rounded-md border">
+                    {lessons && lessons.length > 0 ? (
+                        lessons.map(lesson => (
+                            <Link
+                                key={lesson.id}
+                                href={`/dashboard/student/lessons/${lesson.id}`}
+                                className="flex items-center justify-between p-4 hover:bg-muted/50"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <span className="font-medium">{lesson.title}</span>
+                                    {lesson.type === 'private' && <Badge>خاص</Badge>}
+                                </div>
+                                <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                            </Link>
+                        ))
+                    ) : (
+                        <div className="p-8 text-center text-muted-foreground">
+                            لا توجد دروس متاحة في هذا القسم حتى الآن.
+                        </div>
+                    )}
+                </div>
+            )}
+        </CardContent>
+    </Card>
+);
+
 export default function SubjectPage() {
   const params = useParams();
   const subjectId = Array.isArray(params.subjectId) ? params.subjectId[0] : params.subjectId;
@@ -139,6 +178,10 @@ export default function SubjectPage() {
 
   // Determine the teacher ID for this subject from the student's linked teachers
   const linkedTeacherId = student?.linkedTeachers?.[subjectId];
+
+  // Fetch teacher's name if linked
+  const teacherRef = useMemoFirebase(() => (firestore && linkedTeacherId) ? doc(firestore, 'users', linkedTeacherId) : null, [firestore, linkedTeacherId]);
+  const { data: teacher, isLoading: isTeacherLoading } = useDoc<UserType>(teacherRef);
 
   // Fetch public lessons for the student's level in this subject
   const publicLessonsQuery = useMemoFirebase(() => {
@@ -165,22 +208,18 @@ export default function SubjectPage() {
   }, [firestore, subjectId, student?.levelId, linkedTeacherId]);
   const { data: privateLessons, isLoading: arePrivateLessonsLoading } = useCollection<Lesson>(privateLessonsQuery);
 
-  const allLessons = useMemo(() => {
-    const lessonsMap = new Map<string, Lesson>();
-    (publicLessons || []).forEach(lesson => lessonsMap.set(lesson.id, lesson));
-    (privateLessons || []).forEach(lesson => lessonsMap.set(lesson.id, lesson));
-    return Array.from(lessonsMap.values());
-  }, [publicLessons, privateLessons]);
+  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading || isTeacherLoading;
 
-  const isLoading = isSubjectLoading || isAuthLoading || isStudentLoading || arePublicLessonsLoading || arePrivateLessonsLoading || isLevelLoading || isStageLoading;
-
-  if (isLoading) {
+  if (isLoading && !subject) {
     return (
         <div className="space-y-6">
             <PageHeader title={<Skeleton className="h-8 w-48" />} description={<Skeleton className="h-4 w-72 mt-1" />}>
                  <Skeleton className="h-10 w-32" />
             </PageHeader>
-            <Skeleton className="h-48 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
         </div>
     )
   }
@@ -206,41 +245,29 @@ export default function SubjectPage() {
         </Button>
       </PageHeader>
 
-      {!linkedTeacherId && (
-        <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        {/* Public Lessons Column */}
+        <LessonListCard 
+            title="الدروس العامة"
+            description="محتوى عام مقدم من مشرفي المادة."
+            lessons={publicLessons}
+            isLoading={arePublicLessonsLoading}
+        />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>قائمة الدروس</CardTitle>
-          <CardDescription>
-            تصفح الدروس المتاحة في هذه المادة. الدروس الخاصة تظهر بعد الارتباط مع الأستاذ.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="divide-y rounded-md border">
-            {allLessons?.length > 0 ? (
-              allLessons.map(lesson => (
-                <Link
-                  key={lesson.id}
-                  href={`/dashboard/student/lessons/${lesson.id}`}
-                  className="flex items-center justify-between p-4 hover:bg-muted/50"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-medium">{lesson.title}</span>
-                    {lesson.type === 'private' && <Badge>خاص</Badge>}
-                  </div>
-                  <ArrowLeft className="h-4 w-4 text-muted-foreground" />
-                </Link>
-              ))
+        {/* Private/Teacher Column */}
+        <div>
+            {linkedTeacherId ? (
+                 <LessonListCard 
+                    title={`الدروس الخاصة بالأستاذ: ${teacher?.name || '...'}`}
+                    description="محتوى خاص مقدم من الأستاذ المرتبط بك."
+                    lessons={privateLessons}
+                    isLoading={arePrivateLessonsLoading || isTeacherLoading}
+                />
             ) : (
-              <div className="p-8 text-center text-muted-foreground">
-                لا توجد دروس متاحة في هذه المادة حتى الآن.
-              </div>
+                 <TeacherLinkCard student={student} onLinkSuccess={refetchStudent} />
             )}
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
       
     </div>
   );
