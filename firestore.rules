@@ -3,47 +3,82 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users can only manage their own documents, but any authenticated user can read public profiles.
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
     }
 
-    // Allow any authenticated user to read stages, levels, and subjects.
+    // USERS
+    // - Anyone can create their own user document upon signup.
+    // - Users can only read and update their own document.
+    // - Authenticated users can read the 'name' and 'avatar' of other users.
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth.uid == userId;
+      allow get: if request.auth != null;
+    }
+
+    // STAGES, LEVELS, SUBJECTS
+    // - These are considered public data structures managed by the 'directeur'.
+    // - Any authenticated user can read them.
+    // - Only a 'directeur' can create, update, or delete them.
+    function isDirector() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'directeur';
+    }
     match /stages/{stageId} {
       allow read: if request.auth != null;
-      allow write: if false; // Managed by Director only
+      allow write: if isDirector();
     }
     match /levels/{levelId} {
       allow read: if request.auth != null;
-      allow write: if false; // Managed by Director only
+      allow write: if isDirector();
     }
     match /subjects/{subjectId} {
       allow read: if request.auth != null;
-      allow write: if false; // Managed by Director only
+      allow write: if isDirector();
     }
 
-    // Lessons can be read by any authenticated user.
-    // Writing is handled by Server Actions with admin privileges, so client-side writes can be disabled.
+    // LESSONS
+    // - Authenticated users can read any lesson.
+    // - Only the author ('teacher' or 'supervisor_subject') can update their own lesson.
+    // - Only the author can delete their own lesson.
+    // - Authenticated 'teacher' or 'supervisor_subject' can create lessons.
+    function isTeacher() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'teacher';
+    }
+     function isSubjectSupervisor() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_subject';
+    }
     match /lessons/{lessonId} {
       allow read: if request.auth != null;
-      allow write: if false;
+      allow create: if isTeacher() || isSubjectSupervisor();
+      allow update: if request.auth.uid == resource.data.authorId;
+      allow delete: if request.auth.uid == resource.data.authorId;
     }
 
-    // Students can manage their own lesson progress.
+    // STUDENT LESSON PROGRESS
+    // - Students can only create or update their own progress records.
     match /users/{studentId}/lessonProgress/{lessonId} {
-      allow read, write: if request.auth != null && request.auth.uid == studentId;
+      allow read, write: if request.auth.uid == studentId;
     }
 
-    // Allow authenticated users to send messages. Reading/forwarding is handled by server-side roles.
+    // MESSAGES
+    // - Any user (even unauthenticated) can create a message (for the contact form).
+    // - Only 'directeur' and 'supervisor_general' can read messages.
+    // - Only 'directeur' can update messages (to mark as read/forwarded).
+    function isGeneralSupervisor() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor_general';
+    }
     match /messages/{messageId} {
-      allow create: if request.auth != null;
-      allow read, update, delete: if false; // Only server-side logic can manage this
+       allow create: if true;
+       allow read, update: if isDirector() || isGeneralSupervisor();
     }
     
-    // Only server-side logic can manage settings.
+    // SETTINGS
+    // - Only 'directeur' can read and write settings.
     match /settings/{settingId} {
-      allow read, write: if false;
+      allow read, write: if isDirector();
     }
+
   }
 }

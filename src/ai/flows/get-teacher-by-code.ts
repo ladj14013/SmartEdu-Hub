@@ -65,7 +65,7 @@ export const getTeacherByCode = ai.defineFlow(
     return {
       teacherFound: true,
       teacherId: teacherDoc.id,
-      teacherName: teacherData.name,
+      teacherName: teacherData.name, // Use 'name' from the document data
     };
   }
 );
